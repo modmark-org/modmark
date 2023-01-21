@@ -11,23 +11,28 @@
     <title>Modmark Playground</title>
     <link rel="stylesheet" href="style.css">
     <script type="module">
-        import init, { parse } from "./pkg/web_bindings.js";
+        import init, { parse, transpile } from "./pkg/web_bindings.js";
 
         const editor = document.getElementById("editor");
         const output = document.getElementById("output");
+        const selector = document.getElementById("selector");
 
         // Once we have loaded the wasm module, just bind the parse function
         // to the editor. Later once we have a runtime/compiler up and running
         // we will add multiple output options here.
+
+
+        function updateOutput(input) {
+            if (selector.value === "parse") {
+                output.innerText = parse(input);
+            } else if (selector.value === "transpile") {
+                output.innerHTML = transpile(input)
+            }
+        }
+
         init().then(() => {
-            editor.oninput = (event) => {
-                let tree = parse(event.target.value);
-                output.innerText = tree;
-            };
-
-            let tree = parse(editor.value);
-            output.innerText = tree;
-
+            editor.oninput = (event) => updateOutput(event.target.value);
+            selector.onchange = () => updateOutput(editor.value);
         });
 
 
@@ -36,7 +41,12 @@
 
 <body>
     <div class="menu">
-        <h1>Modmark playground</h1> <a href="https://github.com/modmark-org/modmark">Github repo</a>
+        <h1>Modmark playground</h1>
+        <select name="selector" id="selector">
+            <option value="parse">Document tree</option>
+            <option value="transpile">Transpiled output</option>
+        </select>
+        <a href="https://github.com/modmark-org/modmark">Github repo</a>
     </div>
     <main>
         <textarea id="editor"></textarea>
