@@ -91,7 +91,7 @@ pub fn parse(source: &str) -> Element {
         } else {
             match &mut current_paragraph {
                 Element::Node { name: _, attributes: _, children } =>
-                    children.push(Element::Data(str.clone().into())),
+                    children.push(Element::Data(str.into())),
                 _ => { () }
             }
         }
