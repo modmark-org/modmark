@@ -4,8 +4,7 @@ use wasm_bindgen::prelude::*;
 pub fn parse(source: &str) -> String {
     set_panic_hook();
     let document = parser::parse(source);
-    let pretty = document.tree_string(true);
-    format!("{pretty}")
+    document.tree_string(true)
 }
 
 #[wasm_bindgen]
@@ -18,8 +17,7 @@ pub fn raw_tree(source: &str) -> String {
 #[wasm_bindgen]
 pub fn transpile(source: &str) -> String {
     let document = parser::parse(source);
-    let output = core::eval(&document);
-    format!("{output}")
+    core::eval(&document)
 }
 
 pub fn set_panic_hook() {
