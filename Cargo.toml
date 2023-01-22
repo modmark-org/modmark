@@ -1,0 +1,8 @@
+[workspace]
+
+members = [
+    "cli",
+    "core",
+    "parser",
+    "playground/web_bindings"
+]
