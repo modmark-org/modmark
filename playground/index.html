@@ -24,7 +24,7 @@
 
         function updateOutput(input) {
             if (selector.value === "parse") {
-                output.innerText = parse(input);
+                output.innerHTML = `<pre>${parse(input)}</pre>`
             } else if (selector.value === "transpile") {
                 output.innerHTML = transpile(input)
             }
@@ -48,9 +48,11 @@
         </select>
         <a href="https://github.com/modmark-org/modmark">Github repo</a>
     </div>
-    <main>
+    <main id="wrapper">
         <textarea id="editor"></textarea>
-        <pre id="output"></pre>
+        <div id="output">
+
+        </div>
     </main>
 
 </body>

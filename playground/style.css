@@ -26,7 +26,7 @@ textarea {
     font-size: 1.5rem;
 }
 
-main {
+#wrapper {
     width: 100%;
     display: flex;
     height: calc(100vh - 4rem);
