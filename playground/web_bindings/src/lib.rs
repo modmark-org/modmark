@@ -4,6 +4,14 @@ use wasm_bindgen::prelude::*;
 pub fn parse(source: &str) -> String {
     set_panic_hook();
     let document = parser::parse(source);
+    let pretty = document.tree_string(true);
+    format!("{pretty}")
+}
+
+#[wasm_bindgen]
+pub fn raw_tree(source: &str) -> String {
+    set_panic_hook();
+    let document = parser::parse(source);
     format!("{document:#?}")
 }
 
