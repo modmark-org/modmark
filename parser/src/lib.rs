@@ -89,7 +89,8 @@ pub fn parse(source: &str) -> Element {
                 name: _,
                 attributes: _,
                 children,
-            } = &mut doc {
+            } = &mut doc
+            {
                 children.push(current_paragraph.clone())
             }
             current_paragraph = default_paragraph.clone();
@@ -97,7 +98,8 @@ pub fn parse(source: &str) -> Element {
             name: _,
             attributes: _,
             children,
-        } = &mut current_paragraph {
+        } = &mut current_paragraph
+        {
             children.push(Element::Data(str.into()))
         }
     });
@@ -106,7 +108,8 @@ pub fn parse(source: &str) -> Element {
         name: _,
         attributes: _,
         children,
-    } = &mut doc {
+    } = &mut doc
+    {
         children.push(current_paragraph)
     }
 
