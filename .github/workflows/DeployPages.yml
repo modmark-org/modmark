@@ -32,22 +32,21 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v2
       - name: Setup output directory
-        run: mkdir public
+        run: mkdir build
       - name: Install toolchain (minimal, stable, wasm32-unknown-unknown)
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
       - name: Install wasm-pack
         uses: jetli/wasm-pack-action@v0.4.0
-      - name: Run wasm-pack
-        run: wasm-pack build ./web_bindings --target web --out-dir ../public/pkg
-      # If new static sources are added, make sure to copy them to the ./playground/public directory here
-      - name: Copy sources
-        run: cp index.html style.css public
+      - name: Make build script executable
+        run: chmod +x ./build-playground.sh
+      - name: Build playground
+        run: ./build-playground.sh
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
-          path: ./playground/public
+          path: ./playground/build
 
   deploy:
     environment:
