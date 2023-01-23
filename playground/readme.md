@@ -24,3 +24,5 @@ The instructions below will build and host the static site in the directory `bui
     ```sh
     live-server build
     ```
+
+There is an action workflow running on all pushes to `main` which will build and deploy the playground to [modmark-org.github.io/modmark](https://modmark-org.github.io/modmark/).
