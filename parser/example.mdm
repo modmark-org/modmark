@@ -1,0 +1,87 @@
+[config]
+output out.txt, out.html
+
+This is the first paragraph of the file
+
+One line continues until the end of the row, \
+but the same line may be continued by adding a \
+backslash at the end of the line.
+One line following another immediately will be parsed \
+as a separate line, but in the same paragraph
+This line is line 3 of paragraph 2
+
+This is a new paragraph. Note that multiple lines in the
+same paragraph will, in many languages, be combined
+automatically into the same block of text, even if they
+aren't in the same row. \\
+\\
+This is technically the same paragraph, but with a break between.
+Here is some more text.
+
+[list sorting=numbered]
+entry1
+entry2
+entry3
+this is an entry which contains very much text and \
+it doesn't fit on one row
+{bold}x^2
+
+- this
+- is
+- also a list
+
+[list]
+a
+b
+c
+
+This text:
+
+The first equation is
+
+[math][x^2 + x^3]
+and the second one is
+[math]y^3
+
+
+[{(<
+
+
+
+
+[math][
+x^2+x^3
+]
+
+will be parsed to:
+
+The first equation is x^2+x^3 and the second one is y^3
+
+[code python]
+# There is a code module with this signature:
+def code(lang: String = "txt",
+    indent: "tabs"|"spaces" = "spaces",
+    indentsize: int = 4)
+
+[code python, 4, tabs]
+def main():
+    if (5 == 10 / 2):
+        print("Hello modmark")
+'
+    print("abcdefg")
+
+[code lang=python indent=tabs]
+def main():
+    print("Hello modmark")
+'
+    print("abcdefg")
+
+
+This is a famous poem:
+[verbatim]
+This is the
+First beautiful
+Veeeeeerse
+'
+And this is the second
+one ta da da daaaaa
