@@ -1,12 +1,8 @@
 [package]
-name = "core"
+name = "bold"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-parser = {version= "*", path = "../parser/"}
-wasmer = {version = "3.1.1", features = ["sys-default"]}
-wasmer-wasi = "3.1.1"
-thiserror = "1.0.38"
