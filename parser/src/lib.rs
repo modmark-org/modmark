@@ -275,7 +275,7 @@ pub fn parse(source: &str) -> Element {
             )
             "
         ).unwrap();
-        
+
         static ref ESCAPED_NEW_LINE_BLOCK_SEQUENCE: Regex = Regex::new(
             r"(?x)
             (\r?\n)
@@ -302,10 +302,12 @@ pub fn parse(source: &str) -> Element {
     fn closing_delim(string: &str) -> String {
         string
             .chars()
+            .rev()
             .map(|c| match c {
                 '(' => ')',
                 '{' => '}',
                 '[' => ']',
+                '<' => '>',
                 x => x,
             })
             .collect()
@@ -368,11 +370,10 @@ pub fn parse(source: &str) -> Element {
                     } else {
                         panic!("No module body found even though match was successful");
                     };
-                    
-                    let body = ESCAPED_NEW_LINE_BLOCK_SEQUENCE.replace_all(
-                        &input_str[body_range.clone()],
-                        "$1$2$3"
-                    ).to_string();
+
+                    let body = ESCAPED_NEW_LINE_BLOCK_SEQUENCE
+                        .replace_all(&input_str[body_range.clone()], "$1$2$3")
+                        .to_string();
 
                     elem = Some(Element::ModuleInvocation {
                         name,
@@ -391,7 +392,27 @@ pub fn parse(source: &str) -> Element {
                     })
                 }
             } else {
-                println!("Delimiter '{delimiter}'")
+                let end_delim = closing_delim(&delimiter);
+                let body_range =
+                    ..input_str.find(&end_delim).unwrap_or(input_str.len());
+                let body = input_str[body_range.clone()].to_string();
+                let one_line = !body.contains('\n');
+                
+                elem = Some(Element::ModuleInvocation {
+                    name,
+                    args,
+                    body,
+                    one_line
+                });
+                
+                let end_limit = body_range.end + end_delim.len();
+                
+                if end_limit >= input_str.len() {
+                    input_str = "".to_string();
+                } else {
+                    input_str.replace_range(
+                        .. end_limit, "");
+                }
             }
             push_to_paragraph(elem.unwrap());
         } else {
