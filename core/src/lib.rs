@@ -1,4 +1,4 @@
-use parser::Element;
+use parser::{Element, ModuleArguments};
 use std::collections::HashMap;
 
 // It is still somewhat unclear how we want to structure this part of the code base.
@@ -19,7 +19,16 @@ fn elem_to_html(elem: &Element) -> String {
             attributes,
             children,
         } => inode_to_html(name, attributes, children),
+        Element::ModuleInvocation { name, args, body, one_line } => invoke_to_html(name, args, body)
     }
+}
+
+fn invoke_to_html(
+    name: &str,
+    args: &Option<ModuleArguments>,
+    body: &String
+) -> String {
+    "".to_string()
 }
 
 // Example turning inode (non-leaf node) to html, to make above function cleaner
