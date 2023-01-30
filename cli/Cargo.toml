@@ -1,5 +1,5 @@
 [package]
-name = "cli"
+name = "modmark"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,3 +8,6 @@ edition = "2021"
 [dependencies]
 parser = {version= "*", path = "../parser/"}
 core = {version= "*", path = "../core/"}
+clap = { version = "4.1.4", features = ["derive"] }
+notify = "5.0.0"
+termion = "2.0.1"
