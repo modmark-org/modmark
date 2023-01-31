@@ -395,7 +395,7 @@ pub fn parse(source: &str) -> Element {
                 let end_delim = closing_delim(&delimiter);
                 let body_range =
                     ..input_str.find(&end_delim).unwrap_or(input_str.len());
-                let body = input_str[body_range.clone()].to_string();
+                let body = input_str[body_range].to_string();
                 let one_line = !body.contains('\n');
                 
                 elem = Some(Element::ModuleInvocation {
