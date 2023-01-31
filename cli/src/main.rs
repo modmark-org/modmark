@@ -1,9 +1,9 @@
 use clap::Parser;
 use core::eval;
 use notify::{
-    Config, PollWatcher, RecommendedWatcher, RecursiveMode, Result, Watcher, WatcherKind,
+    Config, Event, PollWatcher, RecommendedWatcher, RecursiveMode, Result, Watcher, WatcherKind,
 };
-use parser::parse;
+use parser::{parse, Element};
 use std::env;
 use std::{fs, path::Path};
 use std::{fs::File, io::Write, time::Duration};
@@ -23,20 +23,62 @@ struct Args {
         long = "watch",
         help = "Watches file and compiles changes"
     )]
-    w: bool,
+    watch: bool,
+
+    #[arg(short = 'd', long = "dev", help = "Prints the tree")]
+    dev: bool,
 }
 
-fn compile_file(args: &Args) -> Result<()> {
-    let source = fs::read_to_string(&args.input).expect("[ERROR] Failed to read file...");
+fn print_tree(tree: parser::Element) {
+    println!("\n{}", tree.tree_string(false));
+}
+
+fn compile_file(args: &Args) -> Result<Element> {
+    let source = fs::read_to_string(&args.input)?;
     let document = parse(&source);
     let output = eval(&document);
 
     let mut output_file = File::create(&args.output)?;
-    output_file.write_all(&output.as_bytes())?;
-    Ok(())
+    output_file.write_all(output.as_bytes())?;
+    Ok(document)
 }
 
 fn watch(args: &Args, target: &String) -> Result<()> {
+    fn watch_compile(event: Result<Event>, args: &Args, target: &String) -> Result<()> {
+        print!("{}{}", termion::clear::All, termion::cursor::Goto(1, 1));
+        println!(
+            "{}Recompiling...{}\n",
+            color::Fg(color::Yellow),
+            style::Reset
+        );
+
+        let tree = match event {
+            Ok(_) => match compile_file(args) {
+                Ok(t) => t,
+                Err(e) => return Err(e),
+            },
+            Err(e) => return Err(e),
+        };
+
+        print!("{}{}", termion::clear::All, termion::cursor::Goto(1, 1));
+        println!(
+            "{}File successfully compiled!{}\n",
+            color::Fg(color::Green),
+            style::Reset
+        );
+
+        println!(
+            "Your file can be found at {}/{}\nSave your file to recompile changes.",
+            target, &args.output
+        );
+
+        if args.dev {
+            print_tree(tree);
+        }
+
+        Ok(())
+    }
+
     let (tx, rx) = std::sync::mpsc::channel();
     let mut watcher: Box<dyn Watcher> = if RecommendedWatcher::kind() == WatcherKind::PollWatcher {
         let config = Config::default().with_poll_interval(Duration::from_secs(10));
@@ -47,32 +89,9 @@ fn watch(args: &Args, target: &String) -> Result<()> {
 
     watcher.watch(Path::new(&args.input), RecursiveMode::Recursive)?;
 
+    watch_compile(Ok(Event::default()), args, target)?;
     for event in rx {
-        print!("{}{}", termion::clear::All, termion::cursor::Goto(1, 1));
-        println!(
-            "{}Recompiling...{}\n",
-            color::Fg(color::Yellow),
-            style::Reset
-        );
-        match event {
-            Ok(_) => match compile_file(args) {
-                Ok(_) => {}
-                Err(_) => println!("[ERROR] File could not compile..."),
-            },
-            Err(_) => println!("[ERROR] Input file removed..."),
-        }
-        print!("{}{}", termion::clear::All, termion::cursor::Goto(1, 1));
-        println!(
-            "{}File successfully compiled!{}\n",
-            color::Fg(color::Green),
-            style::Reset
-        );
-
-        println!(
-            "Your file can be found at {}/{}\n
-            Save your file to recompile changes.",
-            target, &args.output
-        );
+        watch_compile(event, args, target)?;
     }
 
     Ok(())
@@ -83,25 +102,27 @@ fn main() -> Result<()> {
     let current_path = env::current_dir()?;
     let target = current_path.into_os_string().into_string().unwrap();
 
-    if args.w {
-        match watch(&args, &target) {
-            Ok(_) => (),
-            Err(_) => println!("[ERROR] Watching file failed..."),
-        };
+    if args.watch {
+        watch(&args, &target)?;
     } else {
         match compile_file(&args) {
-            Ok(_) => (),
-            Err(_) => println!("[ERROR] File could not compile..."),
-        }
-        print!("{}{}", termion::clear::All, termion::cursor::Goto(1, 1));
-        println!("{}File successfully compiled!\n", color::Fg(color::Green));
+            Ok(tree) => {
+                print!("{}{}", termion::clear::All, termion::cursor::Goto(1, 1));
+                println!("{}File successfully compiled!\n", color::Fg(color::Green));
 
-        println!(
-            "{}Output file can be found at {}/{}",
-            color::Fg(color::Blue),
-            target,
-            &args.output
-        );
+                println!(
+                    "{}Output file can be found at {}/{}",
+                    color::Fg(color::Blue),
+                    target,
+                    &args.output
+                );
+
+                if args.dev {
+                    print_tree(tree);
+                }
+            }
+            Err(e) => return Err(e),
+        }
     }
 
     Ok(())
