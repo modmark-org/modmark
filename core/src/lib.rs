@@ -25,7 +25,7 @@ fn elem_to_html(elem: &Element) -> String {
 
 fn invoke_to_html(
     name: &str,
-    args: &Option<ModuleArguments>,
+    args: &ModuleArguments,
     body: &String
 ) -> String {
     "".to_string()
