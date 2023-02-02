@@ -4,14 +4,12 @@
 extern crate core;
 
 use std::collections::HashMap;
-
 use std::mem;
 
 use nom::bytes::complete::{take_till, take_until, take_until1, take_while1};
 use nom::character::complete::{
     alphanumeric1, char, line_ending, multispace0, multispace1, none_of, space0, space1,
 };
-
 use nom::error::Error;
 use nom::multi::{fold_many1, many1, separated_list0, separated_list1};
 use nom::sequence::{delimited, pair, preceded, separated_pair, terminated};
@@ -30,7 +28,7 @@ pub enum Element {
     Data(String),
     Node {
         name: String,
-        attributes: HashMap<String, String>,
+        environment: HashMap<String, String>,
         children: Vec<Element>,
     },
     ModuleInvocation {
@@ -301,7 +299,7 @@ fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Element>> {
 fn parse_paragraph(input: &str) -> IResult<&str, Element> {
     map(parse_paragraph_elements, |elems| Node {
         name: "Paragraph".to_string(),
-        attributes: Default::default(),
+        environment: Default::default(),
         children: elems,
     })(input)
 }
@@ -317,7 +315,7 @@ fn parse_multiple_paragraphs(input: &str) -> IResult<&str, Vec<Element>> {
 fn parse_document(input: &str) -> IResult<&str, Element> {
     map(parse_multiple_paragraphs, |paras| Node {
         name: "Document".to_string(),
-        attributes: Default::default(),
+        environment: Default::default(),
         children: paras,
     })(input)
 }
@@ -360,12 +358,12 @@ pub fn parse(source: &str) -> Element {
 }
 
 impl Element {
-    pub fn tree_string(&self, include_attributes: bool) -> String {
-        pretty_rows(self, include_attributes).join("\n")
+    pub fn tree_string(&self, include_environment: bool) -> String {
+        pretty_rows(self, include_environment).join("\n")
     }
 }
 
-fn pretty_rows(element: &Element, include_attributes: bool) -> Vec<String> {
+fn pretty_rows(element: &Element, include_environment: bool) -> Vec<String> {
     let indent = "  ";
     let mut strs = vec![];
 
@@ -375,24 +373,23 @@ fn pretty_rows(element: &Element, include_attributes: bool) -> Vec<String> {
         }),
         Node {
             name,
-            attributes,
+            environment,
             children,
         } => {
             strs.push(format!("{name} {{"));
-            if attributes.is_empty() {
-                strs.push(format!("{indent}attributes: {{ <empty> }}"));
-            } else if include_attributes {
-                strs.push(format!("{indent}attributes: {{"));
-
-                attributes
+            if environment.is_empty() {
+                strs.push(format!("{indent}env: {{ <empty> }}"));
+            } else if include_environment {
+                strs.push(format!("{indent}env: {{"));
+                environment
                     .iter()
                     .for_each(|(k, v)| strs.push(format!(r#"{indent}{indent}"{k}": "{v}""#)));
 
                 strs.push(format!("{indent}}}"));
             } else {
                 strs.push(format!(
-                    "{indent}attributes: {{ < {len} attributes > }}",
-                    len = &attributes.len().to_string()
+                    "{indent}env: {{ < {len} entries > }}",
+                    len = &environment.len().to_string()
                 ))
             }
 
@@ -402,7 +399,7 @@ fn pretty_rows(element: &Element, include_attributes: bool) -> Vec<String> {
                 strs.push(format!("{indent}children: ["));
 
                 children.iter().for_each(|c| {
-                    pretty_rows(c, include_attributes)
+                    pretty_rows(c, include_environment)
                         .iter()
                         .for_each(|s| strs.push(format!("{indent}{indent}{s}")))
                 });
@@ -430,14 +427,18 @@ fn pretty_rows(element: &Element, include_attributes: bool) -> Vec<String> {
                 args_vec.extend_from_slice(&p2.unwrap_or_default());
                 args_vec.join(", ")
             };
-            strs.push(format!("{name}({args}){{"));
-            body.lines()
-                .for_each(|line| strs.push(format!("{indent}{line}")));
-            strs.push(if *one_line {
-                "} [one-line invocation]".to_string()
+            if *one_line {
+                strs.push(format!("{name}({args}){{{body}}}"));
             } else {
-                "} [multiline invocation]".to_string()
-            });
+                strs.push(format!("{name}({args}){{"));
+                body.lines().enumerate().for_each(|(idx, line)| {
+                    strs.push(format!(
+                        "{indent}{} {line}",
+                        if idx == 0 { '>' } else { '|' }
+                    ))
+                });
+                strs.push("} [multiline invocation]".to_string());
+            }
         }
     }
     strs

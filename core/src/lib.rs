@@ -16,7 +16,7 @@ fn elem_to_html(elem: &Element) -> String {
         Element::Data(str) => str.to_string(),
         Element::Node {
             name,
-            attributes,
+            environment: attributes,
             children,
         } => inode_to_html(name, attributes, children),
         Element::ModuleInvocation { name, args, body, one_line } => invoke_to_html(name, args, body)
