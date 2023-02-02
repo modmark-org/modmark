@@ -43,137 +43,345 @@ pub struct ModuleArguments {
     named: Option<HashMap<String, String>>,
 }
 
-/// Returns a parser parsing the separator of arguments. The separators are whitespace and optional comma.
-///
-/// # Arguments
-///
-/// * `inline`: a bool indicating if the parser is for inline
-///
-/// returns: impl Parser<&str, (), Error<&str>>+Sized
-///
-
-fn get_arg_separator_parser<'a>(inline: bool) -> impl Parser<&'a str, (), Error<&'a str>> {
-    let space = if inline { space1 } else { multispace1 };
-    map(space, |_| ())
+impl Element {
+    /// Gets a string representation of this element and the (possible) tree-formed structure
+    /// within
+    ///
+    /// # Arguments
+    ///
+    /// * `include_environment`: whether or not the environment variables of the node
+    ///         should be printed out individually. If false, only the amount of variables
+    ///         will be printed.
+    ///
+    /// returns: a string representing the tree
+    ///
+    /// # Examples
+    ///
+    /// ```text
+    /// Document {
+    ///   env: { <empty> }
+    ///   children: [
+    ///     Paragraph {
+    ///       env: { <empty> }
+    ///       children: [
+    ///         > I love the equation
+    ///         math(form=latex){x^2}
+    ///       ]
+    ///     }
+    ///   ]
+    /// }
+    /// ```
+    pub fn tree_string(&self, include_environment: bool) -> String {
+        pretty_rows(self, include_environment).join("\n")
+    }
 }
 
-/// Parses the argument to a function removing optional quotation marks and returning the value.
+/// Parses the source document. If the parser errors out, a placeholder `Document` is returned
+/// with the error inserted
 ///
 /// # Arguments
 ///
-/// * `input`: The string to parse
+/// * `source`: The source text to parse
 ///
-/// # Examples
-///
-/// | Input                           | Match          |
-/// |---------------------------------|----------------|
-/// | `python 3`                      | `python`       |
-/// | `"Alice Parker" "Matt Steward"` | `Alice Parker` |
-/// | `a_b_c_d e_f_g_h`               | `a_b_c_d`      |
-/// | `!"#!€/"(`                      | `<Error>`      |
-///
-/// returns: a parser consuming and returning the match
-///
-fn arg_value_parser(input: &str) -> IResult<&str, &str> {
-    alt((
-        delimited(char('"'), take_until1(r#"""#), char('"')),
-        take_while1(|c: char| c.is_ascii_alphanumeric() || c == '_'),
-    ))(input)
+/// returns: Element The parsed element
+pub fn parse(source: &str) -> Element {
+    parse_document(source)
+        .finish()
+        .map(|(_, x)| x)
+        .map_err(|e| dbg!(e))
+        .unwrap_or_else(|e: Error<&str>| Node {
+            name: "Document".to_string(),
+            environment: HashMap::new(),
+            children: vec![
+                Data("Document failed to parse".to_string()),
+                Data(format!("Error: {e}")),
+            ],
+        })
 }
 
-/// Gets a parser which consumes the key-value separator, `=` in `lang=python`, without returning
-/// anything, and failing if the consumption failed
-///
-/// For inline, this is defined as `[ \t]*=[ \t]*`, and for multiline, this is defined as
-/// `[ \t\r\n]*=[ \t\r\n]*`
+/// Parses a document, which consists of multiple paragraphs and block modules, and returns a
+/// `Node` with the name `Document` containing all paragraphs
 ///
 /// # Arguments
 ///
-/// * `inline`: a bool indicating if the parser is using the ruleset for inline modules
+/// * `input`: The input to parse
 ///
-/// # Examples:
-///
-/// | Input (il=inline, ml=multiline) | Match          |
-/// |---------------------------------|----------------|
-/// | `banana`                        | `<Fail>`       |
-/// | `<space>=<space>` (il/ml)       | `<Success>`    |
-/// | `\n\n<space>=<space>\t\n` (ml)  | `<Success>`    |
-/// | `<space>`                       | `<Fail>`       |
-///
-/// returns: a parser consuming but not returning the match
-///
-fn get_kv_separator_parser<'a>(inline: bool) -> impl Parser<&'a str, (), Error<&'a str>> {
-    let space = if inline { space0 } else { multispace0 };
-    map(delimited(space, char('='), space), |_| ())
+/// returns: Result<(&str, Element), Err<Error<I>>>
+fn parse_document(input: &str) -> IResult<&str, Element> {
+    map(parse_multiple_paragraphs, |paras| Node {
+        name: "Document".to_string(),
+        environment: Default::default(),
+        children: paras,
+    })(input)
 }
 
-/// Gets a parser which parses a named argument, eg `lang = python`, and returns a key-value pair
-/// of owned Strings.
-///
-/// See `arg_name_parser`, `arg_value_parser` and `get_kv_separator_parser` for more info about
-/// rules for argument names, values and separators
+/// Parses multiple paragraphs or multiline modules, separated by two or more line endings.
+/// The result will be a vector of the elements parsed, where each element is either a
+/// multiline module invocation or a `Paragraph` node.
 ///
 /// # Arguments
 ///
-/// * `inline`: if the inline or multiline ruleset should be followed
+/// * `input`: The text to parse
 ///
-/// # Examples
+/// returns: Result<(&str, Vec<Element, Global>), Err<Error<I>>>
+fn parse_multiple_paragraphs(input: &str) -> IResult<&str, Vec<Element>> {
+    separated_list0(
+        preceded(line_ending, many1(line_ending)),
+        parse_multiline_module.or(parse_paragraph),
+    )(input)
+}
+
+/// Parses a paragraph which consists of multiple paragraph elements, and puts all those into a
+/// `Paragraph` node.
 ///
-/// | Input                           | Match             |
-/// |---------------------------------|-------------------|
-/// | `apple=pie`                     | `(apple, pie)`    |
-/// | `delim = "yes box"`             | `(delim, yes box)`|
-/// | `"fake" = news`                 | `<Fail>`          |
-/// | `<space>`                       | `<Fail>`          |
-/// returns: a parser parsing one named argument
+/// # Arguments
 ///
-fn get_named_arg_parser<'a>(
-    inline: bool,
-) -> impl Parser<&'a str, (String, String), Error<&'a str>> {
+/// * `input`:
+///
+/// returns: Result<(&str, Element), Err<Error<I>>>
+fn parse_paragraph(input: &str) -> IResult<&str, Element> {
+    map(parse_paragraph_elements, |elems| Node {
+        name: "Paragraph".to_string(),
+        environment: Default::default(),
+        children: elems,
+    })(input)
+}
+
+fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Element>> {
     map(
-        separated_pair(
-            arg_name_parser,
-            get_kv_separator_parser(inline),
-            arg_value_parser,
+        fold_many1(
+            or::or5(
+                parse_inline_module,
+                preceded(char('\\'), line_ending),
+                preceded(char('\\'), none_of("\r\n")),
+                none_of("\r\n"),
+                // note: do NOT use not_line_ending, it matches successfully on empty string
+                // so that would break this
+                terminated(line_ending, peek(none_of("\r\n"))),
+            ),
+            || (Vec::new(), String::new()),
+            |(acc_vec, acc_str), (opt_inline, _opt_esc_line_ending, opt_esc_char, opt_char, opt_line_ending)| {
+                let mut elems = acc_vec;
+                let mut string = acc_str;
+
+                if let Some(module) = opt_inline {
+                    if !string.is_empty() {
+                        elems.push(Data(mem::take(&mut string)))
+                    }
+                    elems.push(module);
+                } else if let Some(esc_char) = opt_esc_char {
+                    string.push(escape(esc_char));
+                } else if let Some(n_char) = opt_char {
+                    string.push(n_char);
+                } else if let Some(line_ending) = opt_line_ending {
+                    string.push_str(line_ending);
+                }
+                (elems, string)
+            },
         ),
-        |(a, b)| (a.to_string(), b.to_string()),
-    )
+        |(a, b)| {
+            let mut elems = a;
+            if !b.is_empty() {
+                elems.push(Data(b))
+            }
+            elems
+        },
+    )(input)
 }
 
-/// Parses an argument name and returns it. It may contain any alphanumeric characters and
-/// underscores. It consumes the captured argument name, and nothing more
+fn escape(char: char) -> char {
+    char
+}
+
+fn parse_inline_module(input: &str) -> IResult<&str, Element> {
+    map(
+        pair(get_module_invocation_parser(true), parse_inline_module_body),
+        |((name, args), body)| ModuleInvocation {
+            name,
+            args,
+            body: body.to_string(),
+            one_line: true,
+        },
+    )(input)
+}
+
+fn parse_inline_module_body(input: &str) -> IResult<&str, &str> {
+    flat_map(parse_opening_delim, get_inline_body_parser)(input)
+}
+
+fn get_inline_body_parser<'a>(
+    delim: Option<&'_ str>,
+) -> impl Parser<&'a str, &'a str, Error<&'a str>> + '_ {
+    move |i: &'a str| {
+        if let Some(opening_delim) = delim {
+            let closing = closing_delim(opening_delim);
+            let res = terminated(
+                take_until_no_newlines(closing.as_str()),
+                tag(closing.as_str()),
+            )(i);
+            res
+        } else {
+            preceded(space0, take_till(|c: char| c.is_ascii_whitespace()))(i)
+        }
+    }
+}
+
+/// This gives a parser which works just like `take_until`, but fails if `take_until` would take a
+/// newline. See the documentation for `complete::take_until`. Note that this will use `fail` to
+/// generate errors, and thus won't be as useful as the implementation of `take_until`
 ///
 /// # Arguments
 ///
-/// * `input`: The string to parse
+/// * `tag`: The tag to take
+///
+/// returns: a parser according to the description above
+///
+/// # Examples
+/// For the tag `eof`:
+/// | Input                           | Match         |
+/// |---------------------------------|---------------|
+/// | `hello, world!eof`              |`hello, world!`|
+/// | `hello, \n world!eof"`          |`<Fail>`       |
+/// | `hello, world!`                 |`<Fail>`       |
+/// | `eof`                           |(empty string) |
+///
+// this will use take_until to take a substring until a given tag, but won't take any newlines.
+// if a newline occurs before the tag, this will fail
+// don't mention the body, it is copied from the definition of take_until
+fn take_until_no_newlines(tag: &str) -> impl Fn(&str) -> IResult<&str, &str, Error<&str>> + '_ {
+    move |i: &str| match i.find_substring(tag) {
+        None => fail(i),
+        Some(index) => {
+            if i.find('\n').map_or(true, |i| i > index) {
+                Ok(i.take_split(index))
+            } else {
+                fail(i)
+            }
+        }
+    }
+}
+
+/// Parses optional delimitors for opening and closing modules.
+///
+/// # Arguments
+///
+/// * `input`:
+///
+/// returns: Result<(&str, Option<&str>), Err<Error<I>>>
+///
+fn parse_opening_delim(input: &str) -> IResult<&str, Option<&str>> {
+    opt(take_while1(|c: char| {
+        !c.is_alphanumeric() && !c.is_whitespace()
+    }))(input)
+}
+
+/// Gets the appropriate closing delimiter for an opening delimiter for a body of a module
+///
+/// # Arguments
+///
+/// * `string`: The opening delimiter
+///
+/// returns: String
 ///
 /// # Examples
 ///
-/// | Input                           | Match     |
-/// |---------------------------------|-----------|
-/// | `apple=pie`                     | `apple`   |
-/// | `delim = "yes box"`             | `delim`   |
-/// | `"fake" = news`                 | `<Fail>`  |
-/// | `<space>`                       | `<Fail>`  |
-///
-/// returns: The parsing result capturing the argument name
-fn arg_name_parser(input: &str) -> IResult<&str, &str> {
-    take_while1(|c: char| c.is_alphanumeric() || c == '_')(input)
+/// | Input | Output |
+/// |-------|--------|
+/// |`---`  | `---`  |
+/// |`((`   | `))`   |
+/// |`({<*<`| `>*>})`|
+fn closing_delim(string: &str) -> String {
+    string
+        .chars()
+        .rev()
+        .map(|c| match c {
+            '(' => ')',
+            '{' => '}',
+            '[' => ']',
+            '<' => '>',
+            x => x,
+        })
+        .collect()
 }
 
-/// Parses the optional unnamed args on all unnamed arguments removing arg separators
+fn parse_multiline_module(input: &str) -> IResult<&str, Element> {
+    map(
+        pair(
+            get_module_invocation_parser(false),
+            parse_multiline_module_body,
+        ),
+        |((name, args), body)| ModuleInvocation {
+            name,
+            args,
+            body: body.to_string(),
+            one_line: false,
+        },
+    )(input)
+}
+
+fn parse_multiline_module_body(input: &str) -> IResult<&str, &str> {
+    flat_map(parse_opening_delim, get_multiline_body_parser)(input)
+}
+
+fn get_multiline_body_parser<'a>(
+    delim: Option<&'_ str>,
+) -> impl Parser<&'a str, &'a str, Error<&'a str>> + '_ {
+    move |i: &'a str| {
+        if let Some(opening_delim) = delim {
+            let closing = closing_delim(opening_delim);
+            let res = delimited(
+                line_ending,
+                take_until(closing.as_str()),
+                tag(closing.as_str()),
+            )(i);
+            res
+        } else {
+            preceded(
+                line_ending,
+                take_until1("\r\n\r\n").or(take_until1("\n\n").or(rest)),
+            )(i)
+        }
+    }
+}
+
+/// Returns a parser for module invocations
 ///
 /// # Arguments
 ///
-/// * `inline`: All unnamed args
+/// * `input`: a bool indicating whether the returned parser is used as inline.
 ///
-/// returns: impl Parser<&str, String, Error<&str>>+Sized
+/// returns: impl Parser<&'a str, (String, ModuleArguments), Error<&'a str>>
 ///
-fn get_unnamed_arg_parser<'a>(inline: bool) -> impl Parser<&'a str, String, Error<&'a str>> {
+fn get_module_invocation_parser<'a>(
+    inline: bool,
+) -> impl Parser<&'a str, (String, ModuleArguments), Error<&'a str>> {
     map(
-        terminated(arg_value_parser, peek(not(get_kv_separator_parser(inline)))),
-        |s| s.to_string(),
+        delimited(
+            char('['),
+            pair(
+                parse_module_name,
+                opt(delimited(
+                    get_arg_separator_parser(inline),
+                    get_module_args_parser(inline),
+                    opt(get_arg_separator_parser(inline)),
+                )),
+            ),
+            char(']'),
+        ),
+        |(name, args)| (name.to_string(), args.unwrap_or_default()),
     )
+}
+
+/// A parser for module names.
+///
+/// # Arguments
+///
+/// * `input`: the slice containing the name
+///
+/// returns: IResult<&str, &str>
+///
+fn parse_module_name(input: &str) -> IResult<&str, &str> {
+    take_while1(|c: char| c == '-' || c == '_' || c.is_ascii_alphanumeric())(input)
 }
 
 /// Returns a parser for parsing module arguments. Works both for named and positional.
@@ -232,345 +440,137 @@ fn get_module_args_parser<'a>(
     )
 }
 
-/// A parser for module names.
+/// Returns a parser parsing the separator of arguments. The separators are whitespace and optional comma.
 ///
 /// # Arguments
 ///
-/// * `input`: the slice containing the name
+/// * `inline`: a bool indicating if the parser is for inline
 ///
-/// returns: IResult<&str, &str>
+/// returns: impl Parser<&str, (), Error<&str>>+Sized
 ///
-fn parse_module_name(input: &str) -> IResult<&str, &str> {
-    take_while1(|c: char| c == '-' || c == '_' || c.is_ascii_alphanumeric())(input)
+
+fn get_arg_separator_parser<'a>(inline: bool) -> impl Parser<&'a str, (), Error<&'a str>> {
+    let space = if inline { space1 } else { multispace1 };
+    map(space, |_| ())
 }
 
-/// Returns a parser for module invocations
+/// Parses the optional unnamed args on all unnamed arguments removing arg separators
 ///
 /// # Arguments
 ///
-/// * `input`: a bool indicating whether the returned parser is used as inline.
+/// * `inline`: All unnamed args
 ///
-/// returns: impl Parser<&'a str, (String, ModuleArguments), Error<&'a str>>
+/// returns: impl Parser<&str, String, Error<&str>>+Sized
 ///
-fn get_module_invocation_parser<'a>(
-    inline: bool,
-) -> impl Parser<&'a str, (String, ModuleArguments), Error<&'a str>> {
+fn get_unnamed_arg_parser<'a>(inline: bool) -> impl Parser<&'a str, String, Error<&'a str>> {
     map(
-        delimited(
-            char('['),
-            pair(
-                parse_module_name,
-                opt(delimited(
-                    get_arg_separator_parser(inline),
-                    get_module_args_parser(inline),
-                    opt(get_arg_separator_parser(inline)),
-                )),
-            ),
-            char(']'),
-        ),
-        |(name, args)| (name.to_string(), args.unwrap_or_default()),
+        terminated(arg_value_parser, peek(not(get_kv_separator_parser(inline)))),
+        |s| s.to_string(),
     )
 }
 
-/// Parses optional delimitors for opening and closing modules.
+/// Gets a parser which parses a named argument, eg `lang = python`, and returns a key-value pair
+/// of owned Strings.
+///
+/// See `arg_name_parser`, `arg_value_parser` and `get_kv_separator_parser` for more info about
+/// rules for argument names, values and separators
 ///
 /// # Arguments
 ///
-/// * `input`:
-///
-/// returns: Result<(&str, Option<&str>), Err<Error<I>>>
-///
-fn parse_opening_delim(input: &str) -> IResult<&str, Option<&str>> {
-    opt(take_while1(|c: char| {
-        !c.is_alphanumeric() && !c.is_whitespace()
-    }))(input)
-}
-
-fn get_multiline_body_parser<'a>(
-    delim: Option<&'_ str>,
-) -> impl Parser<&'a str, &'a str, Error<&'a str>> + '_ {
-    move |i: &'a str| {
-        if let Some(opening_delim) = delim {
-            let closing = closing_delim(opening_delim);
-            let res = delimited(
-                line_ending,
-                take_until(closing.as_str()),
-                tag(closing.as_str()),
-            )(i);
-            res
-        } else {
-            preceded(
-                line_ending,
-                take_until1("\r\n\r\n").or(take_until1("\n\n").or(rest)),
-            )(i)
-        }
-    }
-}
-
-fn get_inline_body_parser<'a>(
-    delim: Option<&'_ str>,
-) -> impl Parser<&'a str, &'a str, Error<&'a str>> + '_ {
-    move |i: &'a str| {
-        if let Some(opening_delim) = delim {
-            let closing = closing_delim(opening_delim);
-            let res = terminated(
-                take_until_no_newlines(closing.as_str()),
-                tag(closing.as_str()),
-            )(i);
-            res
-        } else {
-            preceded(space0, take_till(|c: char| c.is_ascii_whitespace()))(i)
-        }
-    }
-}
-
-/// This gives a parser which works just like `take_until`, but fails if `take_until` would take a
-/// newline. See the documentation for `complete::take_until`. Note that this will use `fail` to
-/// generate errors, and thus won't be as useful as the implementation of `take_until`
-///
-/// # Arguments
-///
-/// * `tag`: The tag to take
-///
-/// returns: a parser according to the description above
-///
-/// # Examples
-/// For the tag `eof`:
-/// | Input                           | Match         |
-/// |---------------------------------|---------------|
-/// | `hello, world!eof`              |`hello, world!`|
-/// | `hello, \n world!eof"`          |`<Fail>`       |
-/// | `hello, world!`                 |`<Fail>`       |
-/// | `eof`                           |(empty string) |
-///
-// this will use take_until to take a substring until a given tag, but won't take any newlines.
-// if a newline occurs before the tag, this will fail
-// don't mention the body, it is copied from the definition of take_until
-fn take_until_no_newlines(tag: &str) -> impl Fn(&str) -> IResult<&str, &str, Error<&str>> + '_ {
-    move |i: &str| match i.find_substring(tag) {
-        None => fail(i),
-        Some(index) => {
-            if i.find('\n').map_or(true, |i| i > index) {
-                Ok(i.take_split(index))
-            } else {
-                fail(i)
-            }
-        }
-    }
-}
-
-fn parse_inline_module_body(input: &str) -> IResult<&str, &str> {
-    flat_map(parse_opening_delim, get_inline_body_parser)(input)
-}
-
-fn parse_inline_module(input: &str) -> IResult<&str, Element> {
-    map(
-        pair(get_module_invocation_parser(true), parse_inline_module_body),
-        |((name, args), body)| ModuleInvocation {
-            name,
-            args,
-            body: body.to_string(),
-            one_line: true,
-        },
-    )(input)
-}
-
-fn parse_multiline_module_body(input: &str) -> IResult<&str, &str> {
-    flat_map(parse_opening_delim, get_multiline_body_parser)(input)
-}
-
-fn parse_multiline_module(input: &str) -> IResult<&str, Element> {
-    map(
-        pair(
-            get_module_invocation_parser(false),
-            parse_multiline_module_body,
-        ),
-        |((name, args), body)| ModuleInvocation {
-            name,
-            args,
-            body: body.to_string(),
-            one_line: false,
-        },
-    )(input)
-}
-
-fn escape(char: char) -> char {
-    char
-}
-
-fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Element>> {
-    map(
-        fold_many1(
-            or::or5(
-                parse_inline_module,
-                preceded(char('\\'), line_ending),
-                preceded(char('\\'), none_of("\r\n")),
-                none_of("\r\n"),
-                // note: do NOT use not_line_ending, it matches successfully on empty string
-                // so that would break this
-                terminated(line_ending, peek(none_of("\r\n"))),
-            ),
-            || (Vec::new(), String::new()),
-            |(acc_vec, acc_str), (opt_inline, _opt_esc_line_ending, opt_esc_char, opt_char, opt_line_ending)| {
-                let mut elems = acc_vec;
-                let mut string = acc_str;
-
-                if let Some(module) = opt_inline {
-                    if !string.is_empty() {
-                        elems.push(Data(mem::take(&mut string)))
-                    }
-                    elems.push(module);
-                } else if let Some(esc_char) = opt_esc_char {
-                    string.push(escape(esc_char));
-                } else if let Some(n_char) = opt_char {
-                    string.push(n_char);
-                } else if let Some(line_ending) = opt_line_ending {
-                    string.push_str(line_ending);
-                }
-                (elems, string)
-            },
-        ),
-        |(a, b)| {
-            let mut elems = a;
-            if !b.is_empty() {
-                elems.push(Data(b))
-            }
-            elems
-        },
-    )(input)
-}
-
-/// Parses a paragraph which consists of multiple paragraph elements, and puts all those into a
-/// `Paragraph` node.
-///
-/// # Arguments
-///
-/// * `input`:
-///
-/// returns: Result<(&str, Element), Err<Error<I>>>
-fn parse_paragraph(input: &str) -> IResult<&str, Element> {
-    map(parse_paragraph_elements, |elems| Node {
-        name: "Paragraph".to_string(),
-        environment: Default::default(),
-        children: elems,
-    })(input)
-}
-
-/// Parses multiple paragraphs or multiline modules, separated by two or more line endings.
-/// The result will be a vector of the elements parsed, where each element is either a
-/// multiline module invocation or a `Paragraph` node.
-///
-/// # Arguments
-///
-/// * `input`: The text to parse
-///
-/// returns: Result<(&str, Vec<Element, Global>), Err<Error<I>>>
-fn parse_multiple_paragraphs(input: &str) -> IResult<&str, Vec<Element>> {
-    separated_list0(
-        preceded(line_ending, many1(line_ending)),
-        parse_multiline_module.or(parse_paragraph),
-    )(input)
-}
-
-/// Parses a document, which consists of multiple paragraphs and block modules, and returns a
-/// `Node` with the name `Document` containing all paragraphs
-///
-/// # Arguments
-///
-/// * `input`: The input to parse
-///
-/// returns: Result<(&str, Element), Err<Error<I>>>
-fn parse_document(input: &str) -> IResult<&str, Element> {
-    map(parse_multiple_paragraphs, |paras| Node {
-        name: "Document".to_string(),
-        environment: Default::default(),
-        children: paras,
-    })(input)
-}
-
-/// Gets the appropriate closing delimiter for an opening delimiter for a body of a module
-///
-/// # Arguments
-///
-/// * `string`: The opening delimiter
-///
-/// returns: String
+/// * `inline`: if the inline or multiline ruleset should be followed
 ///
 /// # Examples
 ///
-/// | Input | Output |
-/// |-------|--------|
-/// |`---`  | `---`  |
-/// |`((`   | `))`   |
-/// |`({<*<`| `>*>})`|
-fn closing_delim(string: &str) -> String {
-    string
-        .chars()
-        .rev()
-        .map(|c| match c {
-            '(' => ')',
-            '{' => '}',
-            '[' => ']',
-            '<' => '>',
-            x => x,
-        })
-        .collect()
+/// | Input                           | Match             |
+/// |---------------------------------|-------------------|
+/// | `apple=pie`                     | `(apple, pie)`    |
+/// | `delim = "yes box"`             | `(delim, yes box)`|
+/// | `"fake" = news`                 | `<Fail>`          |
+/// | `<space>`                       | `<Fail>`          |
+/// returns: a parser parsing one named argument
+///
+fn get_named_arg_parser<'a>(
+    inline: bool,
+) -> impl Parser<&'a str, (String, String), Error<&'a str>> {
+    map(
+        separated_pair(
+            arg_key_parser,
+            get_kv_separator_parser(inline),
+            arg_value_parser,
+        ),
+        |(a, b)| (a.to_string(), b.to_string()),
+    )
 }
 
-/// Parses the source document. If the parser errors out, a placeholder `Document` is returned
-/// with the error inserted
+/// Parses an argument key and returns it. It may contain any alphanumeric characters and
+/// underscores. It consumes the captured argument name, and nothing more
 ///
 /// # Arguments
 ///
-/// * `source`: The source text to parse
+/// * `input`: The string to parse
 ///
-/// returns: Element The parsed element
-pub fn parse(source: &str) -> Element {
-    parse_document(source)
-        .finish()
-        .map(|(_, x)| x)
-        .map_err(|e| dbg!(e))
-        .unwrap_or_else(|e: Error<&str>| Node {
-            name: "Document".to_string(),
-            environment: HashMap::new(),
-            children: vec![
-                Data("Document failed to parse".to_string()),
-                Data(format!("Error: {e}")),
-            ],
-        })
+/// # Examples
+///
+/// | Input                           | Match     |
+/// |---------------------------------|-----------|
+/// | `apple=pie`                     | `apple`   |
+/// | `delim = "yes box"`             | `delim`   |
+/// | `"fake" = news`                 | `<Fail>`  |
+/// | `<space>`                       | `<Fail>`  |
+///
+/// returns: The parsing result capturing the argument name
+fn arg_key_parser(input: &str) -> IResult<&str, &str> {
+    take_while1(|c: char| c.is_alphanumeric() || c == '_')(input)
 }
 
-impl Element {
-    /// Gets a string representation of this element and the (possible) tree-formed structure
-    /// within
-    ///
-    /// # Arguments
-    ///
-    /// * `include_environment`: whether or not the environment variables of the node
-    ///         should be printed out individually. If false, only the amount of variables
-    ///         will be printed.
-    ///
-    /// returns: a string representing the tree
-    ///
-    /// # Examples
-    ///
-    /// ```text
-    /// Document {
-    ///   env: { <empty> }
-    ///   children: [
-    ///     Paragraph {
-    ///       env: { <empty> }
-    ///       children: [
-    ///         > I love the equation
-    ///         math(form=latex){x^2}
-    ///       ]
-    ///     }
-    ///   ]
-    /// }
-    /// ```
-    pub fn tree_string(&self, include_environment: bool) -> String {
-        pretty_rows(self, include_environment).join("\n")
-    }
+/// Parses the argument to a function removing optional quotation marks and returning the value.
+///
+/// # Arguments
+///
+/// * `input`: The string to parse
+///
+/// # Examples
+///
+/// | Input                           | Match          |
+/// |---------------------------------|----------------|
+/// | `python 3`                      | `python`       |
+/// | `"Alice Parker" "Matt Steward"` | `Alice Parker` |
+/// | `a_b_c_d e_f_g_h`               | `a_b_c_d`      |
+/// | `!"#!€/"(`                      | `<Error>`      |
+///
+/// returns: a parser consuming and returning the match
+///
+fn arg_value_parser(input: &str) -> IResult<&str, &str> {
+    alt((
+        delimited(char('"'), take_until1(r#"""#), char('"')),
+        take_while1(|c: char| c.is_ascii_alphanumeric() || c == '_'),
+    ))(input)
+}
+
+/// Gets a parser which consumes the key-value separator, `=` in `lang=python`, without returning
+/// anything, and failing if the consumption failed
+///
+/// For inline, this is defined as `[ \t]*=[ \t]*`, and for multiline, this is defined as
+/// `[ \t\r\n]*=[ \t\r\n]*`
+///
+/// # Arguments
+///
+/// * `inline`: a bool indicating if the parser is using the ruleset for inline modules
+///
+/// # Examples:
+///
+/// | Input (il=inline, ml=multiline) | Match          |
+/// |---------------------------------|----------------|
+/// | `banana`                        | `<Fail>`       |
+/// | `<space>=<space>` (il/ml)       | `<Success>`    |
+/// | `\n\n<space>=<space>\t\n` (ml)  | `<Success>`    |
+/// | `<space>`                       | `<Fail>`       |
+///
+/// returns: a parser consuming but not returning the match
+///
+fn get_kv_separator_parser<'a>(inline: bool) -> impl Parser<&'a str, (), Error<&'a str>> {
+    let space = if inline { space0 } else { multispace0 };
+    map(delimited(space, char('='), space), |_| ())
 }
 
 /// Converts an AST into a vector of strings suitable for a text representation.
