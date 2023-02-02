@@ -19,15 +19,16 @@ fn elem_to_html(elem: &Element) -> String {
             environment: attributes,
             children,
         } => inode_to_html(name, attributes, children),
-        Element::ModuleInvocation { name, args, body, one_line } => invoke_to_html(name, args, body)
+        Element::ModuleInvocation {
+            name,
+            args,
+            body,
+            one_line: _,
+        } => invoke_to_html(name, args, body),
     }
 }
 
-fn invoke_to_html(
-    name: &str,
-    args: &ModuleArguments,
-    body: &String
-) -> String {
+fn invoke_to_html(_name: &str, _args: &ModuleArguments, _body: &str) -> String {
     "".to_string()
 }
 
