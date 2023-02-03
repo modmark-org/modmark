@@ -1,5 +1,5 @@
 use clap::Parser;
-use core::eval;
+use core::{eval, Context};
 use crossterm::{
     cursor,
     style::{self, Stylize},
@@ -41,7 +41,8 @@ fn print_tree(tree: parser::Element) {
 fn compile_file(args: &Args) -> Result<Element> {
     let source = fs::read_to_string(&args.input)?;
     let document = parse(&source);
-    let output = eval(&document);
+    let mut ctx = Context::default();
+    let output = eval(&document, &mut ctx);
 
     let mut output_file = File::create(&args.output)?;
     output_file.write_all(output.as_bytes())?;
