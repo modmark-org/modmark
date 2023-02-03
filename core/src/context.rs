@@ -3,11 +3,12 @@ use std::collections::HashMap;
 use parser::Element;
 use wasmer::{Cranelift, Store};
 
-use crate::{CoreError, LoadedModule, NodeName, Transform};
+use crate::{CoreError, LoadedModule, ModuleInfo, NodeName, Transform};
 
 pub struct Context {
     transforms: HashMap<Transform, LoadedModule>,
     all_transforms_for_node: HashMap<NodeName, Vec<(Transform, LoadedModule)>>,
+    modules_by_name: HashMap<String, LoadedModule>,
     store: Store,
 }
 
@@ -16,6 +17,7 @@ impl Context {
         Context {
             transforms: HashMap::new(),
             all_transforms_for_node: HashMap::new(),
+            modules_by_name: HashMap::new(),
             store: Store::new(Cranelift::default()),
         }
     }
@@ -36,6 +38,9 @@ impl Context {
 
     pub fn load_module(&mut self, wasm_source: &[u8]) -> Result<(), CoreError> {
         let module = LoadedModule::new(wasm_source, &mut self.store)?;
+
+        self.modules_by_name
+            .insert(module.info.as_ref().name.to_string(), module.clone());
 
         // Go through all transforms that the module supports and add them
         // to the Context.
@@ -75,6 +80,13 @@ impl Context {
     pub fn transform(&mut self, _elem: Element) -> Result<Element, CoreError> {
         // FIXME: implement this
         todo!()
+    }
+
+    /// Borrow information about a module with a given name
+    pub fn get_module_info(&self, name: &str) -> Option<&ModuleInfo> {
+        self.modules_by_name
+            .get(name)
+            .map(|module| module.info.as_ref())
     }
 }
 
