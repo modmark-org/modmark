@@ -9,7 +9,8 @@ use json::{object, JsonValue};
 
 use parser::{parse, Element};
 
-#[test]
+//Old runner, don't use, see compilation_test.rs for using datatest-stable runner
+//#[test]
 fn test_a() {
     let filename = format!(
         "{}/tests/compilation_tests/simple_paragraph.mdm",
