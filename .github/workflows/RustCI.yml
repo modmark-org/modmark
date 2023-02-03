@@ -16,7 +16,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Install toolchain (minimal, stable)
+      - name: Install toolchain (minimal, stable, wasm32-wasi)
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-wasi
@@ -29,7 +29,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Install toolchain (minimal, stable)
+      - name: Install toolchain (minimal, stable, wasm32-wasi)
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-wasi
@@ -42,7 +42,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Install toolchain (minimal+clippy, stable)
+      - name: Install toolchain (minimal+clippy, stable, wasm32-wasi)
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -56,7 +56,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Install toolchain (minimal+rustfmt, stable)
+      - name: Install toolchain (minimal+rustfmt, stable, wasm32-wasi)
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
