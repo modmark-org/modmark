@@ -38,7 +38,7 @@ pub enum CoreError {
 
 /// Evaluates a document using the given context
 pub fn eval(_document: &Element, _ctx: &mut Context) -> String {
-    todo!()
+    "TODO".to_string()
 }
 
 type NodeName = String;

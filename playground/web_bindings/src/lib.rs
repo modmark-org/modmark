@@ -1,3 +1,4 @@
+use core::{eval, Context};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -17,7 +18,8 @@ pub fn raw_tree(source: &str) -> String {
 #[wasm_bindgen]
 pub fn transpile(source: &str) -> String {
     let document = parser::parse(source);
-    core::eval(&document)
+    let mut ctx = Context::default();
+    eval(&document, &mut ctx)
 }
 
 pub fn set_panic_hook() {
