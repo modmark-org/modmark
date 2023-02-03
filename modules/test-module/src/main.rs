@@ -2,7 +2,7 @@ use std::{env, io};
 
 #[no_mangle]
 pub fn name() {
-    println!("My cool utils 🥑");
+    println!("Module test");
 }
 
 #[no_mangle]
@@ -12,24 +12,8 @@ pub fn version() {
 
 #[no_mangle]
 pub fn transforms() {
-    /*
-    [verbatim] -> tex html
-    foo       - An example of a required positional argument
-    ident = 4 - The number of spaces to indent
-
-    [table] -> table
-
-    table -> html latex
-
-    row - html latex
-    */
-
-    println!("[verbatim] -> html latex");
-    println!("foo - An example of a required postional argument");
-    println!("ident = 4 - The number of spaces to indent the verbatim block");
-    println!("");
-
     println!("[table] -> table");
+    println!("border = black - What color the border should be");
     println!("");
 
     println!("table -> html latex");
@@ -47,7 +31,6 @@ fn main() {
     io::stdin().read_line(&mut body).unwrap();
 
     match node_name.as_str() {
-        "[verbatim]" => todo!(),
         "[table]" => todo!(),
         "row" => todo!(),
         "table" => todo!(),

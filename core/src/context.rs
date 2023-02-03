@@ -5,6 +5,7 @@ use wasmer::{Cranelift, Store};
 
 use crate::{CoreError, LoadedModule, ModuleInfo, NodeName, Transform};
 
+#[derive(Debug)]
 pub struct Context {
     transforms: HashMap<Transform, LoadedModule>,
     all_transforms_for_node: HashMap<NodeName, Vec<(Transform, LoadedModule)>>,
@@ -23,12 +24,6 @@ impl Context {
     }
 
     pub fn load_default_modules(&mut self) {
-        self.load_module(include_bytes!(concat!(
-            env!("OUT_DIR"),
-            "/bold/wasm32-wasi/release/bold.wasm"
-        )))
-        .expect("Failed to load bold module");
-
         self.load_module(include_bytes!(concat!(
             env!("OUT_DIR"),
             "/test-module/wasm32-wasi/release/test-module.wasm"

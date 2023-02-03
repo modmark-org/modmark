@@ -15,12 +15,12 @@ pub struct Transform {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Arg {
-    name: String,
-    default: Option<String>,
-    description: String,
+    pub name: String,
+    pub default: Option<String>,
+    pub description: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ModuleInfo {
     pub name: String,
     pub version: String,
@@ -78,7 +78,7 @@ impl LoadedModule {
             output
                 .read_to_string(&mut buffer)
                 .map_err(|_| CoreError::InvalidUTF8("unkown (when reading name)".to_string()))?;
-            buffer
+            buffer.trim().to_string()
         };
 
         // Retrieve version from module
@@ -97,7 +97,7 @@ impl LoadedModule {
             output
                 .read_to_string(&mut buffer)
                 .map_err(|_| CoreError::InvalidUTF8(name.clone()))?;
-            buffer
+            buffer.trim().to_string()
         };
 
         // Retrieve transform capabilities of module
