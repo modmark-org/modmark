@@ -33,7 +33,7 @@ jobs:
         uses: actions/configure-pages@v2
       - name: Setup output directory
         run: mkdir build
-      - name: Install toolchain (minimal, stable, wasm32-unknown-unknown)
+      - name: Install toolchain (minimal, stable, wasm32-unknown-unknown + wasm32-wasi)
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown, wasm32-wasi
