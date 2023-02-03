@@ -1,0 +1,76 @@
+Testing parsing of inline modules with various spacing, and
+inclusion of delimiters and/or args. "yes" are meant to be
+captured, "no" isn't.
+
+Cases below:
+1. Without spaces, take next string
+2. With space, take next string
+3. Should take "\[" as delim, capture "abc", leaving "no"
+4. Should capture "[abc]yes" as string
+5. Should include spaces
+6. Should not stop at single quote
+
+```mdm
+Equations:
+[one]yes no
+[two] yes no
+[tre][abc]no
+[for] [abc]yes
+[fiv]" yes space "
+[six]""yes1 "yes2" yes3""
+```
+
+```json
+{
+    "name": "Document",
+    "children": [
+        {
+            "name": "Paragraph",
+            "children": [
+                "Equations:\n",
+                {
+                    "name": "one",
+                    "args": {},
+                    "body": "yes",
+                    "one_line": true
+                },
+                " no\n",
+                {
+                    "name": "two",
+                    "args": {},
+                    "body": "yes",
+                    "one_line": true
+                },
+                " no\n",
+                {
+                    "name": "tre",
+                    "args": {},
+                    "body": "abc",
+                    "one_line": true
+                },
+                "no\n",
+                {
+                    "name": "for",
+                    "args": {},
+                    "body": "[abc]yes",
+                    "one_line": true
+                },
+                "\n",
+                {
+                    "name": "fiv",
+                    "args": {},
+                    "body": " yes space ",
+                    "one_line": true
+                },
+                "\n",
+                {
+                    "name": "six",
+                    "args": {},
+                    "body": "yes1 \"yes2\" yes3",
+                    "one_line": true
+                }
+            ]
+        }
+    ]
+}
+```

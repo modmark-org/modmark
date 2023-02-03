@@ -1,0 +1,41 @@
+Testing parsing of two paragraphs.
+Note that some newlines are escaped, while
+some are not. In the second example,
+note that there is a space between the first
+and second line, and the second and
+third line (right behind the backslash),
+while between the third and forth line,
+there isn't a space.
+
+```mdm
+This is the first paragraph \
+of the document. Slashes \
+are used to escape new-\
+lines.
+
+This is the second paragraph.
+Here, escaped newlines are \
+used sometimes, while sometimes
+not
+```
+
+```json
+{
+    "name": "Document",
+    "children": [
+        {
+            "name": "Paragraph",
+            "children": [
+                "This is the first paragraph of the document. Slashes are used to escape new-lines."
+            ]
+        },
+        
+        {
+            "name": "Paragraph",
+            "children": [
+                "This is the second paragraph.\nHere, escaped newlines are used sometimes, while sometimes\nnot"
+            ]
+        }
+    ]
+}
+```
