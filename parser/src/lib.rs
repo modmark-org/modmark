@@ -39,8 +39,8 @@ pub enum Element {
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct ModuleArguments {
-    positioned: Option<Vec<String>>,
-    named: Option<HashMap<String, String>>,
+    pub positioned: Option<Vec<String>>,
+    pub named: Option<HashMap<String, String>>,
 }
 
 impl Element {

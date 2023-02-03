@@ -1,0 +1,22 @@
+Testing the parsing of a simple paragraph with some hard breaks
+
+```mdm
+This is a simple paragraph.
+It should be easy to parse.
+It contains a couple of hard
+breaks
+```
+
+```json
+{
+    "name": "Document",
+    "children": [
+        {
+            "name": "Paragraph",
+            "children": [
+                "This is a simple paragraph.\nIt should be easy to parse.\nIt contains a couple of hard\nbreaks"
+            ]
+        }
+    ]
+}
+```
