@@ -9,3 +9,6 @@ edition = "2021"
 regex = "1"
 lazy_static = "1.4.0"
 nom = "7.1.3"
+
+[dev-dependencies]
+json = "0.12.4"
