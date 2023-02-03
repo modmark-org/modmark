@@ -1,0 +1,11 @@
+{
+    "name": "Document",
+    "children": [
+        {
+            "name": "Paragraph",
+            "children": [
+                "This is a simple paragraph.\nIt should be easy to parse.\nIt contains a couple of hard\nbreaks"
+            ]
+        }
+    ]
+}
