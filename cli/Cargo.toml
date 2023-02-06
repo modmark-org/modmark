@@ -10,4 +10,5 @@ parser = {version= "*", path = "../parser/"}
 core = {version= "*", path = "../core/"}
 clap = { version = "4.1.4", features = ["derive"] }
 notify = "5.0.0"
-termion = "2.0.1"
+dirs = "4.0.0"
+crossterm = "0.26.0"
