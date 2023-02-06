@@ -1,5 +1,7 @@
 use thiserror::Error;
-use wasmer::{CompileError, ExportError, InstantiationError, RuntimeError};
+#[cfg(feature = "native")]
+use wasmer::CompileError;
+use wasmer::{ExportError, InstantiationError, RuntimeError};
 use wasmer_wasi::{WasiError, WasiStateCreationError};
 
 use crate::NodeName;
@@ -12,20 +14,21 @@ pub enum CoreError {
         "Could not load module '{2}'. There is another module that transforms '{0}' to '{1}'."
     )]
     OccupiedTransform(NodeName, NodeName, String),
+    #[cfg(feature = "native")]
     #[error("Compiler error")]
-    WasmerCompiler(CompileError),
+    WasmerCompiler(#[from] CompileError),
     #[error("No module for transforming node '{0}'.")]
     MissingTransform(String),
     #[error("Wasi error '{0}'.")]
-    WasiError(WasiError),
+    WasiError(#[from] WasiError),
     #[error("Wasmer intstantiation error '{0}'.")]
-    WasmerInstantiation(InstantiationError),
+    WasmerInstantiation(#[from] InstantiationError),
     #[error("Wasi state creation error '{0}'.")]
-    WasiStateCreation(WasiStateCreationError),
+    WasiStateCreation(#[from] WasiStateCreationError),
     #[error("Wasmer export error '{0}'.")]
-    WasmerExport(ExportError),
+    WasmerExport(#[from] ExportError),
     #[error("Wasmer runtime error '{0}'.")]
-    WasmerRuntimeError(RuntimeError),
+    WasmerRuntimeError(#[from] RuntimeError),
     #[error("Module '{0}' has written invalid UTF-8 to stdout.")]
     InvalidUTF8(String),
     #[error("Failed to parse transforms of module '{0}'.")]

@@ -3,10 +3,19 @@ name = "core"
 version = "0.1.0"
 edition = "2021"
 
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 parser = {version= "*", path = "../parser/"}
-wasmer = {version = "3.1.1", features = ["sys-default"]}
-wasmer-wasi = "3.1.1"
+wasmer = {version = "3.1.1", default-features = false}
+wasmer-wasi = {version = "3.1.1", default-features = false}
 thiserror = "1.0.38"
+
+
+# Use the "web" feature to support web builds with:
+[features]
+# `wasm-pack build --target web`
+default = ["native"]
+native = ["wasmer/sys-default", "wasmer-wasi/sys-default"]
+web = ["wasmer/js-default", "wasmer-wasi/js"]

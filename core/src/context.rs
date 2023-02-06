@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use parser::Element;
-use wasmer::{Cranelift, Store};
+#[cfg(feature = "native")]
+use wasmer::Cranelift;
+use wasmer::Store;
 
 use crate::{CoreError, LoadedModule, ModuleInfo, NodeName, Transform};
 
@@ -19,7 +21,7 @@ impl Context {
             transforms: HashMap::new(),
             all_transforms_for_node: HashMap::new(),
             modules_by_name: HashMap::new(),
-            store: Store::new(Cranelift::default()),
+            store: get_new_store(),
         }
     }
 
@@ -92,4 +94,14 @@ impl Default for Context {
         ctx.load_default_modules();
         ctx
     }
+}
+
+/// Get a new using different compilers depending
+/// if we are using the "web" or "native" feature
+fn get_new_store() -> Store {
+    #[cfg(feature = "web")]
+    return Store::new();
+
+    #[cfg(feature = "native")]
+    return Store::new(Cranelift::new());
 }
