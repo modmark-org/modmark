@@ -38,7 +38,11 @@ impl LoadedModule {
     /// containing info about the module as well as the compiled wasm source.
     pub fn new(wasm_source: &[u8], store: &mut Store) -> Result<Self, CoreError> {
         // Compile the module and store it
-        let module = Module::from_binary(store, wasm_source).map_err(CoreError::WasmerCompiler)?;
+        #[cfg(feature = "native")]
+        let module = Module::from_binary(store, wasm_source)?;
+
+        #[cfg(feature = "web")]
+        let module = Module::from_binary(store, wasm_source).expect("Web wasm compiler error");
 
         let input = Pipe::new();
         let mut output = Pipe::new();
@@ -52,8 +56,7 @@ impl LoadedModule {
         let import_object = wasi_env
             .import_object(store, &module)
             .map_err(CoreError::WasiError)?;
-        let instance = Instance::new(store, &module, &import_object)
-            .map_err(CoreError::WasmerInstantiation)?;
+        let instance = Instance::new(store, &module, &import_object)?;
 
         // Attach the memory export
         let memory = instance
@@ -64,13 +67,8 @@ impl LoadedModule {
 
         // Retrieve name from module
         // Call the `name` function
-        let name_fn = instance
-            .exports
-            .get_function("name")
-            .map_err(CoreError::WasmerExport)?;
-        name_fn
-            .call(store, &[])
-            .map_err(CoreError::WasmerRuntimeError)?;
+        let name_fn = instance.exports.get_function("name")?;
+        name_fn.call(store, &[])?;
 
         // Read the name from stdout
         let name = {
@@ -83,13 +81,8 @@ impl LoadedModule {
 
         // Retrieve version from module
         // Call the `version` function
-        let version_fn = instance
-            .exports
-            .get_function("version")
-            .map_err(CoreError::WasmerExport)?;
-        version_fn
-            .call(store, &[])
-            .map_err(CoreError::WasmerRuntimeError)?;
+        let version_fn = instance.exports.get_function("version")?;
+        version_fn.call(store, &[])?;
 
         // Read the version from stdout
         let version = {
@@ -101,13 +94,8 @@ impl LoadedModule {
         };
 
         // Retrieve transform capabilities of module
-        let transforms_fn = instance
-            .exports
-            .get_function("transforms")
-            .map_err(CoreError::WasmerExport)?;
-        transforms_fn
-            .call(store, &[])
-            .map_err(CoreError::WasmerRuntimeError)?;
+        let transforms_fn = instance.exports.get_function("transforms")?;
+        transforms_fn.call(store, &[])?;
 
         let raw_transforms_str = {
             let mut buffer = String::new();

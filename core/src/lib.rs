@@ -8,6 +8,9 @@ pub use context::Context;
 pub use error::CoreError;
 pub use loaded_module::{Arg, LoadedModule, ModuleInfo, NodeName, Transform};
 
+#[cfg(all(feature = "web", feature = "native"))]
+compile_error!("feature \"native\" and feature \"web\" cannot be enabled at the same time");
+
 /// Evaluates a document using the given context
 pub fn eval(_document: &Element, _ctx: &mut Context) -> String {
     "TODO".to_string()
