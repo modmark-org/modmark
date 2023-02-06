@@ -1,13 +1,18 @@
 use clap::Parser;
 use core::eval;
+use crossterm::{
+    cursor,
+    style::{self, Stylize},
+    terminal, ExecutableCommand,
+};
 use notify::{
     Config, Event, PollWatcher, RecommendedWatcher, RecursiveMode, Result, Watcher, WatcherKind,
 };
 use parser::{parse, Element};
 use std::env;
+use std::io::{stdout, Write};
 use std::{fs, path::Path};
-use std::{fs::File, io::Write, time::Duration};
-use termion::{color, style};
+use std::{fs::File, time::Duration};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
@@ -45,36 +50,36 @@ fn compile_file(args: &Args) -> Result<Element> {
 
 fn watch(args: &Args, target: &String) -> Result<()> {
     fn watch_compile(event: Result<Event>, args: &Args, target: &String) -> Result<()> {
-        print!("{}{}", termion::clear::All, termion::cursor::Goto(1, 1));
-        println!(
-            "{}Recompiling...{}\n",
-            color::Fg(color::Yellow),
-            style::Reset
-        );
+        let mut stdout = stdout();
+
+        stdout.execute(terminal::Clear(terminal::ClearType::All))?;
+        stdout.execute(cursor::MoveTo(0, 0))?;
+        stdout.execute(style::PrintStyledContent("Recompiling...".yellow()))?;
 
         let tree = match event {
-            Ok(_) => match compile_file(args) {
-                Ok(t) => t,
-                Err(e) => return Err(e),
-            },
+            Ok(_) => compile_file(args),
             Err(e) => return Err(e),
         };
 
-        print!("{}{}", termion::clear::All, termion::cursor::Goto(1, 1));
-        println!(
-            "{}File successfully compiled!{}\n",
-            color::Fg(color::Green),
-            style::Reset
-        );
+        stdout.execute(terminal::Clear(terminal::ClearType::All))?;
+        stdout.execute(cursor::MoveTo(0, 0))?;
+        stdout.execute(style::PrintStyledContent(
+            "File successfully compiled!\n\n".green(),
+        ))?;
+
+        let mut location = Path::new(&target).to_path_buf();
+        location.push(&args.output);
 
         println!(
-            "Your file can be found at {}/{}\nSave your file to recompile changes.",
-            target, &args.output
+            "Your file can be found at {}\nSave your file to recompile changes.",
+            location.display()
         );
 
         if args.dev {
-            print_tree(tree);
+            print_tree(tree?);
         }
+
+        stdout.flush()?;
 
         Ok(())
     }
@@ -90,6 +95,7 @@ fn watch(args: &Args, target: &String) -> Result<()> {
     watcher.watch(Path::new(&args.input), RecursiveMode::Recursive)?;
 
     watch_compile(Ok(Event::default()), args, target)?;
+
     for event in rx {
         watch_compile(event, args, target)?;
     }
@@ -107,15 +113,18 @@ fn main() -> Result<()> {
     } else {
         match compile_file(&args) {
             Ok(tree) => {
-                print!("{}{}", termion::clear::All, termion::cursor::Goto(1, 1));
-                println!("{}File successfully compiled!\n", color::Fg(color::Green));
+                let mut stdout = stdout();
 
-                println!(
-                    "{}Output file can be found at {}/{}",
-                    color::Fg(color::Blue),
-                    target,
-                    &args.output
-                );
+                stdout.execute(terminal::Clear(terminal::ClearType::All))?;
+                stdout.execute(cursor::MoveTo(0, 0))?;
+                stdout.execute(style::PrintStyledContent(
+                    "File successfully compiled!\n\n".green(),
+                ))?;
+
+                let mut location = Path::new(&target).to_path_buf();
+                location.push(&args.output);
+
+                println!("Output file can be found at {}", location.display());
 
                 if args.dev {
                     print_tree(tree);
