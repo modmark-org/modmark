@@ -4,7 +4,7 @@ use std::path::Path;
 
 use json::{object, JsonValue};
 
-use parser::{parse, Element};
+use parser::{parse, parse_to_ast, Ast, Document, Element};
 
 fn split_test(input: &Path) -> datatest_stable::Result<()> {
     let output = input.with_extension("json");
@@ -49,6 +49,7 @@ fn unified_test(input: &Path) -> datatest_stable::Result<()> {
 
 fn test_lf(input: &str, output: &str) {
     let mdm_obj = elem_to_json(&parse(input));
+    let ast_obj = doc_to_json(parse_to_ast(input));
     let json_obj = json::parse(output).expect("JSON should be parsable");
 
     // note: we DO NOT want assert_eq here since that would print the mismatched
@@ -60,10 +61,19 @@ fn test_lf(input: &str, output: &str) {
             mdm_obj.pretty(2),
         );
     }
+
+    if ast_obj != json_obj {
+        panic!(
+            "Failed using LF,\nEXPECTED\n{}\nGOT\n{}",
+            json_obj.pretty(2),
+            ast_obj.pretty(2),
+        );
+    }
 }
 
 fn test_crlf(input: &str, output: &str) {
     let mdm_obj = elem_to_json(&parse(&input.replace('\n', "\r\n")));
+    let ast_obj = doc_to_json(parse_to_ast(&input.replace('\n', "\r\n")));
     let json_obj = json::parse(&output.replace(r"\n", r"\r\n")).expect("JSON should be parsable");
 
     // note: we DO NOT want assert_eq here since that would print the mismatched
@@ -75,8 +85,57 @@ fn test_crlf(input: &str, output: &str) {
             mdm_obj.pretty(2),
         );
     }
+
+    if ast_obj != json_obj {
+        panic!(
+            "Failed using CRLF,\nEXPECTED\n{}\nGOT\n{}",
+            json_obj.pretty(2),
+            ast_obj.pretty(2),
+        );
+    }
 }
 
+fn doc_to_json(doc: Document) -> JsonValue {
+    ast_to_json(&Ast::Document(doc))
+}
+
+fn ast_to_json(ast: &Ast) -> JsonValue {
+    match ast {
+        Ast::Text(str) => str.as_str().into(),
+        Ast::Document(d) => {
+            object! {
+                name: "Document",
+                children: d.elements.iter().map(ast_to_json).collect::<Vec<JsonValue>>()
+            }
+        }
+        Ast::Paragraph(p) => {
+            object! {
+                name: "Paragraph",
+                children: p.elements.iter().map(ast_to_json).collect::<Vec<JsonValue>>()
+            }
+        }
+        Ast::Tag(t) => {
+            object! {
+                name: t.tag_name.as_str(),
+                children: t.elements.iter().map(ast_to_json).collect::<Vec<JsonValue>>()
+            }
+        }
+        Ast::Module(m) => {
+            object! {
+                name: m.name.as_str(),
+                args: JsonValue::from(m.args.positioned.clone().unwrap_or_default().iter().enumerate().map(|(a,b)| (a.to_string(),b.to_string())).chain(
+                    m.args.named.clone().unwrap_or_default().iter().map(|(a,b)| (a.to_string(), b.to_string()))
+                ).collect::<HashMap<String, String>>()),
+                body: m.body.as_str(),
+                one_line: JsonValue::from(m.one_line),
+            }
+        }
+    }
+}
+
+// this is used to compare the resulting parsed Element to the expected Json
+// since the Ast JSON representation is compared as well, if Element is changed
+// too much, this may possibly be removed
 fn elem_to_json(elem: &Element) -> JsonValue {
     match elem {
         Element::Data(str) => str.as_str().into(),
