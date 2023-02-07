@@ -242,7 +242,7 @@ fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<AST>> {
         |(a, b)| {
             let mut elems = a;
             if !b.is_empty() {
-                elems.push(Data(b))
+                elems.push(Text(b))
             }
             elems
         },
@@ -266,7 +266,7 @@ fn second_pass_escape(char: char) -> String {
     }
 }
 
-fn second_pass(input: Vec<Element>) -> Vec<Element> {
+fn second_pass(input: Vec<AST>) -> Vec<AST> {
     input
 }
 
