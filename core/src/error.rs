@@ -8,10 +8,10 @@ use crate::NodeName;
 
 #[derive(Error, Debug)]
 pub enum CoreError {
-    #[error("There is already a module named '{0}'.")]
+    #[error("There is already a package named '{0}'.")]
     OccupiedName(String),
     #[error(
-        "Could not load module '{2}'. There is another module that transforms '{0}' to '{1}'."
+        "Could not load package '{2}'. There is another package that transforms '{0}' to '{1}'."
     )]
     OccupiedTransform(NodeName, NodeName, String),
     #[cfg(feature = "native")]
@@ -31,6 +31,6 @@ pub enum CoreError {
     WasmerRuntimeError(#[from] RuntimeError),
     #[error("Module '{0}' has written invalid UTF-8 to stdout.")]
     InvalidUTF8(String),
-    #[error("Failed to parse transforms of module '{0}'.")]
+    #[error("Failed to parse transforms of package '{0}'.")]
     ParseTransforms(String),
 }

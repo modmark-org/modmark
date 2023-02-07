@@ -2,11 +2,11 @@ use parser::Element;
 
 mod context;
 mod error;
-mod loaded_module;
+mod package;
 
 pub use context::Context;
 pub use error::CoreError;
-pub use loaded_module::{Arg, LoadedModule, ModuleInfo, NodeName, Transform};
+pub use package::{Arg, NodeName, Package, PackageInfo, Transform};
 
 #[cfg(all(feature = "web", feature = "native"))]
 compile_error!("feature \"native\" and feature \"web\" cannot be enabled at the same time");
