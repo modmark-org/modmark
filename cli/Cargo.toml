@@ -12,3 +12,4 @@ clap = { version = "4.1.4", features = ["derive"] }
 notify = "5.0.0"
 dirs = "4.0.0"
 crossterm = "0.26.0"
+thiserror = "1.0.38"

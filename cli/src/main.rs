@@ -1,3 +1,5 @@
+mod error;
+
 use clap::Parser;
 use core::{eval, Context};
 use crossterm::{
@@ -5,9 +7,8 @@ use crossterm::{
     style::{self, Stylize},
     terminal, ExecutableCommand,
 };
-use notify::{
-    Config, Event, PollWatcher, RecommendedWatcher, RecursiveMode, Result, Watcher, WatcherKind,
-};
+use error::CliError;
+use notify::{Config, Event, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher, WatcherKind};
 use parser::{parse, Element};
 use std::env;
 use std::io::{stdout, Write};
@@ -38,7 +39,7 @@ fn print_tree(tree: parser::Element) {
     println!("\n{}", tree.tree_string(false));
 }
 
-fn compile_file(args: &Args) -> Result<Element> {
+fn compile_file(args: &Args) -> Result<Element, CliError> {
     let source = fs::read_to_string(&args.input)?;
     let document = parse(&source);
     let mut ctx = Context::default();
@@ -49,8 +50,12 @@ fn compile_file(args: &Args) -> Result<Element> {
     Ok(document)
 }
 
-fn watch(args: &Args, target: &String) -> Result<()> {
-    fn watch_compile(event: Result<Event>, args: &Args, target: &String) -> Result<()> {
+fn watch(args: &Args, target: &String) -> Result<(), CliError> {
+    fn watch_compile(
+        event: notify::Result<Event>,
+        args: &Args,
+        target: &String,
+    ) -> Result<(), CliError> {
         let mut stdout = stdout();
 
         stdout.execute(terminal::Clear(terminal::ClearType::All))?;
@@ -59,7 +64,7 @@ fn watch(args: &Args, target: &String) -> Result<()> {
 
         let tree = match event {
             Ok(_) => compile_file(args),
-            Err(e) => return Err(e),
+            Err(e) => return Err(CliError::Notify(e)),
         };
 
         stdout.execute(terminal::Clear(terminal::ClearType::All))?;
@@ -104,7 +109,7 @@ fn watch(args: &Args, target: &String) -> Result<()> {
     Ok(())
 }
 
-fn main() -> Result<()> {
+fn main() -> Result<(), CliError> {
     let args = Args::parse();
     let current_path = env::current_dir()?;
     let target = current_path.into_os_string().into_string().unwrap();
