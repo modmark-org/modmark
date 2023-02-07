@@ -21,21 +21,21 @@ pub struct Arg {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ModuleInfo {
+pub struct PackageInfo {
     pub name: String,
     pub version: String,
     pub transforms: Vec<Transform>,
 }
 
 #[derive(Debug, Clone)]
-pub struct LoadedModule {
-    pub info: Arc<ModuleInfo>,
+pub struct Package {
+    pub info: Arc<PackageInfo>,
     pub wasm_module: Module,
 }
 
-impl LoadedModule {
-    /// Read the binary data from a `.wasm` file and create a LoadedModule
-    /// containing info about the module as well as the compiled wasm source.
+impl Package {
+    /// Read the binary data from a `.wasm` file and create a Package
+    /// containing info about the package as well as the compiled wasm source module.
     pub fn new(wasm_source: &[u8], store: &mut Store) -> Result<Self, CoreError> {
         // Compile the module and store it
         #[cfg(feature = "native")]
@@ -65,7 +65,7 @@ impl LoadedModule {
             .map_err(CoreError::WasmerExport)?;
         wasi_env.data_mut(store).set_memory(memory.clone());
 
-        // Retrieve name from module
+        // Retrieve name of the package
         // Call the `name` function
         let name_fn = instance.exports.get_function("name")?;
         name_fn.call(store, &[])?;
@@ -79,7 +79,7 @@ impl LoadedModule {
             buffer.trim().to_string()
         };
 
-        // Retrieve version from module
+        // Retrieve version of the package
         // Call the `version` function
         let version_fn = instance.exports.get_function("version")?;
         version_fn.call(store, &[])?;
@@ -93,7 +93,7 @@ impl LoadedModule {
             buffer.trim().to_string()
         };
 
-        // Retrieve transform capabilities of module
+        // Retrieve transform capabilities of the package
         let transforms_fn = instance.exports.get_function("transforms")?;
         transforms_fn.call(store, &[])?;
 
@@ -109,13 +109,13 @@ impl LoadedModule {
             return Err(CoreError::ParseTransforms(name))
         };
 
-        let module_info = ModuleInfo {
+        let module_info = PackageInfo {
             name,
             version,
             transforms,
         };
 
-        Ok(LoadedModule {
+        Ok(Package {
             info: Arc::new(module_info),
             wasm_module: module,
         })
@@ -123,7 +123,7 @@ impl LoadedModule {
 }
 
 /// A helper to parse the output from the "transforms" function
-/// when loading a module.
+/// when loading a package.
 fn parse_transforms(input: &str) -> Option<Vec<Transform>> {
     let mut transforms = Vec::new();
     let mut lines = input.lines();
