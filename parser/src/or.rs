@@ -1,3 +1,31 @@
+//! Or combinator for the Nom library.
+//!
+//! There is a default or combinator (with method chaining) in the Nom library already, but it
+//! does only work outputs of the same type, such as `char('a').or(char('b'))`, which then
+//! results in a parser returning that same type. This works fine if all parsers handles strings,
+//! however if you want to chain a parser which maps to one type with another parser which maps
+//! to a different type, you will need to make an enum just for that case.
+//!
+//! This file contains functions to combine parsers with .or semantics of different types. The
+//! first parser is attempted to match the input, and if it doesn't match, the second parser is
+//! attempted at matching. The result of the parser is a tuple of `Option`s, one for each parser,
+//! with all of them being `None` but the one matching being `Some` holding the result. If none
+//! of the parsers match, the or combinator fails.
+//!
+//! The functions are called `or{n}` with `n` being the amount of parsers to be combined, currently
+//! implemented from 2 up to 7.
+//!
+//! Example
+//! ```rust,ignore
+//! let num_parser = map(alphanumeric1, |n| usize::from_str(n).unwrap()); // parse int as usize
+//! let abc_parser = is_a("abc"); // parse long string containing "a"s, "b"s and "c"s
+//! let parser = or2(num_parser, abc_parser);
+//! ```
+//! |Input|Output            |
+//! -------------------------|
+//! |"123"|(Some(123), None) |
+//! |"aba"|(None, Some("aba")|
+//! |"eed"|Error             |
 use nom::Parser;
 
 #[allow(dead_code)]
