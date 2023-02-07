@@ -9,6 +9,9 @@ Cases below:
 4. Should capture "[abc]yes" as string
 5. Should include spaces
 6. Should just take the first < as delimiter
+7. Should not include anything since body closes immediately
+8. Only closing brackets should close in this case
+9. Only opening brackets should close in this case
 
 ```mdm
 Equations:
@@ -18,6 +21,9 @@ Equations:
 [for] [abc]yes
 [fiv]" yes space "
 [six]<"yes1 "yes2" yes3">
+[sev]""no no"
+[eig]<y<y<y>
+[nin]>y>y<n
 ```
 
 ```json
@@ -68,7 +74,29 @@ Equations:
                     "args": {},
                     "body": "\"yes1 \"yes2\" yes3\"",
                     "one_line": true
-                }
+                },
+                "\n",
+                {
+                    "name": "sev",
+                    "args": {},
+                    "body": "",
+                    "one_line": true
+                },
+                "no no\"\n",
+                {
+                    "name": "eig",
+                    "args": {},
+                    "body": "y<y<y",
+                    "one_line": true
+                },
+                "\n",
+                {
+                    "name": "nin",
+                    "args": {},
+                    "body": "y>y",
+                    "one_line": true
+                },
+                "n"
             ]
         }
     ]
