@@ -22,7 +22,7 @@
 //! let parser = or2(num_parser, abc_parser);
 //! ```
 //! |Input|Output            |
-//! -------------------------|
+//! |-----|------------------|
 //! |"123"|(Some(123), None) |
 //! |"aba"|(None, Some("aba")|
 //! |"eed"|Error             |
