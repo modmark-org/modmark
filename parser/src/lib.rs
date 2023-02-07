@@ -17,8 +17,8 @@ use nom::{
 
 use Element::Node;
 
+use crate::Ast::Text;
 use crate::Element::{Data, ModuleInvocation};
-use crate::AST::Text;
 
 mod or;
 
@@ -45,7 +45,7 @@ pub struct ModuleArguments {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-enum AST {
+pub enum Ast {
     Text(String),
     Document(Document),
     Paragraph(Paragraph),
@@ -53,26 +53,26 @@ enum AST {
     Module(Module),
 }
 
-impl From<AST> for Element {
-    fn from(value: AST) -> Self {
+impl From<Ast> for Element {
+    fn from(value: Ast) -> Self {
         match value {
             Text(s) => Data(s),
-            AST::Document(doc) => Node {
+            Ast::Document(doc) => Node {
                 name: "Document".to_string(),
                 environment: HashMap::new(),
                 children: doc.elements.into_iter().map(|e| e.into()).collect(),
             },
-            AST::Paragraph(paragraph) => Node {
+            Ast::Paragraph(paragraph) => Node {
                 name: "Paragraph".to_string(),
                 environment: HashMap::new(),
                 children: paragraph.elements.into_iter().map(|e| e.into()).collect(),
             },
-            AST::Tag(tag) => Node {
+            Ast::Tag(tag) => Node {
                 name: tag.tag_name,
                 environment: HashMap::new(),
                 children: tag.elements.into_iter().map(|e| e.into()).collect(),
             },
-            AST::Module(module) => ModuleInvocation {
+            Ast::Module(module) => ModuleInvocation {
                 name: module.name,
                 args: module.args,
                 body: module.body,
@@ -83,27 +83,27 @@ impl From<AST> for Element {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-struct Tag {
-    tag_name: String,
-    elements: Vec<AST>,
+pub struct Tag {
+    pub tag_name: String,
+    pub elements: Vec<Ast>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-struct Paragraph {
-    elements: Vec<AST>,
+pub struct Paragraph {
+    pub elements: Vec<Ast>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-struct Document {
-    elements: Vec<AST>,
+pub struct Document {
+    pub elements: Vec<Ast>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-struct Module {
-    name: String,
-    args: ModuleArguments,
-    body: String,
-    one_line: bool,
+pub struct Module {
+    pub name: String,
+    pub args: ModuleArguments,
+    pub body: String,
+    pub one_line: bool,
 }
 
 impl Element {
@@ -148,7 +148,19 @@ impl Element {
 ///
 /// returns: Element The parsed element
 pub fn parse(source: &str) -> Element {
-    let doc = parse_document(source)
+    Ast::Document(parse_to_ast(source)).into()
+}
+
+/// Parses the source document and returns it as a `document`. If the parser errors out, a
+/// placeholder `document` is returned with the error inserted
+///
+/// # Arguments
+///
+/// * `source`: The source text to parse
+///
+/// returns: Element The parsed element
+pub fn parse_to_ast(source: &str) -> Document {
+    parse_document(source)
         .finish()
         .map(|(_, x)| x)
         .map_err(|e| dbg!(e))
@@ -157,8 +169,7 @@ pub fn parse(source: &str) -> Element {
                 Text("Document failed to parse".to_string()),
                 Text(format!("Error: {e}")),
             ],
-        });
-    AST::Document(doc).into()
+        })
 }
 
 /// Parses a document, which consists of multiple paragraphs and block modules, and returns a
@@ -184,11 +195,10 @@ fn parse_document(input: &str) -> IResult<&str, Document> {
 /// * `input`: The text to parse
 ///
 /// returns: Result<(&str, Vec<Element, Global>), Err<Error<I>>>
-fn parse_document_blocks(input: &str) -> IResult<&str, Vec<AST>> {
+fn parse_document_blocks(input: &str) -> IResult<&str, Vec<Ast>> {
     separated_list0(
         preceded(line_ending, many1(line_ending)),
-        map(parse_multiline_module, |m| AST::Module(m))
-            .or(map(parse_paragraph, |p| AST::Paragraph(p))),
+        map(parse_multiline_module, Ast::Module).or(map(parse_paragraph, Ast::Paragraph)),
     )(input)
 }
 
@@ -206,7 +216,7 @@ fn parse_paragraph(input: &str) -> IResult<&str, Paragraph> {
     })(input)
 }
 
-fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<AST>> {
+fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Ast>> {
     map(
     map(
         fold_many1(
@@ -226,9 +236,9 @@ fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<AST>> {
 
                 if let Some(module) = opt_inline {
                     if !string.is_empty() {
-                        elems.push(AST::Text(mem::take(&mut string)))
+                        elems.push(Text(mem::take(&mut string)))
                     }
-                    elems.push(AST::Module(module));
+                    elems.push(Ast::Module(module));
                 } else if let Some(esc_char) = opt_esc_char {
                     string.push_str(&first_pass_escape(esc_char));
                 } else if let Some(n_char) = opt_char {
@@ -266,7 +276,7 @@ fn second_pass_escape(char: char) -> String {
     }
 }
 
-fn second_pass(input: Vec<AST>) -> Vec<AST> {
+fn second_pass(input: Vec<Ast>) -> Vec<Ast> {
     input
 }
 
@@ -344,7 +354,7 @@ fn take_until_no_newlines(tag: &str) -> impl Fn(&str) -> IResult<&str, &str, Err
 ///
 /// # Arguments
 ///
-/// * `inline`: wether the module is inline
+/// * `inline`: whether the module is inline
 ///
 /// returns: Result<(&str, Option<&str>), Err<Error<I>>>
 ///
