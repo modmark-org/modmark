@@ -18,6 +18,7 @@ use nom::{
 use Element::Node;
 
 use crate::Element::{Data, ModuleInvocation};
+use crate::AST::Text;
 
 mod or;
 
@@ -41,6 +42,68 @@ pub enum Element {
 pub struct ModuleArguments {
     pub positioned: Option<Vec<String>>,
     pub named: Option<HashMap<String, String>>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+enum AST {
+    Text(String),
+    Document(Document),
+    Paragraph(Paragraph),
+    Tag(Tag),
+    Module(Module),
+}
+
+impl From<AST> for Element {
+    fn from(value: AST) -> Self {
+        match value {
+            Text(s) => Data(s),
+            AST::Document(doc) => Node {
+                name: "Document".to_string(),
+                environment: HashMap::new(),
+                children: doc.elements.into_iter().map(|e| e.into()).collect(),
+            },
+            AST::Paragraph(paragraph) => Node {
+                name: "Paragraph".to_string(),
+                environment: HashMap::new(),
+                children: paragraph.elements.into_iter().map(|e| e.into()).collect(),
+            },
+            AST::Tag(tag) => Node {
+                name: tag.tag_name,
+                environment: HashMap::new(),
+                children: tag.elements.into_iter().map(|e| e.into()).collect(),
+            },
+            AST::Module(module) => ModuleInvocation {
+                name: module.name,
+                args: module.args,
+                body: module.body,
+                one_line: module.one_line,
+            },
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct Tag {
+    tag_name: String,
+    elements: Vec<AST>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct Paragraph {
+    elements: Vec<AST>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct Document {
+    elements: Vec<AST>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct Module {
+    name: String,
+    args: ModuleArguments,
+    body: String,
+    one_line: bool,
 }
 
 impl Element {
@@ -85,18 +148,17 @@ impl Element {
 ///
 /// returns: Element The parsed element
 pub fn parse(source: &str) -> Element {
-    parse_document(source)
+    let doc = parse_document(source)
         .finish()
         .map(|(_, x)| x)
         .map_err(|e| dbg!(e))
-        .unwrap_or_else(|e: Error<&str>| Node {
-            name: "Document".to_string(),
-            environment: HashMap::new(),
-            children: vec![
-                Data("Document failed to parse".to_string()),
-                Data(format!("Error: {e}")),
+        .unwrap_or_else(|e: Error<&str>| Document {
+            elements: vec![
+                Text("Document failed to parse".to_string()),
+                Text(format!("Error: {e}")),
             ],
-        })
+        });
+    AST::Document(doc).into()
 }
 
 /// Parses a document, which consists of multiple paragraphs and block modules, and returns a
@@ -107,11 +169,9 @@ pub fn parse(source: &str) -> Element {
 /// * `input`: The input to parse
 ///
 /// returns: Result<(&str, Element), Err<Error<I>>>
-fn parse_document(input: &str) -> IResult<&str, Element> {
-    map(parse_multiple_paragraphs, |paras| Node {
-        name: "Document".to_string(),
-        environment: Default::default(),
-        children: paras,
+fn parse_document(input: &str) -> IResult<&str, Document> {
+    map(parse_document_blocks, |blocks| Document {
+        elements: blocks,
     })(input)
 }
 
@@ -124,10 +184,11 @@ fn parse_document(input: &str) -> IResult<&str, Element> {
 /// * `input`: The text to parse
 ///
 /// returns: Result<(&str, Vec<Element, Global>), Err<Error<I>>>
-fn parse_multiple_paragraphs(input: &str) -> IResult<&str, Vec<Element>> {
+fn parse_document_blocks(input: &str) -> IResult<&str, Vec<AST>> {
     separated_list0(
         preceded(line_ending, many1(line_ending)),
-        parse_multiline_module.or(parse_paragraph),
+        map(parse_multiline_module, |m| AST::Module(m))
+            .or(map(parse_paragraph, |p| AST::Paragraph(p))),
     )(input)
 }
 
@@ -139,15 +200,13 @@ fn parse_multiple_paragraphs(input: &str) -> IResult<&str, Vec<Element>> {
 /// * `input`:
 ///
 /// returns: Result<(&str, Element), Err<Error<I>>>
-fn parse_paragraph(input: &str) -> IResult<&str, Element> {
-    map(parse_paragraph_elements, |elems| Node {
-        name: "Paragraph".to_string(),
-        environment: Default::default(),
-        children: elems,
+fn parse_paragraph(input: &str) -> IResult<&str, Paragraph> {
+    map(parse_paragraph_elements, |elems| Paragraph {
+        elements: elems,
     })(input)
 }
 
-fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Element>> {
+fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<AST>> {
     map(
     map(
         fold_many1(
@@ -167,9 +226,9 @@ fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Element>> {
 
                 if let Some(module) = opt_inline {
                     if !string.is_empty() {
-                        elems.push(Data(mem::take(&mut string)))
+                        elems.push(AST::Text(mem::take(&mut string)))
                     }
-                    elems.push(module);
+                    elems.push(AST::Module(module));
                 } else if let Some(esc_char) = opt_esc_char {
                     string.push_str(&first_pass_escape(esc_char));
                 } else if let Some(n_char) = opt_char {
@@ -211,10 +270,10 @@ fn second_pass(input: Vec<Element>) -> Vec<Element> {
     input
 }
 
-fn parse_inline_module(input: &str) -> IResult<&str, Element> {
+fn parse_inline_module(input: &str) -> IResult<&str, Module> {
     map(
         pair(get_module_invocation_parser(true), parse_inline_module_body),
-        |((name, args), body)| ModuleInvocation {
+        |((name, args), body)| Module {
             name,
             args,
             body: body.to_string(),
@@ -330,22 +389,26 @@ fn closing_delim(string: &str) -> String {
             '{' => '}',
             '[' => ']',
             '<' => '>',
+            '»' => '«',
+            '›' => '‹',
             ')' => '(',
             '}' => '{',
             ']' => '[',
             '>' => '<',
+            '«' => '»',
+            '‹' => '›',
             x => x,
         })
         .collect()
 }
 
-fn parse_multiline_module(input: &str) -> IResult<&str, Element> {
+fn parse_multiline_module(input: &str) -> IResult<&str, Module> {
     map(
         pair(
             get_module_invocation_parser(false),
             parse_multiline_module_body,
         ),
-        |((name, args), body)| ModuleInvocation {
+        |((name, args), body)| Module {
             name,
             args,
             body: body.to_string(),
