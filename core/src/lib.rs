@@ -23,9 +23,9 @@ mod tests {
     #[test]
     fn module_info() {
         let ctx = Context::default();
-        let info = ctx.get_module_info("Module test").unwrap().clone();
+        let info = ctx.get_package_info("Module test").unwrap().clone();
 
-        let foo = ModuleInfo {
+        let foo = PackageInfo {
             name: "Module test".to_string(),
             version: "1".to_string(),
             transforms: vec![

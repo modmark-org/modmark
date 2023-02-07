@@ -16,21 +16,58 @@ pub enum CoreError {
     OccupiedTransform(NodeName, NodeName, String),
     #[cfg(feature = "native")]
     #[error("Compiler error")]
-    WasmerCompiler(#[from] CompileError),
+    WasmerCompiler(Box<CompileError>),
     #[error("No module for transforming node '{0}'.")]
     MissingTransform(String),
     #[error("Wasi error '{0}'.")]
-    WasiError(#[from] WasiError),
+    WasiError(Box<WasiError>),
     #[error("Wasmer intstantiation error '{0}'.")]
-    WasmerInstantiation(#[from] InstantiationError),
+    WasmerInstantiation(Box<InstantiationError>),
     #[error("Wasi state creation error '{0}'.")]
-    WasiStateCreation(#[from] WasiStateCreationError),
+    WasiStateCreation(Box<WasiStateCreationError>),
     #[error("Wasmer export error '{0}'.")]
-    WasmerExport(#[from] ExportError),
+    WasmerExport(Box<ExportError>),
     #[error("Wasmer runtime error '{0}'.")]
-    WasmerRuntimeError(#[from] RuntimeError),
+    WasmerRuntimeError(Box<RuntimeError>),
     #[error("Module '{0}' has written invalid UTF-8 to stdout.")]
     InvalidUTF8(String),
     #[error("Failed to parse transforms of package '{0}'.")]
     ParseTransforms(String),
+}
+
+impl From<WasiError> for CoreError {
+    fn from(value: WasiError) -> Self {
+        CoreError::WasiError(Box::new(value))
+    }
+}
+
+impl From<InstantiationError> for CoreError {
+    fn from(value: InstantiationError) -> Self {
+        CoreError::WasmerInstantiation(Box::new(value))
+    }
+}
+
+impl From<WasiStateCreationError> for CoreError {
+    fn from(value: WasiStateCreationError) -> Self {
+        CoreError::WasiStateCreation(Box::new(value))
+    }
+}
+
+impl From<ExportError> for CoreError {
+    fn from(value: ExportError) -> Self {
+        CoreError::WasmerExport(Box::new(value))
+    }
+}
+
+impl From<RuntimeError> for CoreError {
+    fn from(value: RuntimeError) -> Self {
+        CoreError::WasmerRuntimeError(Box::new(value))
+    }
+}
+
+#[cfg(feature = "native")]
+impl From<CompileError> for CoreError {
+    fn from(value: CompileError) -> Self {
+        CoreError::WasmerCompiler(Box::new(value))
+    }
 }

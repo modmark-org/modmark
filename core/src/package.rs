@@ -48,21 +48,15 @@ impl Package {
         let mut output = Pipe::new();
 
         let wasi_env = WasiState::new("")
-            .stdin(Box::new(input.clone()))
+            .stdin(Box::new(input))
             .stdout(Box::new(output.clone()))
-            .finalize(store)
-            .map_err(CoreError::WasiStateCreation)?;
+            .finalize(store)?;
 
-        let import_object = wasi_env
-            .import_object(store, &module)
-            .map_err(CoreError::WasiError)?;
+        let import_object = wasi_env.import_object(store, &module)?;
         let instance = Instance::new(store, &module, &import_object)?;
 
         // Attach the memory export
-        let memory = instance
-            .exports
-            .get_memory("memory")
-            .map_err(CoreError::WasmerExport)?;
+        let memory = instance.exports.get_memory("memory")?;
         wasi_env.data_mut(store).set_memory(memory.clone());
 
         // Retrieve name of the package
@@ -145,7 +139,7 @@ fn parse_transforms(input: &str) -> Option<Vec<Transform>> {
         // foo = 20 - A description
         let mut arguments = Vec::new();
 
-        while let Some(line) = lines.next() {
+        for line in lines.by_ref() {
             if line.trim().is_empty() {
                 break;
             }
