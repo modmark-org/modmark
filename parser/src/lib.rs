@@ -3,7 +3,7 @@ extern crate core;
 use std::collections::HashMap;
 use std::mem;
 
-use nom::bytes::complete::{take_till, take_until, take_until1, take_while1};
+use nom::bytes::complete::{take, take_till, take_until, take_until1, take_while1};
 use nom::character::complete::{
     char, line_ending, multispace0, multispace1, none_of, space0, space1,
 };
@@ -149,6 +149,7 @@ fn parse_paragraph(input: &str) -> IResult<&str, Element> {
 
 fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Element>> {
     map(
+    map(
         fold_many1(
             or::or5(
                 parse_inline_module,
@@ -170,7 +171,7 @@ fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Element>> {
                     }
                     elems.push(module);
                 } else if let Some(esc_char) = opt_esc_char {
-                    string.push(escape(esc_char));
+                    string.push_str(&first_pass_escape(esc_char));
                 } else if let Some(n_char) = opt_char {
                     string.push(n_char);
                 } else if let Some(line_ending) = opt_line_ending {
@@ -186,11 +187,28 @@ fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Element>> {
             }
             elems
         },
+    ),
+        second_pass
     )(input)
 }
 
-fn escape(char: char) -> char {
-    char
+fn first_pass_escape(char: char) -> String {
+    match char {
+        '[' => "[".to_string(),
+        x => format!(r"\{x}"),
+    }
+}
+
+fn second_pass_escape(char: char) -> String {
+    if char.is_alphanumeric() {
+        format!(r"\{char}")
+    } else {
+        char.to_string()
+    }
+}
+
+fn second_pass(input: Vec<Element>) -> Vec<Element> {
+    input
 }
 
 fn parse_inline_module(input: &str) -> IResult<&str, Element> {
@@ -206,7 +224,7 @@ fn parse_inline_module(input: &str) -> IResult<&str, Element> {
 }
 
 fn parse_inline_module_body(input: &str) -> IResult<&str, &str> {
-    flat_map(parse_opening_delim, get_inline_body_parser)(input)
+    flat_map(parse_opening_delim(true), get_inline_body_parser)(input)
 }
 
 fn get_inline_body_parser<'a>(
@@ -261,18 +279,31 @@ fn take_until_no_newlines(tag: &str) -> impl Fn(&str) -> IResult<&str, &str, Err
     }
 }
 
-/// Parses optional delimitors for opening and closing modules.
+/// Parses optional delimiters for opening and closing modules. If the module is
+/// inline, at most one character is allowed, and if it is multiline, any amount
+/// of characters can be used.
 ///
 /// # Arguments
 ///
-/// * `input`:
+/// * `inline`: wether the module is inline
 ///
 /// returns: Result<(&str, Option<&str>), Err<Error<I>>>
 ///
-fn parse_opening_delim(input: &str) -> IResult<&str, Option<&str>> {
-    opt(take_while1(|c: char| {
-        !c.is_alphanumeric() && !c.is_whitespace()
-    }))(input)
+fn parse_opening_delim<'a>(
+    inline: bool,
+) -> impl Fn(&'a str) -> IResult<&'a str, Option<&'a str>, Error<&'a str>> {
+    move |i: &'a str| {
+        if inline {
+            opt(verify(take(1usize), |s: &str| {
+                let c = s.chars().next().unwrap();
+                !c.is_alphanumeric() && !c.is_whitespace()
+            }))(i)
+        } else {
+            opt(take_while1(|c: char| {
+                !c.is_alphanumeric() && !c.is_whitespace()
+            }))(i)
+        }
+    }
 }
 
 /// Gets the appropriate closing delimiter for an opening delimiter for a body of a module
@@ -299,6 +330,10 @@ fn closing_delim(string: &str) -> String {
             '{' => '}',
             '[' => ']',
             '<' => '>',
+            ')' => '(',
+            '}' => '{',
+            ']' => '[',
+            '>' => '<',
             x => x,
         })
         .collect()
@@ -320,7 +355,7 @@ fn parse_multiline_module(input: &str) -> IResult<&str, Element> {
 }
 
 fn parse_multiline_module_body(input: &str) -> IResult<&str, &str> {
-    flat_map(parse_opening_delim, get_multiline_body_parser)(input)
+    flat_map(parse_opening_delim(false), get_multiline_body_parser)(input)
 }
 
 fn get_multiline_body_parser<'a>(
