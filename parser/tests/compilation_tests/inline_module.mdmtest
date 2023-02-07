@@ -8,7 +8,7 @@ Cases below:
 3. Should take "\[" as delim, capture "abc", leaving "no"
 4. Should capture "[abc]yes" as string
 5. Should include spaces
-6. Should not stop at single quote
+6. Should just take the first < as delimiter
 
 ```mdm
 Equations:
@@ -17,7 +17,7 @@ Equations:
 [tre][abc]no
 [for] [abc]yes
 [fiv]" yes space "
-[six]""yes1 "yes2" yes3""
+[six]<"yes1 "yes2" yes3">
 ```
 
 ```json
@@ -66,7 +66,7 @@ Equations:
                 {
                     "name": "six",
                     "args": {},
-                    "body": "yes1 \"yes2\" yes3",
+                    "body": "\"yes1 \"yes2\" yes3\"",
                     "one_line": true
                 }
             ]
