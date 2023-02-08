@@ -53,6 +53,12 @@ pub enum Ast {
     Module(Module),
 }
 
+impl Ast {
+    pub fn tree_string(&self) -> String {
+        pretty_ast(self).join("\n")
+    }
+}
+
 impl From<Ast> for Element {
     fn from(value: Ast) -> Self {
         match value {
@@ -106,6 +112,53 @@ pub struct Module {
     pub one_line: bool,
 }
 
+/// A trait implemented by data types which contains a Vec of `Ast`s. It contains two methods:
+/// one for getting a reference to that vec, and one for getting a mutable reference to that vec.
+trait CompoundAST {
+    fn elements(&self) -> &Vec<Ast>;
+    fn elements_mut(&mut self) -> &mut Vec<Ast>;
+}
+
+impl CompoundAST for Tag {
+    fn elements(&self) -> &Vec<Ast> {
+        &self.elements
+    }
+
+    fn elements_mut(&mut self) -> &mut Vec<Ast> {
+        &mut self.elements
+    }
+}
+
+impl CompoundAST for Paragraph {
+    fn elements(&self) -> &Vec<Ast> {
+        &self.elements
+    }
+
+    fn elements_mut(&mut self) -> &mut Vec<Ast> {
+        &mut self.elements
+    }
+}
+
+impl CompoundAST for Document {
+    fn elements(&self) -> &Vec<Ast> {
+        &self.elements
+    }
+
+    fn elements_mut(&mut self) -> &mut Vec<Ast> {
+        &mut self.elements
+    }
+}
+
+impl CompoundAST for Vec<Ast> {
+    fn elements(&self) -> &Vec<Ast> {
+        self
+    }
+
+    fn elements_mut(&mut self) -> &mut Vec<Ast> {
+        self
+    }
+}
+
 impl Element {
     /// Gets a string representation of this element and the (possible) tree-formed structure
     /// within
@@ -148,7 +201,11 @@ impl Element {
 ///
 /// returns: Element The parsed element
 pub fn parse(source: &str) -> Element {
-    Ast::Document(parse_to_ast(source)).into()
+    parse_to_ast(source).into()
+}
+
+pub fn parse_to_ast(source: &str) -> Ast {
+    Ast::Document(parse_to_ast_document(&source))
 }
 
 /// Parses the source document and returns it as a `document`. If the parser errors out, a
@@ -159,7 +216,7 @@ pub fn parse(source: &str) -> Element {
 /// * `source`: The source text to parse
 ///
 /// returns: Element The parsed element
-pub fn parse_to_ast(source: &str) -> Document {
+pub fn parse_to_ast_document(source: &str) -> Document {
     parse_document(source)
         .finish()
         .map(|(_, x)| x)
@@ -218,66 +275,416 @@ fn parse_paragraph(input: &str) -> IResult<&str, Paragraph> {
 
 fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Ast>> {
     map(
-    map(
-        fold_many1(
-            or::or5(
-                parse_inline_module,
-                preceded(char('\\'), line_ending),
-                preceded(char('\\'), none_of("\r\n")),
-                none_of("\r\n"),
-                // note: do NOT use not_line_ending, it matches successfully on empty string
-                // so that would break this
-                terminated(line_ending, peek(none_of("\r\n"))),
-            ),
-            || (Vec::new(), String::new()),
-            |(acc_vec, acc_str), (opt_inline, _opt_esc_line_ending, opt_esc_char, opt_char, opt_line_ending)| {
-                let mut elems = acc_vec;
-                let mut string = acc_str;
+        map(
+            map(
+                fold_many1(
+                    or::or5(
+                        parse_inline_module,
+                        preceded(char('\\'), line_ending),
+                        tag(r"\["),
+                        none_of("\r\n"),
+                        // note: do NOT use not_line_ending, it matches successfully on empty string
+                        // so that would break this
+                        terminated(line_ending, peek(none_of("\r\n"))),
+                    ),
+                    || (Vec::new(), String::new()),
+                    |(acc_vec, acc_str),
+                     (
+                        opt_inline,
+                        _opt_esc_line_ending,
+                        opt_escape_mod,
+                        opt_char,
+                        opt_line_ending,
+                    )| {
+                        let mut elems = acc_vec;
+                        let mut string = acc_str;
 
-                if let Some(module) = opt_inline {
-                    if !string.is_empty() {
-                        elems.push(Text(mem::take(&mut string)))
+                        if let Some(module) = opt_inline {
+                            if !string.is_empty() {
+                                elems.push(Text(mem::take(&mut string)))
+                            }
+                            elems.push(Ast::Module(module));
+                        } else if opt_escape_mod.is_some() {
+                            string.push('[');
+                        } else if let Some(n_char) = opt_char {
+                            string.push(n_char);
+                        } else if let Some(line_ending) = opt_line_ending {
+                            string.push_str(line_ending);
+                        }
+                        (elems, string)
+                    },
+                ),
+                |(a, b)| {
+                    let mut elems = a;
+                    if !b.is_empty() {
+                        elems.push(Text(b))
                     }
-                    elems.push(Ast::Module(module));
-                } else if let Some(esc_char) = opt_esc_char {
-                    string.push_str(&first_pass_escape(esc_char));
-                } else if let Some(n_char) = opt_char {
-                    string.push(n_char);
-                } else if let Some(line_ending) = opt_line_ending {
-                    string.push_str(line_ending);
-                }
-                (elems, string)
-            },
+                    elems
+                },
+            ),
+            extract_tags,
         ),
-        |(a, b)| {
-            let mut elems = a;
-            if !b.is_empty() {
-                elems.push(Text(b))
-            }
-            elems
+        |mut x| {
+            remove_escape_chars(&mut x);
+            x
         },
-    ),
-        second_pass
     )(input)
 }
 
-fn first_pass_escape(char: char) -> String {
-    match char {
-        '[' => "[".to_string(),
-        x => format!(r"\{x}"),
-    }
+#[test]
+fn test_second_pass() {
+    dbg!(extract_tags(vec![
+        Text("abc def ** ghi".to_string()),
+        Text("middle".to_string()),
+        Text("abc def ** ghi".to_string())
+    ]));
+    remove_escape_chars(&mut dbg!(extract_tags(vec![Text(
+        "abc def **ghi** jkl".to_string()
+    ),])));
+    remove_escape_chars(&mut dbg!(extract_tags(vec![Text(
+        "abc def **ghi** jkl".to_string()
+    ),])));
+
+    print!(
+        "{}",
+        pretty_ast(&parse_to_ast("this //is some **text** yeah//")).join("\n")
+    );
+
+    //dbg!(remove_escape_chars(x));
+
+    ()
 }
 
-fn second_pass_escape(char: char) -> String {
-    if char.is_alphanumeric() {
-        format!(r"\{char}")
-    } else {
-        char.to_string()
-    }
+fn remove_escape_chars(input: &mut [Ast]) {
+    input.iter_mut().for_each(|e| match e {
+        Text(str) => {
+            let mut escaped = false;
+            str.retain(|c| {
+                if escaped {
+                    escaped = false;
+                    true
+                } else if c == '\\' {
+                    escaped = true;
+                    false
+                } else {
+                    true
+                }
+            });
+        }
+        Ast::Document(d) => {
+            remove_escape_chars(&mut d.elements);
+        }
+        Ast::Paragraph(p) => {
+            remove_escape_chars(&mut p.elements);
+        }
+        Ast::Tag(t) => {
+            remove_escape_chars(&mut t.elements);
+        }
+        _ => {}
+    });
 }
 
-fn second_pass(input: Vec<Ast>) -> Vec<Ast> {
+fn extract_tags(mut input: Vec<Ast>) -> Vec<Ast> {
+    let bold = TagDefinition::new("Bold", ("**", "**"), true);
+    let italic = TagDefinition::new("Italic", ("//", "//"), true);
+    let subscript = TagDefinition::new("Subscript", ("__", "__"), true);
+    let superscript = TagDefinition::new("Superscript", ("^^", "^^"), true);
+    let verbatim = TagDefinition::new("Verbatim", ("``", "``"), false);
+    let underlined = TagDefinition::new("Underlined", ("==", "=="), true);
+    let strikethrough = TagDefinition::new("Strikethrough", ("~~", "~~"), true);
+
+    let defs = vec![
+        &bold,
+        &italic,
+        &subscript,
+        &superscript,
+        &verbatim,
+        &underlined,
+        &strikethrough,
+    ];
+    extract_all_tags(&defs, &mut input);
     input
+}
+
+fn extract_all_tags<T>(tags: &[&TagDefinition], input: &mut T)
+where
+    T: CompoundAST,
+{
+    let mut search_idx = (0usize, 0usize);
+    while let Some(((start_elem_idx, start_str_idx), tag)) =
+        find_opening_tag(search_idx, input, tags)
+    {
+        if let Some((end_elem_idx, end_str_idx)) = find_closing_tag(
+            (start_elem_idx, start_str_idx + tag.delimiters.0.len()),
+            tag,
+            input,
+        ) {
+            let tag_idx = extract_tag(
+                tag,
+                (start_elem_idx, start_str_idx),
+                (end_elem_idx, end_str_idx),
+                input,
+            );
+            if tag.recurse {
+                let tag = &mut input.elements_mut()[tag_idx];
+                match tag {
+                    Ast::Tag(tag) => extract_all_tags(tags, tag),
+                    x => panic!("Expected tag at tag position, got {x:?}"),
+                }
+            }
+        }
+        search_idx = (start_elem_idx, start_str_idx + tag.delimiters.0.len())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct TagDefinition {
+    name: String,
+    delimiters: (String, String),
+    recurse: bool, //maybe add an option span_invocations?
+}
+
+impl TagDefinition {
+    fn new(name: &str, (opening, closing): (&str, &str), recurse: bool) -> Self {
+        Self {
+            name: name.to_string(),
+            delimiters: (opening.to_string(), closing.to_string()),
+            recurse,
+        }
+    }
+}
+
+type CompoundPos = (usize, usize);
+
+// returns index of the extracted thing
+// cant return a ref since its already moved
+fn extract_tag<T>(
+    tag: &TagDefinition,
+    (idx_elem_start, idx_str_start): CompoundPos,
+    (idx_elem_end, idx_str_end): CompoundPos,
+    ast: &mut T,
+) -> usize
+where
+    T: CompoundAST,
+{
+    // in the simplest case, idx_elem_start == idx_elem_end, which means that the tag is just
+    // in the same text. we then extract prefix, middle and suffix:
+    // aaa**bb**ccc
+    // prefix: aaa
+    // middle: bb
+    // suffix: ccc
+    // and we can then replace the original node by the tag, insert the suffix after, then insert prefix
+
+    if idx_elem_start == idx_elem_end {
+        let original_text = ast
+            .elements()
+            .iter()
+            .nth(idx_elem_start)
+            .map(|e| match e {
+                Text(text) => text,
+
+                _ => panic!("Expected Text(...) at index {idx_elem_start} (start), got: {e:?}"),
+            })
+            .expect("Expected string at tag element indices (start==end)");
+        let prefix = original_text[..idx_str_start].to_string();
+        let middle = original_text[idx_str_start + tag.delimiters.0.len()..idx_str_end].to_string();
+        let suffix = original_text[idx_str_end + tag.delimiters.0.len()..].to_string();
+
+        let tag_element = Tag {
+            tag_name: tag.name.to_string(),
+            elements: vec![Text(middle)],
+        };
+
+        ast.elements_mut().push(Ast::Tag(tag_element));
+        ast.elements_mut().swap_remove(idx_elem_start);
+        if !suffix.is_empty() {
+            ast.elements_mut().insert(idx_elem_start + 1, Text(suffix));
+        }
+        if !prefix.is_empty() {
+            ast.elements_mut().insert(idx_elem_start, Text(prefix));
+            // one thing is inserted before the tag element, so the tag element is shifted by 1
+            return idx_elem_start + 1;
+        }
+        return idx_elem_start;
+    }
+
+    let (start_prefix, start_suffix) = ast
+        .elements()
+        .iter()
+        .nth(idx_elem_start)
+        .map(|e| match e {
+            Text(text) => (
+                text[..idx_str_start].to_string(),
+                text[idx_str_start + tag.delimiters.0.len()..].to_string(),
+            ),
+            _ => panic!("Expected Text(...) at index {idx_elem_start} (start), got: {e:?}"),
+        })
+        .expect("Expected string at tag start indices");
+
+    let (end_prefix, end_suffix) = ast
+        .elements()
+        .iter()
+        .nth(idx_elem_end)
+        .map(|e| match e {
+            Text(text) => (
+                text[..idx_str_end].to_string(),
+                text[idx_str_end + tag.delimiters.1.len()..].to_string(),
+            ),
+            _ => panic!("Expected Text(...) at index {idx_elem_end} (end), got: {e:?}"),
+        })
+        .expect("Expected string at tag end indices");
+
+    // lets say we want to extract around *, in this example:
+    // "before" "ab*c" [module] "de*f" "after"
+    // we have found start_prefix="ab" start_suffix="c"
+    // end_prefix = "de" end_suffix = "f"
+    // first we drain the elements:
+    // elems: "before" "after"
+    // drain: "ab*c" [module] "de*f"
+    // then, we remove the last element and add the end prefix if non-empty (constant both ways)
+    // then, if we have a start suffix, we swap "ab*c" for "c"
+    // else we just remove it (constant time if swap, linear if remove)
+    // then, we add the end_suffix to the drain spot (if non-empty)
+    // then, we add the tag
+    // then, we add start_prefix to the drain spot (if non-empty)
+
+    let elems = ast.elements_mut();
+    let mut removed_elems: Vec<Ast> = elems.drain(idx_elem_start..=idx_elem_end).collect();
+
+    removed_elems.remove(removed_elems.len() - 1);
+    if !end_prefix.is_empty() {
+        removed_elems.push(Text(end_prefix))
+    }
+    if start_suffix.is_empty() {
+        removed_elems.remove(0);
+    } else {
+        removed_elems.push(Text(start_suffix));
+        removed_elems.swap_remove(0);
+    }
+
+    let tag = Tag {
+        tag_name: tag.name.clone(),
+        elements: removed_elems,
+    };
+
+    if !end_suffix.is_empty() {
+        elems.insert(idx_elem_start, Text(end_suffix))
+    }
+
+    // the tag is initially inserted into idx_elem_start
+    elems.insert(idx_elem_start, Ast::Tag(tag));
+
+    if !start_prefix.is_empty() {
+        elems.insert(idx_elem_start, Text(start_prefix));
+        // one thing is inserted before the tag element, so the tag element is shifted by 1
+        idx_elem_start + 1
+    } else {
+        // nothing is inserted before tag element
+        idx_elem_start
+    }
+}
+
+// Searches an compound AST for the first opening tag
+fn find_opening_tag<'a, T>(
+    (start_elem_idx, start_str_idx): CompoundPos,
+    ast: &T,
+    tags: &'a [&TagDefinition],
+) -> Option<(CompoundPos, &'a TagDefinition)>
+where
+    T: CompoundAST,
+{
+    ast.elements()
+        .iter()
+        .enumerate()
+        .skip(start_elem_idx)
+        .find_map(|(elem_idx, elem)| match elem {
+            Text(str) => {
+                let offset = if elem_idx == start_elem_idx {
+                    start_str_idx
+                } else {
+                    0
+                };
+                find_first_matching_tag(offset, str, tags, true)
+                    .map(|(i, tag)| ((elem_idx, i), tag))
+            }
+            _ => None,
+        })
+}
+
+///
+///
+/// # Arguments
+///
+/// * `(elem, idx)`:
+/// * `tag`:
+/// * `ast`:
+///
+/// returns: Option<(usize, usize)>
+fn find_closing_tag<T>(
+    (start_elem_idx, start_str_idx): CompoundPos,
+    tag: &TagDefinition,
+    ast: &T,
+) -> Option<CompoundPos>
+where
+    T: CompoundAST,
+{
+    ast.elements()
+        .iter()
+        .enumerate()
+        .skip(start_elem_idx)
+        .find_map(|e| match e {
+            (elem_idx, Text(str)) => {
+                let offset = if elem_idx == start_elem_idx {
+                    start_str_idx
+                } else {
+                    0
+                };
+                find_first_matching_tag(offset, str, &[tag], false).map(|(idx, _)| (elem_idx, idx))
+            }
+            _ => None,
+        })
+}
+
+/// Finds the first matching tag in the given string. The tags are retrieved from a slice of
+/// `TagDefinition`s, and either opening or closing tags are used based on the `opening` parameter.
+/// It also takes the char index to start searching from, and it doesn't include tags escaped
+/// by backslashes `\`
+///
+/// # Arguments
+///
+/// * `from`: The char index to start the search from (0 to search from the start of the string)
+/// * `str`: The string to search in
+/// * `tags`: A list of `TagDefinition`s to search for
+/// * `opening`: `true` if it should search for opening tags, `false` if to search for closing tags
+///
+/// returns: The index where a tag is found and a reference to the tag definition it found, if any
+///          tag is found, otherwise None.
+fn find_first_matching_tag<'a>(
+    from: usize,
+    str: &str,
+    tags: &'a [&'a TagDefinition],
+    opening: bool,
+) -> Option<(usize, &'a TagDefinition)> {
+    let extract = |tag: &'a TagDefinition| {
+        if opening {
+            &tag.delimiters.0
+        } else {
+            &tag.delimiters.1
+        }
+    };
+    let mut is_escaped = false;
+    str.char_indices().skip(from).find_map(|(i, c)| {
+        if is_escaped {
+            is_escaped = false;
+            return None;
+        }
+        if c == '\\' {
+            is_escaped = !is_escaped;
+        }
+        tags.iter()
+            .map(|t| (*t, extract(t)))
+            .find_map(|(t, d)| str[i..].starts_with(d).then_some((i, t)))
+    })
 }
 
 fn parse_inline_module(input: &str) -> IResult<&str, Module> {
@@ -681,7 +1088,90 @@ fn get_kv_separator_parser<'a>(inline: bool) -> impl Parser<&'a str, (), Error<&
     map(delimited(space, char('='), space), |_| ())
 }
 
-/// Converts an AST into a vector of strings suitable for a text representation.
+fn pretty_ast(ast: &Ast) -> Vec<String> {
+    let indent = "  ";
+    let mut strs = vec![];
+
+    match ast {
+        Text(str) => str.lines().enumerate().for_each(|(idx, line)| {
+            strs.push(format!("{} {line}", if idx == 0 { '>' } else { '|' }))
+        }),
+        Ast::Document(Document { elements }) => {
+            strs.push(format!("Document:"));
+            if elements.is_empty() {
+                strs.push(format!("{indent}[no elements]"));
+            } else {
+                elements.iter().for_each(|c| {
+                    pretty_ast(c)
+                        .iter()
+                        .for_each(|s| strs.push(format!("{indent}{s}")))
+                });
+            }
+        }
+
+        Ast::Paragraph(Paragraph { elements }) => {
+            strs.push(format!("Paragraph:"));
+            if elements.is_empty() {
+                strs.push(format!("{indent}[no elements]"));
+            } else {
+                elements.iter().for_each(|c| {
+                    pretty_ast(c)
+                        .iter()
+                        .for_each(|s| strs.push(format!("{indent}{s}")))
+                });
+            }
+        }
+
+        Ast::Tag(Tag { tag_name, elements }) => {
+            strs.push(format!("{tag_name}:"));
+            if elements.is_empty() {
+                strs.push(format!("{indent}[no elements]"));
+            } else {
+                elements.iter().for_each(|c| {
+                    pretty_ast(c)
+                        .iter()
+                        .for_each(|s| strs.push(format!("{indent}{s}")))
+                });
+            }
+        }
+
+        Ast::Module(Module {
+            name,
+            args,
+            body,
+            one_line,
+        }) => {
+            let args = {
+                let p1 = &args.positioned;
+                let p2 = args.named.as_ref().map(|args| {
+                    args.iter()
+                        .map(|(k, v)| format!("{k}={v}"))
+                        .collect::<Vec<String>>()
+                });
+
+                let mut args_vec = p1.clone().unwrap_or_default();
+                args_vec.extend_from_slice(&p2.unwrap_or_default());
+                args_vec.join(", ")
+            };
+            if *one_line {
+                strs.push(format!("{name}({args}){{{body}}}"));
+            } else {
+                strs.push(format!("{name}({args}){{"));
+                body.lines().enumerate().for_each(|(idx, line)| {
+                    strs.push(format!(
+                        "{indent}{} {line}",
+                        if idx == 0 { '>' } else { '|' }
+                    ))
+                });
+                strs.push("} [multiline invocation]".to_string());
+            }
+        }
+    }
+
+    strs
+}
+
+/// Converts an Element into a vector of strings suitable for a text representation.
 ///
 /// # Arguments
 ///
