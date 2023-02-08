@@ -1,7 +1,7 @@
 
 # ModMark: Description
 
-*Examples are written as they would look in source text, before compilation.*
+*Examples are written as they would look in source text, before compilation. Note that wrapping may cause the text to start new rows in unintended locations.*
 
 ## Introduction
 
@@ -37,9 +37,9 @@ Example 2: paragraphs with escapes
 
 ## Modules
 
-Modules are invoked by an opening and closing square bracket. Information about the module is kept inside the square brackets, while the contents of the module is what follows. Exactly how much is consumed by the module depends on the closing delimiter, and whether the module is located inline. A module is automatically treated as inline if there is text outside the square brackets on the same row, otherwise it is treated as multiline.
+Modules are invoked by an opening and closing square bracket. Information about the module is kept inside the square brackets, while the contents of the module is what follows. Exactly how much is consumed by the module depends on the closing delimiter, and whether the module is inline or multiline. For a module to be treated as multiline, it needs to be invoked outside other paragraphs, and without text on the same row as the square brackets.
 
-By default, an inline module will consume the next "chunk" of text, meaning the sequence of characters until a whitespace or newline character is found. This does not include space immediately following the closing square bracket. A multiline module on defaults to consuming until an empty row is found.
+By default, an inline module will by default consume the next "chunk" of text, meaning the sequence of characters until a whitespace or newline character is found. This works the same even with a space immediately following the closing square bracket. A multiline module on defaults to consuming until an empty row is found.
 
 Delimiters are patterns specified after the closing square bracket. A module will then attempt to consume until the matching closing delimiter is found. However, inline modules are still limited to the row they were defined on, which means that they will close at the end of the row if no matching delimiter is found.
 
@@ -65,9 +65,12 @@ Example 4: modules with delimiters
     But also this text because it is inside the delimiters.
     ^&}
 
-    Inline modules [mymodule]{ can also use delimiters to capture all this text }
+    Inline modules can also use delimiters to capture [mymodule]{ all this text }
     
-    However [mymodule]{ even if delimiters are used, this text will not be included since inline stops at the end of the row }
+    However [mymodule]{ even if delimiters are used, 
+    this text will not be included since inline stops at the end of the row }
+
+    Here, [mymodule](( the module body will include the inner layer of parentheses ))
 
 Modules can also take arguments. These arguments can either be positional, or explicitly named. Positional arguments must appear before named arguments. Arguments are separated by whitespace or newlines.
 
@@ -76,9 +79,7 @@ Example 5: module with arguments
     [mymodule red apple indent=4]
     This module is provided with the positional arguments "red" and "apple" and the named argument "indent=4"
 
-Example 6: inline module with double parentheses
-
-    Here, [mymodule](( will include the inner layer of parentheses ))
+    
 
 ## Limitations and valid characters
 
@@ -89,4 +90,4 @@ module names | alphanumeric, underscores, hyphens
 module args  | alphanumeric, underscores
 delimiters   | all special characters
 
-There are also limitations to smart punctuation. Character sequences that could technically be broken up into smaller sequences for smart punctuation will instead be used as is. This means that "----" is not parsed as "&ndash;&ndash;". 
+There are also limitations to smart punctuation. Character sequences that could technically be broken up into smaller sequences for smart punctuation will instead be used as is. This means that "----" is not parsed as "&ndash;&ndash;".
