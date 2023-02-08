@@ -4,7 +4,8 @@ use std::path::Path;
 
 use json::{object, JsonValue};
 
-use parser::{parse, parse_to_ast, Ast, Document, Element};
+use parser::{parse, parse_to_ast_document, Ast, Document, Element};
+use diffy::{create_patch, merge};
 
 fn split_test(input: &Path) -> datatest_stable::Result<()> {
     let output = input.with_extension("json");
@@ -49,48 +50,52 @@ fn unified_test(input: &Path) -> datatest_stable::Result<()> {
 
 fn test_lf(input: &str, output: &str) {
     let mdm_obj = elem_to_json(&parse(input));
-    let ast_obj = doc_to_json(parse_to_ast(input));
+    let ast_obj = doc_to_json(parse_to_ast_document(input));
     let json_obj = json::parse(output).expect("JSON should be parsable");
 
     // note: we DO NOT want assert_eq here since that would print the mismatched
     // json IR:s, but the custom error message is much easier to read
     if mdm_obj != json_obj {
         panic!(
-            "Failed using LF,\nEXPECTED\n{}\nGOT\n{}",
+            "Failed using LF,\nEXPECTED\n{}\nGOT\n{}\nDIFF\n{}",
             json_obj.pretty(2),
             mdm_obj.pretty(2),
+            create_patch(&json_obj.pretty(2), &mdm_obj.pretty(2)).to_string()
         );
     }
 
     if ast_obj != json_obj {
         panic!(
-            "Failed using LF,\nEXPECTED\n{}\nGOT\n{}",
+            "Failed using LF,\nEXPECTED\n{}\nGOT\n{}\nDIFF\n{}",
             json_obj.pretty(2),
             ast_obj.pretty(2),
+            create_patch(&json_obj.pretty(2), &ast_obj.pretty(2)).to_string()
         );
     }
 }
 
 fn test_crlf(input: &str, output: &str) {
     let mdm_obj = elem_to_json(&parse(&input.replace('\n', "\r\n")));
-    let ast_obj = doc_to_json(parse_to_ast(&input.replace('\n', "\r\n")));
+    let ast_obj = doc_to_json(parse_to_ast_document(&input.replace('\n', "\r\n")));
     let json_obj = json::parse(&output.replace(r"\n", r"\r\n")).expect("JSON should be parsable");
 
     // note: we DO NOT want assert_eq here since that would print the mismatched
     // json IR:s, but the custom error message is much easier to read
     if mdm_obj != json_obj {
         panic!(
-            "Failed using CRLF,\nEXPECTED\n{}\nGOT\n{}",
+            "Failed using CRLF,\nEXPECTED\n{}\nGOT\n{}\nDIFF\n{}",
             json_obj.pretty(2),
             mdm_obj.pretty(2),
+            create_patch(&json_obj.pretty(2), &mdm_obj.pretty(2)).to_string()
         );
     }
 
     if ast_obj != json_obj {
         panic!(
-            "Failed using CRLF,\nEXPECTED\n{}\nGOT\n{}",
+            "Failed using CRLF,\nEXPECTED\n{}\nGOT\n{}\nDIFF\n{}",
             json_obj.pretty(2),
             ast_obj.pretty(2),
+            create_patch(&json_obj.pretty(2), &ast_obj.pretty(2)).to_string()
         );
     }
 }
