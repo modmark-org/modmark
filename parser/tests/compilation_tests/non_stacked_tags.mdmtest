@@ -1,0 +1,94 @@
+Here are some simple tests for flat (non-stacked).
+The content of each tag is misspelled intentionally so if the parser
+for some reason uses the tag name as the body, it will be caught.
+Each example tests something extra as well:
+1. Whitespace on both sides of the tag should be preserved
+2. Whitespace on right should be preserved, while removed from the other side
+3. Whitespace on left side should be preserved, and removed from the other side
+4. Tags at start of lines should work
+5. Tags at end of lines should work
+6. Tags on a single line should work
+7. Tags should be parsed as soon as possible (first two `~~` is tags, third `~` is after the tag)
+8. Escaped tags should work (only very first and very last `~~` should parse as tags)
+
+Every row is in the same paragraph
+
+```modmark
+Some **bolld** text
+Sume//itaalic// text
+Some __subbscript__texty
+^^suuperscript^^ text
+Some ``veerbatim``
+==underlyned==
+~~~strykethrough~~~
+~~\~~*\*=\\=~~
+```
+
+```json
+{
+    "name": "Document",
+    "children": [
+        {
+            "name": "Paragraph",
+            "children": [
+                "Some ",
+                {
+                    "name": "Bold",
+                    "children": [
+                        "bolld"
+                    ]
+                },
+                " text\nSume",
+                {
+                    "name": "Italic",
+                    "children": [
+                        "itaalic"
+                    ]
+                },
+                " text\nSome ",
+                {
+                    "name": "Subscript",
+                    "children": [
+                        "subbscript"
+                    ]
+                },
+                "texty\n",
+                {
+                    "name": "Superscript",
+                    "children": [
+                        "suuperscript"
+                    ]
+                },
+                " text\nSome ",
+                {
+                    "name": "Verbatim",
+                    "children": [
+                        "veerbatim"
+                    ]
+                },
+                "\n",
+                {
+                    "name": "Underlined",
+                    "children": [
+                        "underlyned"
+                    ]
+                },
+                "\n",
+                {
+                    "name": "Strikethrough",
+                    "children": [
+                        "~strykethrough"
+                    ]
+                },
+                "~\n",
+                {
+                    "name": "Strikethrough",
+                    "children": [
+                        "~~**=\\="
+                    ]
+                }
+            ]
+        }
+    ]
+}
+```
