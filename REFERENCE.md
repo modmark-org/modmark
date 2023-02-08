@@ -11,8 +11,14 @@ Source | Output
 <code>\``verbatim``</code>    | verbatim
 ```==underlined==```            | <ins>underlined</ins>
 ```~~strikethrough~~```         | <strike>strikethrough</strike>
+
+## Headings
+
+Source | Output
+--- | ---
 ```# heading level 1```         | <h1>heading level 1</h1>
 ```## heading level 2```        | <h2>heading level 2</h2>
+```### heading level 3```        | <h3>heading level 3</h3>
 
 ## Smart punctuation
 
