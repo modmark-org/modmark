@@ -9,6 +9,13 @@ pub fn parse(source: &str) -> String {
 }
 
 #[wasm_bindgen]
+pub fn ast(source: &str) -> String {
+    set_panic_hook();
+    let document = parser::parse_to_ast(source);
+    document.tree_string()
+}
+
+#[wasm_bindgen]
 pub fn raw_tree(source: &str) -> String {
     set_panic_hook();
     let document = parser::parse(source);

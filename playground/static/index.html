@@ -11,7 +11,7 @@
     <title>Modmark Playground</title>
     <link rel="stylesheet" href="style.css">
     <script type="module">
-        import init, {parse, raw_tree, transpile} from "./pkg/web_bindings.js";
+        import init, {parse, raw_tree, transpile, ast} from "./pkg/web_bindings.js";
 
         const editor = document.getElementById("editor");
         const output = document.getElementById("output");
@@ -27,6 +27,9 @@
             switch (selector.value) {
                 case "parse":
                     pre.innerText = parse(input)
+                    break;
+                case "ast":
+                    pre.innerText = ast(input)
                     break;
                 case "raw_tree":
                     pre.innerText = raw_tree(input)
@@ -55,6 +58,7 @@
     <h1>Modmark playground</h1>
     <select name="selector" id="selector">
         <option value="parse">Document tree</option>
+        <option value="ast">Abstract syntax tree</option>
         <option value="raw_tree">Raw tree</option>
         <option value="transpile">HTML output</option>
         <option value="render">Rendered HTML</option>
