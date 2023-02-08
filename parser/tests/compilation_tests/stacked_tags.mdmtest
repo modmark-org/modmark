@@ -1,0 +1,106 @@
+Here are some stacked tags (within each other).
+Out of the built-in †ags, all tags but the verbatim tag will allow
+stacking.
+
+```mdm
+Some **bold and //italic// text**
+Some **bold and //italic text//**
+Some **//italic and// bold text**
+Some **//italic and bold//** text
+Some **bold non-//italic text**//
+Some **bold ``verbatim``**
+Some ``verbatim **thin** text``
+```
+
+```json
+{
+    "name": "Document",
+    "children": [
+        {
+            "name": "Paragraph",
+            "children": [
+                "Some ",
+                {
+                    "name": "Bold",
+                    "children": [
+                        "bold and ",
+                        {
+                            "name": "Italic",
+                            "children": [
+                                "italic"
+                            ]
+                        },
+                        " text"
+                    ]
+                },
+                "\nSome ",
+                {
+                    "name": "Bold",
+                    "children": [
+                        "bold and ",
+                        {
+                            "name": "Italic",
+                            "children": [
+                                "italic text"
+                            ]
+                        }
+                    ]
+                },
+                "\nSome ",
+                {
+                    "name": "Bold",
+                    "children": [
+                        {
+                            "name": "Italic",
+                            "children": [
+                                "italic and"
+                            ]
+                        },
+                        " bold text"
+                    ]
+                },
+                "\nSome ",
+                {
+                    "name": "Bold",
+                    "children": [
+                        {
+                            "name": "Italic",
+                            "children": [
+                                "italic and bold"
+                            ]
+                        }
+                    ]
+                },
+                " text\nSome ",
+                {
+                    "name": "Bold",
+                    "children": [
+                        "bold non-//italic text"
+                    ]
+                },
+                "//\nSome ",
+                {
+                    "name": "Bold",
+                    "children": [
+                        "bold ",
+                        {
+                            "name": "Verbatim",
+                            "children": [
+                                "verbatim"
+                            ]
+                        }
+                    ]
+                },
+                "\nSome ",
+                {
+                    "name": "Verbatim",
+                    "children": [
+                        "verbatim **thin** text"
+                    ]
+                }
+            ]
+        }
+    ]
+}
+
+```
