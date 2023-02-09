@@ -334,30 +334,6 @@ fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Ast>> {
     )(input)
 }
 
-#[test]
-fn test_second_pass() {
-    dbg!(extract_tags(vec![
-        Text("abc def ** ghi".to_string()),
-        Text("middle".to_string()),
-        Text("abc def ** ghi".to_string())
-    ]));
-    remove_escape_chars(&mut dbg!(extract_tags(vec![Text(
-        "abc def **ghi** jkl".to_string()
-    ),])));
-    remove_escape_chars(&mut dbg!(extract_tags(vec![Text(
-        "abc def **ghi** jkl".to_string()
-    ),])));
-
-    print!(
-        "{}",
-        pretty_ast(&parse_to_ast("this //is some **text** yeah//")).join("\n")
-    );
-
-    //dbg!(remove_escape_chars(x));
-
-    ()
-}
-
 fn remove_escape_chars(input: &mut [Ast]) {
     input.iter_mut().for_each(|e| match e {
         Text(str) => {
@@ -392,9 +368,10 @@ fn extract_tags(mut input: Vec<Ast>) -> Vec<Ast> {
     let italic = TagDefinition::new("Italic", ("//", "//"), true);
     let subscript = TagDefinition::new("Subscript", ("__", "__"), true);
     let superscript = TagDefinition::new("Superscript", ("^^", "^^"), true);
-    let verbatim = TagDefinition::new("Verbatim", ("``", "``"), false);
     let underlined = TagDefinition::new("Underlined", ("==", "=="), true);
     let strikethrough = TagDefinition::new("Strikethrough", ("~~", "~~"), true);
+    let verbatim = TagDefinition::new("Verbatim", ("``", "``"), false);
+    let math = TagDefinition::new("Math", ("$$", "$$"), false);
 
     let defs = vec![
         &bold,
@@ -404,6 +381,7 @@ fn extract_tags(mut input: Vec<Ast>) -> Vec<Ast> {
         &verbatim,
         &underlined,
         &strikethrough,
+        &math,
     ];
     extract_all_tags(&defs, &mut input);
     input
