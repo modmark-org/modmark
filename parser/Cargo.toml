@@ -18,3 +18,4 @@ diffy = "0.3.0"
 [[test]]
 name = "compilation_test"
 harness = false
+serde = {version = "1.0.152", features = ["derive"]}
