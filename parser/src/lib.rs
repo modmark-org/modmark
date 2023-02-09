@@ -490,9 +490,14 @@ where
         let middle = original_text[idx_str_start + tag.delimiters.0.len()..idx_str_end].to_string();
         let suffix = original_text[idx_str_end + tag.delimiters.0.len()..].to_string();
 
+        let content = if middle.is_empty() {
+            vec![]
+        } else {
+            vec![Text(middle)]
+        };
         let tag_element = Tag {
             tag_name: tag.name.to_string(),
-            elements: vec![Text(middle)],
+            elements: content,
         };
 
         ast.elements_mut().push(Ast::Tag(tag_element));
