@@ -276,6 +276,33 @@ fn parse_paragraph(input: &str) -> IResult<&str, Paragraph> {
     })(input)
 }
 
+/// Gets the Ast elements for the paragraph starting at the start of the string. A paragraph runs
+/// until two line endings following each other, and may thus span multiple lines.
+///
+/// The parsing is done in three steps:
+///  1. Each position of the string is parsed. These elements are attempted at being parsed,
+///     and the first one matching succeeds, in order:
+///     * An inline module is attempted at parsing
+///     * An escaped newline, in which case the newline gets fixed to \n and the backslash is kept
+///     * An escaped character, in which case both the character and backslash is retained
+///     * An character which isn't a newline
+///     * A newline not immediately following another newline (the following char is not consumed)
+///     During this step, the result is folded into a (Vec<Ast>, String) after each parse, pushing
+///     to the accumulator string if appropriate and if, let's say, a module is found, this happens:
+///     * The accumulator string is turned into a Text element (if non-empty)
+///     * The Text element is pushed to the accumulator vector
+///     * The module is pushed to the accumulator vector
+///     After this, if the accumulator string is non-empty, it gets added to the end of the Ast.
+///  2. A tag search is started, finding all tags (like **, // etc) in all text nodes in the tree.
+///     When a tag pair is found, the element it encases are drained and added into a Tag node.
+///     The tag node is then added to the Ast where the elements were drained. After that, the
+///     string where the tags was found is split at the position of the tags, and the prefix and
+///     suffix are added back as text nodes. Depending on the tag type and configuration, the tag
+///     search may continue recursively. See [extract_tags] for more information.
+///  3. All text nodes are traversed once again, removing all escaping backslashes. The
+///     backslashes have been respected up to this point, and it was needed for them to be retained
+///     in the string as to allow the different steps to find them (since we don't tokenize), but
+///     since the parsing is done, we remove them.
 fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Ast>> {
     map(
         map(
@@ -370,6 +397,8 @@ fn remove_escape_chars(input: &mut [Ast]) {
     });
 }
 
+/// This function extracts tags in all text nodes in the input. It delegates the work to
+/// [extract_all_tags], see that comment for more information.
 fn extract_tags(mut input: Vec<Ast>) -> Vec<Ast> {
     let bold = TagDefinition::new("Bold", ("**", "**"), true);
     let italic = TagDefinition::new("Italic", ("//", "//"), true);
@@ -394,6 +423,28 @@ fn extract_tags(mut input: Vec<Ast>) -> Vec<Ast> {
     input
 }
 
+/// Extracts all tags from the given compound Ast, matching the given tag definition. The term
+/// "extracting" means taking some elements previously laying flat in the tree, removing them from
+/// the tree, create a new node for those elements and then inserting it in the position where the
+/// elements were extracted.
+///
+/// This function has a cursor (`search_index`) which starts at the first character of the first
+/// element and moves further along the Ast the more the process continues. The function is mainly
+/// one loop, using helper functions for searching and the actual extraction. This is what it does:
+///  1. First, [find_opening_tag] is called, which searches the Ast and, for all text nodes, tries
+///     to match each tag at each position, starting at the beginning. This ensures that the tag
+///     to be returned is the first tag occurrence. [find_opening_tag] takes the cursor as a
+///     parameter as well, and starts the search from there. The function optionally returns the
+///     position where the first tag was found together with a reference to it.
+///  2. Secondly, [find_closing_tag] is called, attempting to find the matching closing somewhere
+///     after the opening tag was found.
+///  3. If both an opening tag and matching closing tag was found, [extract_tag] is called to
+///     do the extraction, i.e slicing the strings at the tag positions, draining elements
+///     in between, making a new [Tag] and inserting it into the tree.
+///     If the closing tag is not found, the cursor is set to the position where the opening tag
+///     was found, incremented by the length of the opening tag, and the loop starts from the top.
+///  4. If the [TagDefinition] says that the tag extraction should continue recursively, it does so
+///     on the extracted [Tag].
 fn extract_all_tags<T>(tags: &[&TagDefinition], input: &mut T)
 where
     T: CompoundAST,
