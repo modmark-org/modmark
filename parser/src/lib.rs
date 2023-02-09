@@ -8,8 +8,8 @@ use nom::character::complete::{
     char, line_ending, multispace0, multispace1, none_of, space0, space1,
 };
 use nom::error::Error;
-use nom::multi::{fold_many1, many1, separated_list0, separated_list1};
-use nom::sequence::{delimited, pair, preceded, separated_pair, terminated};
+use nom::multi::{fold_many1, many1, separated_list0, separated_list1, many_till};
+use nom::sequence::{delimited, pair, preceded, separated_pair, terminated, tuple};
 use nom::{
     branch::*, bytes::complete::tag, combinator::*, FindSubstring, Finish, IResult, InputTake,
     Parser,
@@ -496,9 +496,37 @@ fn parse_module_name(input: &str) -> IResult<&str, &str> {
 fn get_module_args_parser<'a>(
     inline: bool,
 ) -> impl Parser<&'a str, ModuleArguments, Error<&'a str>> {
-    let mut first_named = false;
     map(
         opt(alt((
+            map(
+                tuple((
+                    separated_list0(
+                        get_arg_separator_parser(inline),
+                        get_unnamed_arg_parser(inline),
+                    ),
+                    get_arg_separator_parser(inline),
+                    separated_list1(
+                        get_arg_separator_parser(inline),
+                        get_named_arg_parser(inline),
+                    ),
+                    get_arg_separator_parser(inline),
+                    separated_list1(
+                        get_arg_separator_parser(inline),
+                        get_unnamed_arg_parser(inline),
+                    ),
+
+                )), 
+                |tuple| ModuleArguments {
+                    positioned: Some({
+                        println!("{:?}", tuple);
+                        vec![]
+                    }),
+                    named: Some({
+                        let mut map = HashMap::new();
+                        map.insert("".to_string(), "".to_string());
+                        map}),
+                },
+            ),
             map(
                 separated_pair(
                     separated_list1(
@@ -512,7 +540,10 @@ fn get_module_args_parser<'a>(
                     ),
                 ),
                 |(unnamed, named)| ModuleArguments {
-                    positioned: Some(unnamed),
+                    positioned: Some({
+                        println!("in 1");
+                        unnamed
+                    }),
                     named: Some(named.into_iter().collect()),
                 },
             ),
@@ -522,7 +553,9 @@ fn get_module_args_parser<'a>(
                     get_unnamed_arg_parser(inline),
                 ),
                 |unnamed| ModuleArguments {
-                    positioned: Some(unnamed),
+                    positioned: Some({
+                        println!("in 2");
+                        unnamed}),
                     named: None,
                 },
             ),
@@ -533,13 +566,21 @@ fn get_module_args_parser<'a>(
                 ),
                 |named| ModuleArguments {
                     positioned: None,
-                    named: Some(named.into_iter().collect()),
+                    named: Some({
+                        println!("in 3");
+                        named.into_iter().collect()}),
                 },
             ),
         ))),
         |x| x.unwrap_or_default(),
     )
 }
+
+/*fn get_arg_error_parser<'a>(inline: bool) -> impl Parser<&'a str, (), Error<&'a str>> {
+    // should return a parser that returns an Error if there is a named arg before an unnamed arg
+    // or if there is a named arg with no value
+    unimplemented!();
+ } */
 
 /// Returns a parser parsing the separator of arguments. The separators are whitespace and optional comma.
 ///

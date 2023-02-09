@@ -97,7 +97,12 @@ fn watch(args: &Args, target: &String) -> Result<()> {
     Ok(())
 }
 
-fn main() -> Result<()> {
+fn main(){
+    let source = fs::read_to_string("parser/test.mdm").unwrap();
+    let document = parse(&source);
+    println!("{}", document.tree_string(false));
+}
+/*fn main() -> Result<()> {
     let args = Args::parse();
     let current_path = env::current_dir()?;
     let target = current_path.into_os_string().into_string().unwrap();
@@ -127,3 +132,4 @@ fn main() -> Result<()> {
 
     Ok(())
 }
+*/
