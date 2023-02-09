@@ -205,7 +205,7 @@ pub fn parse(source: &str) -> Element {
 }
 
 pub fn parse_to_ast(source: &str) -> Ast {
-    Ast::Document(parse_to_ast_document(&source))
+    Ast::Document(parse_to_ast_document(source))
 }
 
 /// Parses the source document and returns it as a `document`. If the parser errors out, a
@@ -1097,7 +1097,7 @@ fn pretty_ast(ast: &Ast) -> Vec<String> {
             strs.push(format!("{} {line}", if idx == 0 { '>' } else { '|' }))
         }),
         Ast::Document(Document { elements }) => {
-            strs.push(format!("Document:"));
+            strs.push("Document:".to_string());
             if elements.is_empty() {
                 strs.push(format!("{indent}[no elements]"));
             } else {
@@ -1110,7 +1110,7 @@ fn pretty_ast(ast: &Ast) -> Vec<String> {
         }
 
         Ast::Paragraph(Paragraph { elements }) => {
-            strs.push(format!("Paragraph:"));
+            strs.push("Paragraph:".to_string());
             if elements.is_empty() {
                 strs.push(format!("{indent}[no elements]"));
             } else {
