@@ -9,12 +9,12 @@ pub type NodeName = String;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Transform {
     pub from: NodeName,
-    pub to: NodeName,
-    pub arguments: Vec<Arg>,
+    pub to: Vec<String>,
+    pub args_info: Vec<ArgInfo>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Arg {
+pub struct ArgInfo {
     pub name: String,
     pub default: Option<String>,
     pub description: String,
@@ -68,8 +68,7 @@ impl Package {
         let name = {
             let mut buffer = String::new();
             output
-                .read_to_string(&mut buffer)
-                .map_err(|_| CoreError::InvalidUTF8("unkown (when reading name)".to_string()))?;
+                .read_to_string(&mut buffer)?;
             buffer.trim().to_string()
         };
 
@@ -82,8 +81,7 @@ impl Package {
         let version = {
             let mut buffer = String::new();
             output
-                .read_to_string(&mut buffer)
-                .map_err(|_| CoreError::InvalidUTF8(name.clone()))?;
+                .read_to_string(&mut buffer)?;
             buffer.trim().to_string()
         };
 
@@ -94,8 +92,7 @@ impl Package {
         let raw_transforms_str = {
             let mut buffer = String::new();
             output
-                .read_to_string(&mut buffer)
-                .map_err(|_| CoreError::InvalidUTF8(name.clone()))?;
+                .read_to_string(&mut buffer)?;
             buffer
         };
 
@@ -148,14 +145,11 @@ fn parse_transforms(input: &str) -> Option<Vec<Transform>> {
             };
         }
 
-        // Add a tranform entry for each output
-        for output in outputs {
-            transforms.push(Transform {
-                from: name.to_string(),
-                to: output,
-                arguments: arguments.clone(),
-            });
-        }
+        transforms.push(Transform {
+            from: name.to_string(),
+            to: outputs,
+            args_info: arguments,
+        });
     }
 
     Some(transforms)
@@ -165,13 +159,13 @@ fn parse_transforms(input: &str) -> Option<Vec<Transform>> {
 /// name = "optional default value" - Description
 /// FIXME: this parser breaks on the following input
 /// foo ="-" - description
-fn parse_arg(input: &str) -> Option<Arg> {
+fn parse_arg(input: &str) -> Option<ArgInfo> {
     let (lhs, description) = input.split_once('-')?;
     let name = lhs.split_whitespace().take(1).collect();
     let maybe_default = lhs.split_whitespace().skip(1).collect::<String>();
     let default = maybe_default.strip_prefix('=');
 
-    Some(Arg {
+    Some(ArgInfo {
         name,
         description: description.trim().to_string(),
         default: default.map(|s| s.trim().to_string()),
@@ -187,7 +181,7 @@ mod tests {
         let s = "x = 30 - The y position";
         assert_eq!(
             parse_arg(s),
-            Some(Arg {
+            Some(ArgInfo {
                 name: "x".to_string(),
                 default: Some("30".to_string()),
                 description: "The y position".to_string(),

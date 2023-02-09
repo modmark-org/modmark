@@ -6,14 +6,39 @@ mod package;
 
 pub use context::Context;
 pub use error::CoreError;
-pub use package::{Arg, NodeName, Package, PackageInfo, Transform};
+pub use package::{ArgInfo, NodeName, Package, PackageInfo, Transform};
 
 #[cfg(all(feature = "web", feature = "native"))]
 compile_error!("feature \"native\" and feature \"web\" cannot be enabled at the same time");
 
+
+
 /// Evaluates a document using the given context
-pub fn eval(_document: &Element, _ctx: &mut Context) -> String {
-    "TODO".to_string()
+pub fn eval(source: &str, ctx: &mut Context) -> String {
+    let document = parser::parse(source);
+    eval_elem(&document, ctx)
+}
+
+pub fn eval_elem(element: &Element, ctx: &mut Context) -> String {
+    use Element::*;
+    match root {
+        Data(_) => {
+        },
+        Node { name, environment, children } => {
+            if evaluated_children.iter().all(|child| false /*Kolla om alla är module 'output' */) {
+                // concatenera barnen och ge tillbaka en module output...
+            } else {
+                unreachable!()
+            }
+        }
+        ModuleInvocation { name, args, body, one_line } => {
+            // base case: om det är output
+            // då vill vi ge en sträng
+            // annars får man kicka igång wasm-runtimen och expandera macrot
+            // ..., det vi kallat transform
+        },
+    };
+    todo!()
 }
 
 #[cfg(test)]
@@ -31,8 +56,8 @@ mod tests {
             transforms: vec![
                 Transform {
                     from: "[table]".to_string(),
-                    to: "table".to_string(),
-                    arguments: vec![Arg {
+                    to: vec!["table".to_string()],
+                    args_info: vec![ArgInfo {
                         name: "border".to_string(),
                         default: Some("black".to_string()),
                         description: "What color the border should be".to_string(),
@@ -40,23 +65,13 @@ mod tests {
                 },
                 Transform {
                     from: "table".to_string(),
-                    to: "html".to_string(),
-                    arguments: vec![],
-                },
-                Transform {
-                    from: "table".to_string(),
-                    to: "latex".to_string(),
-                    arguments: vec![],
+                    to: vec!["html".to_string(), "latex".to_string()],
+                    args_info: vec![],
                 },
                 Transform {
                     from: "row".to_string(),
-                    to: "html".to_string(),
-                    arguments: vec![],
-                },
-                Transform {
-                    from: "row".to_string(),
-                    to: "latex".to_string(),
-                    arguments: vec![],
+                    to: vec!["html".to_string(), "latex".to_string()],
+                    args_info: vec![],
                 },
             ],
         };

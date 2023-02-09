@@ -17,8 +17,8 @@ pub enum CoreError {
     #[cfg(feature = "native")]
     #[error("Compiler error")]
     WasmerCompiler(Box<CompileError>),
-    #[error("No module for transforming node '{0}'.")]
-    MissingTransform(String),
+    #[error("No package for transforming node '{0}' to '{1}'.")]
+    MissingTransform(String, String),
     #[error("Wasi error '{0}'.")]
     WasiError(Box<WasiError>),
     #[error("Wasmer intstantiation error '{0}'.")]
@@ -29,10 +29,14 @@ pub enum CoreError {
     WasmerExport(Box<ExportError>),
     #[error("Wasmer runtime error '{0}'.")]
     WasmerRuntimeError(Box<RuntimeError>),
-    #[error("Module '{0}' has written invalid UTF-8 to stdout.")]
-    InvalidUTF8(String),
+    #[error("Failed to write/read to or from a package '{0}'.")]
+    IoError(#[from] std::io::Error),
     #[error("Failed to parse transforms of package '{0}'.")]
     ParseTransforms(String),
+    #[error("You repeated the argument {1} for the '{0}' module.")]
+    RepeatedArgument(NodeName, String),
+    #[error("Failed to serialize json")]
+    JsonError(#[from] serde_json::Error),
 }
 
 impl From<WasiError> for CoreError {

@@ -13,6 +13,7 @@ use nom::{combinator::*, Finish, IResult, Parser};
 use thiserror::Error;
 
 use Element::Node;
+use serde::{Deserialize, Serialize};
 
 use crate::tag::CompoundAST;
 use crate::Ast::Text;
@@ -22,7 +23,8 @@ mod module;
 mod or;
 mod tag;
 
-#[derive(Clone, Debug, PartialEq)]
+// FIXME Move element to core
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Element {
     Data(String),
     Node {
@@ -38,7 +40,7 @@ pub enum Element {
     },
 }
 
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct ModuleArguments {
     pub positioned: Option<Vec<String>>,
     pub named: Option<HashMap<String, String>>,

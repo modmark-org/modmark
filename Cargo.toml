@@ -5,7 +5,7 @@ members = [
     "parser",
 ]
 
-exclude = ["modules/test-module", "playground/web_bindings"]
+exclude = ["modules/test-module", "modules/bold-package", "playground/web_bindings"]
 
 # We need to specifiy that we use the new resolver to
 # get wasmer to build correctly when using a workspace
