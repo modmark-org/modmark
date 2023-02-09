@@ -284,7 +284,7 @@ fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Ast>> {
                     or::or5(
                         parse_inline_module,
                         preceded(char('\\'), line_ending),
-                        tag(r"\["),
+                        preceded(char('\\'), none_of("\r\n")),
                         none_of("\r\n"),
                         // note: do NOT use not_line_ending, it matches successfully on empty string
                         // so that would break this
@@ -294,8 +294,8 @@ fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Ast>> {
                     |(acc_vec, acc_str),
                      (
                         opt_inline,
-                        _opt_esc_line_ending,
-                        opt_escape_mod,
+                        opt_esc_line_ending,
+                        opt_escaped_char,
                         opt_char,
                         opt_line_ending,
                     )| {
@@ -307,8 +307,16 @@ fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Ast>> {
                                 elems.push(Text(mem::take(&mut string)))
                             }
                             elems.push(Ast::Module(module));
-                        } else if opt_escape_mod.is_some() {
-                            string.push('[');
+                        } else if opt_esc_line_ending.is_some() {
+                            // this ensures that each escaped newline is just one escaped character
+                            // so that it is removed correctly in the second pass. If this wasn't
+                            // the case, \\LF would give \LF which would then get removed during the
+                            // second pass, which is incorrect
+                            string.push('\\');
+                            string.push('\n');
+                        } else if let Some(char) = opt_escaped_char {
+                            string.push('\\');
+                            string.push(char)
                         } else if let Some(n_char) = opt_char {
                             string.push(n_char);
                         } else if let Some(line_ending) = opt_line_ending {
@@ -317,12 +325,11 @@ fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Ast>> {
                         (elems, string)
                     },
                 ),
-                |(a, b)| {
-                    let mut elems = a;
+                |(mut a, b)| {
                     if !b.is_empty() {
-                        elems.push(Text(b))
+                        a.push(Text(b))
                     }
-                    elems
+                    a
                 },
             ),
             extract_tags,
