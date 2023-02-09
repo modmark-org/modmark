@@ -51,6 +51,7 @@ enum AST {
     Paragraph(Paragraph),
     Tag(Tag),
     Module(Module),
+    Error(String),
 }
 
 impl From<AST> for Element {
@@ -78,6 +79,7 @@ impl From<AST> for Element {
                 body: module.body,
                 one_line: module.one_line,
             },
+            AST::Error(error) => panic!("{}", error),
         }
     }
 }
@@ -494,6 +496,7 @@ fn parse_module_name(input: &str) -> IResult<&str, &str> {
 fn get_module_args_parser<'a>(
     inline: bool,
 ) -> impl Parser<&'a str, ModuleArguments, Error<&'a str>> {
+    let mut first_named = false;
     map(
         opt(alt((
             map(
@@ -585,7 +588,7 @@ fn get_unnamed_arg_parser<'a>(inline: bool) -> impl Parser<&'a str, String, Erro
 /// | `delim = "yes box"`             | `(delim, yes box)`|
 /// | `"fake" = news`                 | `<Fail>`          |
 /// | `<space>`                       | `<Fail>`          |
-/// returns: a parser parsing one named argument
+/// returns: aget_arg_separator_parser parser parsing one named argument
 ///
 fn get_named_arg_parser<'a>(
     inline: bool,
