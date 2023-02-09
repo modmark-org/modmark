@@ -8,7 +8,7 @@ use nom::character::complete::{
     char, line_ending, multispace0, multispace1, none_of, space0, space1,
 };
 use nom::error::Error;
-use nom::multi::{fold_many1, many1, separated_list0, separated_list1};
+use nom::multi::{fold_many1, many0, many1, separated_list0, separated_list1};
 use nom::sequence::{delimited, pair, preceded, separated_pair, terminated};
 use nom::{
     branch::*, bytes::complete::tag, combinator::*, FindSubstring, Finish, IResult, InputTake,
@@ -253,9 +253,12 @@ fn parse_document(input: &str) -> IResult<&str, Document> {
 ///
 /// returns: Result<(&str, Vec<Element, Global>), Err<Error<I>>>
 fn parse_document_blocks(input: &str) -> IResult<&str, Vec<Ast>> {
-    separated_list0(
-        preceded(line_ending, many1(line_ending)),
-        map(parse_multiline_module, Ast::Module).or(map(parse_paragraph, Ast::Paragraph)),
+    preceded(
+        many0(line_ending),
+        separated_list0(
+            preceded(line_ending, many1(line_ending)),
+            map(parse_multiline_module, Ast::Module).or(map(parse_paragraph, Ast::Paragraph)),
+        ),
     )(input)
 }
 
