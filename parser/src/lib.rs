@@ -8,7 +8,7 @@ use nom::character::complete::{
     char, line_ending, multispace0, multispace1, none_of, space0, space1,
 };
 use nom::error::Error;
-use nom::multi::{fold_many1, many1, separated_list0, separated_list1, many_till};
+use nom::multi::{fold_many1, many1, separated_list0, separated_list1, many0};
 use nom::sequence::{delimited, pair, preceded, separated_pair, terminated, tuple};
 use nom::{
     branch::*, bytes::complete::tag, combinator::*, FindSubstring, Finish, IResult, InputTake,
@@ -45,13 +45,24 @@ pub struct ModuleArguments {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+enum MaybeArgs {
+    ModuleArguments(ModuleArguments),
+    Error(String),
+}
+
+impl Default for MaybeArgs {
+    fn default() -> Self {
+        MaybeArgs::ModuleArguments(ModuleArguments::default())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 enum AST {
     Text(String),
     Document(Document),
     Paragraph(Paragraph),
     Tag(Tag),
     Module(Module),
-    Error(String),
 }
 
 impl From<AST> for Element {
@@ -73,13 +84,16 @@ impl From<AST> for Element {
                 environment: HashMap::new(),
                 children: tag.elements.into_iter().map(|e| e.into()).collect(),
             },
-            AST::Module(module) => ModuleInvocation {
-                name: module.name,
-                args: module.args,
-                body: module.body,
-                one_line: module.one_line,
-            },
-            AST::Error(error) => panic!("{}", error),
+            AST::Module(module) => {
+                match module.args {
+                    MaybeArgs::ModuleArguments(args) => ModuleInvocation {
+                        name: module.name,
+                        args,
+                        body: module.body,
+                        one_line: module.one_line,
+                    },
+                    MaybeArgs::Error(error) => panic!("{}", error),
+                }},
         }
     }
 }
@@ -103,7 +117,7 @@ struct Document {
 #[derive(Clone, Debug, PartialEq)]
 struct Module {
     name: String,
-    args: ModuleArguments,
+    args: MaybeArgs,
     body: String,
     one_line: bool,
 }
@@ -454,7 +468,7 @@ fn get_multiline_body_parser<'a>(
 ///
 fn get_module_invocation_parser<'a>(
     inline: bool,
-) -> impl Parser<&'a str, (String, ModuleArguments), Error<&'a str>> {
+) -> impl Parser<&'a str, (String, MaybeArgs), Error<&'a str>> {
     map(
         delimited(
             char('['),
@@ -495,7 +509,7 @@ fn parse_module_name(input: &str) -> IResult<&str, &str> {
 ///
 fn get_module_args_parser<'a>(
     inline: bool,
-) -> impl Parser<&'a str, ModuleArguments, Error<&'a str>> {
+) -> impl Parser<&'a str, MaybeArgs, Error<&'a str>> {
     map(
         opt(alt((
             map(
@@ -504,7 +518,7 @@ fn get_module_args_parser<'a>(
                         get_arg_separator_parser(inline),
                         get_unnamed_arg_parser(inline),
                     ),
-                    get_arg_separator_parser(inline),
+                    many0(get_arg_separator_parser(inline)),
                     separated_list1(
                         get_arg_separator_parser(inline),
                         get_named_arg_parser(inline),
@@ -516,16 +530,7 @@ fn get_module_args_parser<'a>(
                     ),
 
                 )), 
-                |tuple| ModuleArguments {
-                    positioned: Some({
-                        println!("{:?}", tuple);
-                        vec![]
-                    }),
-                    named: Some({
-                        let mut map = HashMap::new();
-                        map.insert("".to_string(), "".to_string());
-                        map}),
-                },
+                |tuple| MaybeArgs::Error("Unnamed arguments after Named Arguments".to_string()),
             ),
             map(
                 separated_pair(
@@ -539,38 +544,35 @@ fn get_module_args_parser<'a>(
                         get_named_arg_parser(inline),
                     ),
                 ),
-                |(unnamed, named)| ModuleArguments {
+                |(unnamed, named)| MaybeArgs::ModuleArguments(ModuleArguments {
                     positioned: Some({
-                        println!("in 1");
                         unnamed
                     }),
                     named: Some(named.into_iter().collect()),
-                },
+                },),
             ),
             map(
                 separated_list1(
                     get_arg_separator_parser(inline),
                     get_unnamed_arg_parser(inline),
                 ),
-                |unnamed| ModuleArguments {
+                |unnamed| MaybeArgs::ModuleArguments(ModuleArguments {
                     positioned: Some({
-                        println!("in 2");
                         unnamed}),
                     named: None,
-                },
+                },),
             ),
             map(
                 separated_list1(
                     get_arg_separator_parser(inline),
                     get_named_arg_parser(inline),
                 ),
-                |named| ModuleArguments {
+                |named| MaybeArgs::ModuleArguments(ModuleArguments {
                     positioned: None,
                     named: Some({
-                        println!("in 3");
                         named.into_iter().collect()}),
                 },
-            ),
+            ),),
         ))),
         |x| x.unwrap_or_default(),
     )
