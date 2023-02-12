@@ -25,11 +25,11 @@
         function updateOutput(input) {
             let pre = document.createElement("pre")
             switch (selector.value) {
-                case "parse":
-                    pre.innerText = parse(input)
-                    break;
                 case "ast":
                     pre.innerText = ast(input)
+                    break;
+                case "parse":
+                    pre.innerText = parse(input)
                     break;
                 case "raw_tree":
                     pre.innerText = raw_tree(input)
@@ -57,13 +57,13 @@
 <div class="menu">
     <h1>Modmark playground</h1>
     <select name="selector" id="selector">
-        <option value="parse">Document tree</option>
         <option value="ast">Abstract syntax tree</option>
+        <option value="parse">Document tree</option>
         <option value="raw_tree">Raw tree</option>
         <option value="transpile">HTML output</option>
         <option value="render">Rendered HTML</option>
     </select>
-    <a href="https://github.com/modmark-org/modmark">Github repo</a>
+    <a href="https://github.com/modmark-org/modmark">GitHub repo</a>
 </div>
 <main id="wrapper">
     <textarea id="editor"></textarea>
