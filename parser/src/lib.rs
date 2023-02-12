@@ -379,8 +379,11 @@ fn remove_escape_chars(input: &mut [Ast]) {
             str.retain(|c| {
                 if escaped {
                     escaped = false;
-                    // we want to return false for newlines, so we remove them
-                    // all other escaped characters are retained as-is
+                    // this "true" returns on an escaped character, saying that it should be
+                    // retained. if some escaped characters are to be deleted, this is the place to
+                    // delete them. if we decide on that backslashes shouldn't be deleted at all
+                    // when preceded by [a-zA-Z0-9], we have to change this .retain to something
+                    // else since it doesn't support looking ahead
                     true
                 } else if c == '\\' {
                     escaped = true;
