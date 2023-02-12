@@ -251,7 +251,7 @@ fn parse_document(input: &str) -> IResult<&str, Document> {
 ///
 /// * `input`: The text to parse
 ///
-/// returns: Result<(&str, Vec<Element, Global>), Err<Error<I>>>
+/// returns: A vector of ASTs where each AST is either a multiline module or a paragraph
 fn parse_document_blocks(input: &str) -> IResult<&str, Vec<Ast>> {
     preceded(
         many0(line_ending),
@@ -267,9 +267,9 @@ fn parse_document_blocks(input: &str) -> IResult<&str, Vec<Ast>> {
 ///
 /// # Arguments
 ///
-/// * `input`:
+/// * `input`: The text to parse
 ///
-/// returns: Result<(&str, Element), Err<Error<I>>>
+/// returns: The paragraph node, if a successful parse occurs, otherwise the parse error
 fn parse_paragraph(input: &str) -> IResult<&str, Paragraph> {
     map(parse_paragraph_elements, |elems| Paragraph {
         elements: elems,
@@ -283,7 +283,7 @@ fn parse_paragraph(input: &str) -> IResult<&str, Paragraph> {
 ///  1. Each position of the string is parsed. These elements are attempted at being parsed,
 ///     and the first one matching succeeds, in order:
 ///     * An inline module is attempted at parsing
-///     * An escaped newline, in which case the newline gets fixed to \n and the backslash is kept
+///     * An escaped newline, in which case both the backslash and newline are removed
 ///     * An escaped character, in which case both the character and backslash is retained
 ///     * An character which isn't a newline
 ///     * A newline not immediately following another newline (the following char is not consumed)
@@ -303,6 +303,12 @@ fn parse_paragraph(input: &str) -> IResult<&str, Paragraph> {
 ///     backslashes have been respected up to this point, and it was needed for them to be retained
 ///     in the string as to allow the different steps to find them (since we don't tokenize), but
 ///     since the parsing is done, we remove them.
+///
+/// # Arguments
+///
+/// * `input`: The input to parse
+///
+/// returns: A list of the elements that the paragraph contains, or a parsing error
 fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Ast>> {
     map(
         map(
@@ -321,7 +327,7 @@ fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Ast>> {
                     |(acc_vec, acc_str),
                      (
                         opt_inline,
-                        opt_esc_line_ending,
+                        _opt_esc_line_ending,
                         opt_escaped_char,
                         opt_char,
                         opt_line_ending,
@@ -334,13 +340,6 @@ fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Ast>> {
                                 elems.push(Text(mem::take(&mut string)))
                             }
                             elems.push(Ast::Module(module));
-                        } else if opt_esc_line_ending.is_some() {
-                            // this ensures that each escaped newline is just one escaped character
-                            // so that it is removed correctly in the second pass. If this wasn't
-                            // the case, \\LF would give \LF which would then get removed during the
-                            // second pass, which is incorrect
-                            string.push('\\');
-                            string.push('\n');
                         } else if let Some(char) = opt_escaped_char {
                             string.push('\\');
                             string.push(char)
@@ -349,6 +348,14 @@ fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Ast>> {
                         } else if let Some(line_ending) = opt_line_ending {
                             string.push_str(line_ending);
                         }
+
+                        // If there is an escaped newline, we can remove both the backslash
+                        // and the newline. This means that "pre\LFpost" becomes "prepost",
+                        // and since this won't touch other backslashes or already-escaped
+                        // backslashes, this will work. If we have "\\LF", both "\\" will be
+                        // caught by opt_escaped_char and thus \LF won't be caught by
+                        // _opt_esc_line_ending
+
                         (elems, string)
                     },
                 ),
@@ -375,6 +382,8 @@ fn remove_escape_chars(input: &mut [Ast]) {
             str.retain(|c| {
                 if escaped {
                     escaped = false;
+                    // we want to return false for newlines, so we remove them
+                    // all other escaped characters are retained as-is
                     true
                 } else if c == '\\' {
                     escaped = true;
@@ -399,6 +408,8 @@ fn remove_escape_chars(input: &mut [Ast]) {
 
 /// This function extracts tags in all text nodes in the input. It delegates the work to
 /// [extract_all_tags], see that comment for more information.
+/// Currently, the tags are defined in here and [extract_all_tags] uses them. If new tags are to
+/// be added, this would be the place to add them.
 fn extract_tags(mut input: Vec<Ast>) -> Vec<Ast> {
     let bold = TagDefinition::new("Bold", ("**", "**"), true);
     let italic = TagDefinition::new("Italic", ("//", "//"), true);
@@ -445,13 +456,18 @@ fn extract_tags(mut input: Vec<Ast>) -> Vec<Ast> {
 ///     was found, incremented by the length of the opening tag, and the loop starts from the top.
 ///  4. If the [TagDefinition] says that the tag extraction should continue recursively, it does so
 ///     on the extracted [Tag].
+///
+/// # Arguments:
+/// * `tags`: The tags to extract
+/// * `input`: The AST to extract the tags from. Modifications will occur in-place
+///
 fn extract_all_tags<T>(tags: &[&TagDefinition], input: &mut T)
 where
     T: CompoundAST,
 {
     let mut search_idx = (0usize, 0usize);
     while let Some(((start_elem_idx, start_str_idx), tag)) =
-        find_opening_tag(search_idx, input, tags)
+        find_opening_tag(search_idx, tags, input)
     {
         if let Some((end_elem_idx, end_str_idx)) = find_closing_tag(
             (start_elem_idx, start_str_idx + tag.delimiters.0.len()),
@@ -468,7 +484,7 @@ where
                 let tag = &mut input.elements_mut()[tag_idx];
                 match tag {
                     Ast::Tag(tag) => extract_all_tags(tags, tag),
-                    x => panic!("Expected tag at tag position, got {x:?}"),
+                    _x => panic!("Expected tag at tag position, got {_x:?}"),
                 }
             }
         }
@@ -493,10 +509,41 @@ impl TagDefinition {
     }
 }
 
+/// The position of a character inside a compound AST. One compound AST consists of a list of
+/// children, and those children can be any of the types defined in the AST enum. You can position
+/// one character in an AST by first giving the index of the text element, and then giving the
+/// character index inside that text element. This is a type alias for one such pair; it holds the
+/// index of the element as the first element, and the index oc the character as the second element.
 type CompoundPos = (usize, usize);
 
-// returns index of the extracted thing
-// cant return a ref since its already moved
+/// This function extracts an already found tag from the given Ast. See [CompoundPos] for info about
+/// the positions. The function takes two positions as inputs, and extracts all text and elements
+/// in between them. It also takes the matched tag definition as input, and uses that to know the
+/// length of the prefixes to subtract. The two positions can be in one of two cases, and the
+/// behaviour is different:
+///  1. Both positions point to the same element:
+///     * This means that the text to extract is from the same Text node.
+///     * The function simply splits the text in three parts, one for the part before the
+///         tag, one for the part between the opening and closing tag, and one for the part
+///         after the closing tag.
+///     * A tag is created containing the middle part, and the start part,
+///         then the tag, and then the end part is added to the tree, replacing the original Text.
+///     * The algorithm ensures that no empty texts are added.
+///  2. The positions are in different elements:
+///     * This means that the tags span several elements, possibly inline modules, texts and other
+///         tags (most probably not other tags).
+///     * The text of the first position is located, and is split at the tag position into two
+///         Text nodes, where one should be inside the tag and one outside.
+///     * The text of the second position is located, and is split at the tag position into two
+///         Text nodes, where one should be inside the tag and one outside.
+///     * All elements between the two different split positions are removed from the Ast and moved
+///         into a new Tag-type Ast.
+///     * That new Ast is inserted where the previous elements were removed.
+///     * The algorithm ensures that no empty texts are added.
+///
+/// Note that the function behaves as if it does everything stated above, but the actions done may
+/// differ slightly due to performance gains. See comments in the source code for the function for
+/// more details.
 fn extract_tag<T>(
     tag: &TagDefinition,
     (idx_elem_start, idx_str_start): CompoundPos,
@@ -628,11 +675,21 @@ where
     }
 }
 
-// Searches an compound AST for the first opening tag
+/// Finds the first opening tag out of all opening tags in the list of the [TagDefinition]s given,
+/// starting the search after a specific position.
+///
+/// # Arguments
+///
+/// * `(start_elem_idx, start_str_idx)`: The position to search from, see [CompoundPos]
+/// * `tags`: A list of the definitions of the tags to search for
+/// * `ast`: The Ast to search in
+///
+/// returns: Option<(usize, usize), &TagDefinition>, the position where the first tag was found,
+///     see [CompoundPos], together with a reference to the tag found
 fn find_opening_tag<'a, T>(
     (start_elem_idx, start_str_idx): CompoundPos,
-    ast: &T,
     tags: &'a [&TagDefinition],
+    ast: &T,
 ) -> Option<(CompoundPos, &'a TagDefinition)>
 where
     T: CompoundAST,
@@ -655,15 +712,15 @@ where
         })
 }
 
-///
+/// Finds the first closing tag according to the given [TagDefinition] after a specific position.
 ///
 /// # Arguments
 ///
-/// * `(elem, idx)`:
-/// * `tag`:
-/// * `ast`:
+/// * `(elem, idx)`: The position to search from, see [CompoundPos]
+/// * `tag`: The definition of the tag to search for
+/// * `ast`: The Ast to search in
 ///
-/// returns: Option<(usize, usize)>
+/// returns: Option<(usize, usize)>, the position where the closing tag was found, see [CompoundPos]
 fn find_closing_tag<T>(
     (start_elem_idx, start_str_idx): CompoundPos,
     tag: &TagDefinition,
