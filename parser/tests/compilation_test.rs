@@ -4,8 +4,8 @@ use std::path::Path;
 
 use json::{object, JsonValue};
 
-use parser::{parse, parse_to_ast_document, Ast, Document, Element};
 use diffy::create_patch;
+use parser::{parse, parse_to_ast_document, Ast, Document, Element};
 
 fn split_test(input: &Path) -> datatest_stable::Result<()> {
     let output = input.with_extension("json");
