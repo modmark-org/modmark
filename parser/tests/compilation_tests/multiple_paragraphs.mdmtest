@@ -1,11 +1,15 @@
 Testing parsing of two paragraphs.
 Note that some newlines are escaped, while
 some are not. In the second example,
-note that there is a space between the first
-and second line, and the second and
-third line (right behind the backslash),
-while between the third and forth line,
-there isn't a space.
+stacked backslashes are used. In the
+first line, there is a space, then an
+escaped backslash, then an escaped newline.
+In the second line, there is an escaped newline.
+In the third line, there is just an escaped
+backslash. In the fourth line, there are
+three escaped backslashes, and in
+the fifth line, there are two escaped
+backslashes and one escaped newline.
 
 ```mdm
 This is the first paragraph \
@@ -13,10 +17,12 @@ of the document. Slashes \
 are used to escape new-\
 lines.
 
-This is the second paragraph.
+This is the second paragraph. \\\
 Here, escaped newlines are \
-used sometimes, while sometimes
-not
+used sometimes, while sometimes \\
+not. Stacked slashes are used \\\\\\
+to try to fool the system haha \\\\\
+abc
 ```
 
 ```json
@@ -33,7 +39,7 @@ not
         {
             "name": "Paragraph",
             "children": [
-                "This is the second paragraph.\nHere, escaped newlines are used sometimes, while sometimes\nnot"
+                "This is the second paragraph. \\Here, escaped newlines are used sometimes, while sometimes \\\nnot. Stacked slashes are used \\\\\\\nto try to fool the system haha \\\\abc"
             ]
         }
     ]
