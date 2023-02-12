@@ -5,7 +5,7 @@ use std::path::Path;
 use json::{object, JsonValue};
 
 use parser::{parse, parse_to_ast_document, Ast, Document, Element};
-use diffy::{create_patch, merge};
+use diffy::create_patch;
 
 fn split_test(input: &Path) -> datatest_stable::Result<()> {
     let output = input.with_extension("json");
@@ -60,7 +60,7 @@ fn test_lf(input: &str, output: &str) {
             "Failed using LF,\nEXPECTED\n{}\nGOT\n{}\nDIFF\n{}",
             json_obj.pretty(2),
             mdm_obj.pretty(2),
-            create_patch(&json_obj.pretty(2), &mdm_obj.pretty(2)).to_string()
+            create_patch(&json_obj.pretty(2), &mdm_obj.pretty(2))
         );
     }
 
@@ -69,7 +69,7 @@ fn test_lf(input: &str, output: &str) {
             "Failed using LF,\nEXPECTED\n{}\nGOT\n{}\nDIFF\n{}",
             json_obj.pretty(2),
             ast_obj.pretty(2),
-            create_patch(&json_obj.pretty(2), &ast_obj.pretty(2)).to_string()
+            create_patch(&json_obj.pretty(2), &ast_obj.pretty(2))
         );
     }
 }
@@ -86,7 +86,7 @@ fn test_crlf(input: &str, output: &str) {
             "Failed using CRLF,\nEXPECTED\n{}\nGOT\n{}\nDIFF\n{}",
             json_obj.pretty(2),
             mdm_obj.pretty(2),
-            create_patch(&json_obj.pretty(2), &mdm_obj.pretty(2)).to_string()
+            create_patch(&json_obj.pretty(2), &mdm_obj.pretty(2))
         );
     }
 
@@ -95,7 +95,7 @@ fn test_crlf(input: &str, output: &str) {
             "Failed using CRLF,\nEXPECTED\n{}\nGOT\n{}\nDIFF\n{}",
             json_obj.pretty(2),
             ast_obj.pretty(2),
-            create_patch(&json_obj.pretty(2), &ast_obj.pretty(2)).to_string()
+            create_patch(&json_obj.pretty(2), &ast_obj.pretty(2))
         );
     }
 }
