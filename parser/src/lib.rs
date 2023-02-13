@@ -12,8 +12,8 @@ use nom::{combinator::*, Finish, IResult, Parser};
 
 use thiserror::Error;
 
-use Element::Node;
 use serde::{Deserialize, Serialize};
+use Element::Node;
 
 use crate::tag::CompoundAST;
 use crate::Ast::Text;
@@ -38,6 +38,7 @@ pub enum Element {
         body: String,
         one_line: bool,
     },
+    Compound(Vec<Self>),
 }
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
@@ -669,6 +670,7 @@ fn pretty_rows(element: &Element, include_environment: bool) -> Vec<String> {
                 strs.push("} [multiline invocation]".to_string());
             }
         }
+        Element::Compound(_) => todo!(),
     }
     strs
 }

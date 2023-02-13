@@ -2,7 +2,7 @@ mod error;
 mod package;
 
 use clap::Parser;
-use core::{eval, Context};
+use core::{eval, Context, OutputFormat};
 use crossterm::{
     cursor,
     style::{self, Stylize},
@@ -26,6 +26,14 @@ struct Args {
     output: String,
 
     #[arg(
+        short = 'f',
+        long = "format",
+        help = "The output format of the file",
+        default_value = "html"
+    )]
+    format: String,
+
+    #[arg(
         short = 'w',
         long = "watch",
         help = "Watches file and compiles changes"
@@ -42,15 +50,15 @@ fn print_tree(tree: parser::Element) {
 
 fn compile_file(args: &Args) -> Result<Element, CliError> {
     let source = fs::read_to_string(&args.input)?;
-    let document = parse(&source).unwrap();
-
     let mut ctx = Context::default();
-    let output = eval(&document, &mut ctx);
+    let output =
+        eval(&source, &mut ctx, &OutputFormat::new(&args.format)).expect("Failed to evaluate file");
 
     let mut output_file = File::create(&args.output)?;
     output_file.write_all(output.as_bytes())?;
 
-    Ok(document)
+    // Also return the Element tree for debug purposes
+    Ok(parse(&source))
 }
 
 fn watch(args: &Args, target: &String) -> Result<(), CliError> {

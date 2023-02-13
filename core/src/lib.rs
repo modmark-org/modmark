@@ -1,4 +1,6 @@
-use parser::Element;
+use std::str::FromStr;
+
+use parser::{Element, ModuleArguments};
 
 mod context;
 mod error;
@@ -11,34 +13,86 @@ pub use package::{ArgInfo, NodeName, Package, PackageInfo, Transform};
 #[cfg(all(feature = "web", feature = "native"))]
 compile_error!("feature \"native\" and feature \"web\" cannot be enabled at the same time");
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct OutputFormat(String);
 
-
-/// Evaluates a document using the given context
-pub fn eval(source: &str, ctx: &mut Context) -> String {
-    let document = parser::parse(source);
-    eval_elem(&document, ctx)
+/// To ensure that "html" and "HTML" is the same.
+impl OutputFormat {
+    pub fn new(format: &str) -> Self {
+        OutputFormat(format.to_lowercase())
+    }
 }
 
-pub fn eval_elem(element: &Element, ctx: &mut Context) -> String {
+impl FromStr for OutputFormat {
+    type Err = core::convert::Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(OutputFormat::new(s))
+    }
+}
+
+/// Evaluates a document using the given context
+pub fn eval(source: &str, ctx: &mut Context, format: &OutputFormat) -> Result<String, CoreError> {
+    let document = parser::parse(source)?;
+    eval_elem(document, ctx, format)
+}
+
+pub fn eval_elem(
+    root: Element,
+    ctx: &mut Context,
+    format: &OutputFormat,
+) -> Result<String, CoreError> {
     use Element::*;
     match root {
-        Data(_) => {
-        },
-        Node { name, environment, children } => {
-            if evaluated_children.iter().all(|child| false /*Kolla om alla är module 'output' */) {
-                // concatenera barnen och ge tillbaka en module output...
-            } else {
-                unreachable!()
-            }
+        Data(text) => {
+            // FIXME: den här borde inte finnas, men kan så länge konvertera till en Module {name: "escape_text"}
+            eval_elem(
+                ModuleInvocation {
+                    name: "escape_text".to_string(),
+                    args: ModuleArguments {
+                        positioned: None,
+                        named: None,
+                    },
+                    body: text.clone(),
+                    one_line: true,
+                },
+                ctx,
+                format,
+            )
         }
-        ModuleInvocation { name, args, body, one_line } => {
-            // base case: om det är output
-            // då vill vi ge en sträng
-            // annars får man kicka igång wasm-runtimen och expandera macrot
-            // ..., det vi kallat transform
-        },
-    };
-    todo!()
+        Node {
+            name: _,
+            environment: _,
+            children: _,
+        } => {
+            // skicka in allt till ctx.transform utan att evaluera barnen först, det får transformen göra bäst den vill med
+            let compound = ctx.transform(&root, format)?;
+            eval_elem(compound, ctx, format)
+        }
+        Compound(children) => {
+            let mut raw_content = String::new();
+
+            for child in children {
+                raw_content.push_str(&eval_elem(child, ctx, format)?);
+            }
+            // FIXME: should add a Element::Raw variant.
+            Ok(raw_content)
+        }
+        ModuleInvocation {
+            ref name,
+            args: _,
+            ref body,
+            one_line: _,
+        } => {
+            // Base case, if its just raw content, stop.
+            if name == "raw" {
+                return Ok(body.clone());
+            }
+
+            let compound = ctx.transform(&root, format)?;
+            eval_elem(compound, ctx, format)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -56,7 +110,7 @@ mod tests {
             transforms: vec![
                 Transform {
                     from: "[table]".to_string(),
-                    to: vec!["table".to_string()],
+                    to: vec![OutputFormat::new("table")],
                     args_info: vec![ArgInfo {
                         name: "border".to_string(),
                         default: Some("black".to_string()),
@@ -65,12 +119,12 @@ mod tests {
                 },
                 Transform {
                     from: "table".to_string(),
-                    to: vec!["html".to_string(), "latex".to_string()],
+                    to: vec![OutputFormat::new("html"), OutputFormat::new("latex")],
                     args_info: vec![],
                 },
                 Transform {
                     from: "row".to_string(),
-                    to: vec!["html".to_string(), "latex".to_string()],
+                    to: vec![OutputFormat::new("html"), OutputFormat::new("latex")],
                     args_info: vec![],
                 },
             ],

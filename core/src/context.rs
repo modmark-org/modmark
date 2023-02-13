@@ -10,12 +10,12 @@ use wasmer::Cranelift;
 use wasmer::{Instance, Store};
 use wasmer_wasi::{Pipe, WasiState};
 
-use crate::{ArgInfo, CoreError, NodeName, Package, PackageInfo, Transform};
+use crate::{ArgInfo, CoreError, NodeName, OutputFormat, Package, PackageInfo, Transform};
 
 #[derive(Debug)]
 pub struct Context {
     packages: HashMap<String, Package>,
-    transforms: HashMap<(String, String), (Transform, Package)>,
+    transforms: HashMap<(String, OutputFormat), (Transform, Package)>,
     store: Store,
 }
 
@@ -59,13 +59,13 @@ impl Context {
                 {
                     return Err(CoreError::OccupiedTransform(
                         from.clone(),
-                        output_format.clone(),
+                        output_format.0.clone(),
                         pkg.info.name.clone(),
                     ));
                 }
 
                 self.transforms.insert(
-                    (from.to_string(), output_format.to_string()),
+                    (from.to_string(), output_format.clone()),
                     (transform.clone(), pkg.clone()),
                 );
             }
@@ -75,49 +75,41 @@ impl Context {
     }
 
     /// Transform a node into another node by using the available transforms
+    /// FIXME: maybe should own the Element.
     pub fn transform(
         &mut self,
         from: &Element,
-        output_format: &String,
+        output_format: &OutputFormat,
     ) -> Result<Element, CoreError> {
         use Element::*;
-        // hittar vilket paket som ansvarar för en element-typ
-        // anropar den via wasi och berättar vilket output-format vi förväntar oss
-        // får tillbaka en lista som är en kombination av flera andra Element::ModuleInvocations och Element::Data(...)
-        // som är färdig-evaluerad och bara innehåller outputformatet
 
-        // Vi skapar en ny variant Element::Compound(Vec<Element>)
-        // när man anropar expand(Compound()) om alla innehåller Data kan vi kollapsa den och byta ut noden mot en enda Data()
         match from {
-            Data(text) => Ok(Element::ModuleInvocation {
-                // FIXME: måste först escapeas till rätt output format, så vi vill nog inte ha någon "data" nod
-                // när vi tar över Element utan bara översätta Ast::Text => [text]...
-                name: "output".to_string(),
-                args: ModuleArguments {
-                    positioned: None,
-                    named: None,
-                },
-                body: text.clone(),
-                one_line: true,
-            }),
+            Data(text) => unreachable!("No transform on data node"),
             Node {
                 name,
                 environment,
                 children,
-            } => todo!(),
+            } => {
+                // FIXME: should do the same stuff as in moduleinvocation
+                Ok(Element::Compound(vec![Element::ModuleInvocation {
+                    name: "raw".to_string(),
+                    args: ModuleArguments {
+                        positioned: None,
+                        named: None,
+                    },
+                    body: "ok".to_string(),
+                    one_line: true,
+                }]))
+            }
             ModuleInvocation {
                 name: module_name,
                 args,
                 body,
                 one_line,
             } => {
-                if module_name == "output" {
-                    unreachable!("Transform should never be called on an output module")
-                }
-
                 // We find the package responsible for this transform
                 let Some((transform, package)) = self.transforms.get(&(module_name.clone(), output_format.clone())) else {
-                    return Err(CoreError::MissingTransform(module_name.clone(), output_format.clone()));
+                    return Err(CoreError::MissingTransform(module_name.clone(), output_format.0.clone()));
                 };
 
                 let mut input = Pipe::new();
@@ -156,10 +148,18 @@ impl Context {
                     buffer.trim().to_string()
                 };
 
-                // FIXME: right now, everything is wrapped inside of a ducument,
-                // instead we should use seperate parsers for inline and block depending on the variable one_line
-                Ok(parser::parse(&result))
+                // FIXME: we need to deserialize the result value read from stdout
+                Ok(Element::Compound(vec![Element::ModuleInvocation {
+                    name: "raw".to_string(),
+                    args: ModuleArguments {
+                        positioned: None,
+                        named: None,
+                    },
+                    body: "ok".to_string(),
+                    one_line: true,
+                }]))
             }
+            Compound(_) => unreachable!("Should not transform compound element"),
         }
     }
 
@@ -246,6 +246,14 @@ fn serialize_element(element: &Element, args_info: &Vec<ArgInfo>) -> Result<Stri
                 "inline": one_line,
             }))?)
         }
+        Compound(children) => {
+            let serialized_children: Vec<String> = children
+                .iter()
+                .map(|child| serialize_element(child, args_info))
+                .collect::<Result<Vec<String>, CoreError>>()?;
+
+            Ok(serde_json::to_string(&json!(serialized_children))?)
+        }
     }
 }
 
@@ -274,7 +282,7 @@ fn test_serialize() {
 #[test]
 fn test_tranform() {
     let mut ctx = Context::default();
-    let output_format = "html".to_string();
+    let output_format = OutputFormat::new("html");
     ctx.transform(
         &Element::ModuleInvocation {
             name: "table".to_string(),
