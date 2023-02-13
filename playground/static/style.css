@@ -65,7 +65,8 @@ select:hover {
     width: 100%;
     padding: 1rem;
     box-sizing: border-box;
-    overflow-y: scroll;
+    overflow-x: auto;
+    overflow-y: hidden;
 }
 
 .menu-items {
