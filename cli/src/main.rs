@@ -1,4 +1,5 @@
 mod error;
+mod package;
 
 use clap::Parser;
 use core::{eval, Context};
@@ -42,11 +43,13 @@ fn print_tree(tree: parser::Element) {
 fn compile_file(args: &Args) -> Result<Element, CliError> {
     let source = fs::read_to_string(&args.input)?;
     let document = parse(&source);
+
     let mut ctx = Context::default();
     let output = eval(&document, &mut ctx);
 
     let mut output_file = File::create(&args.output)?;
     output_file.write_all(output.as_bytes())?;
+
     Ok(document)
 }
 
@@ -135,6 +138,7 @@ fn main() -> Result<(), CliError> {
                 if args.dev {
                     print_tree(tree);
                 }
+                stdout.flush()?;
             }
             Err(e) => return Err(e),
         }
