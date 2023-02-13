@@ -11,9 +11,9 @@ use nom::{combinator::*, Finish, IResult, Parser};
 
 use Element::Node;
 
+use crate::tag::CompoundAST;
 use crate::Ast::Text;
 use crate::Element::{Data, ModuleInvocation};
-use crate::tag::CompoundAST;
 
 mod module;
 mod or;
@@ -354,7 +354,10 @@ fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Ast>> {
 /// |`\\\a`| `\a`  |
 ///
 /// The function takes a mutable `CompoundAST` and walks through it, mutating its texts in-place
-fn remove_escape_chars<T>(input: &mut T) where T: CompoundAST {
+fn remove_escape_chars<T>(input: &mut T)
+where
+    T: CompoundAST,
+{
     input.elements_mut().iter_mut().for_each(|e| match e {
         Text(str) => {
             let mut escaped = false;
