@@ -25,10 +25,25 @@ pub fn parse_inline_module(input: &str) -> IResult<&str, Module> {
     )(input)
 }
 
+/// Parses the body of an inline module, which includes possibly parsing the opening delimiter.
+/// This first parses an optional opening delimiter, then passes the result to
+/// [get_inline_module_parser] which parses the body up until the closing delimiter is found, or
+/// a whitespace if no delimiter is found.
 fn parse_inline_module_body(input: &str) -> IResult<&str, &str> {
     flat_map(parse_opening_delim(true), get_inline_body_parser)(input)
 }
 
+/// Gets a parser for an inline module body, which depends on the delimiter used to open the module,
+/// if any. If an opening delimiter is found, it takes all content until a matching closing
+/// delimiter is found (not taking any newlines), and if an opening delimiter isn't found, it first
+/// discards any whitespace, then takes all consecutive characters until the next whitespace
+/// (including counting spaces and newlines).
+///
+/// # Arguments
+///
+/// * `delim`: The opening delimiter found, if any
+///
+/// returns: impl Parser<&str, &str, Error<&str>>+Sized. A parser for the inline body
 fn get_inline_body_parser<'a>(
     delim: Option<&'_ str>,
 ) -> impl Parser<&'a str, &'a str, Error<&'a str>> + '_ {
@@ -163,10 +178,24 @@ pub fn parse_multiline_module(input: &str) -> IResult<&str, Module> {
     )(input)
 }
 
+/// Parses the body of a multiline module, which includes possibly parsing the opening delimiter.
+/// This first parses an optional opening delimiter, then passes the result to
+/// [get_multiline_module_parser] which parses the body up until the closing delimiter is found, or
+/// two newlines if no delimiter is found.
 fn parse_multiline_module_body(input: &str) -> IResult<&str, &str> {
     flat_map(parse_opening_delim(false), get_multiline_body_parser)(input)
 }
 
+/// Gets a parser for a multiline module body, which depends on the delimiter used to open the
+/// module, if any. If an opening delimiter is found, it takes all content until a matching closing
+/// delimiter is found, and if an opening delimiter isn't found, it first discards the first line
+/// ending, then takes all consecutive characters until the next double newline.
+///
+/// # Arguments
+///
+/// * `delim`: The opening delimiter found, if any
+///
+/// returns: impl Parser<&str, &str, Error<&str>>+Sized. A parser for the multiline body
 fn get_multiline_body_parser<'a>(
     delim: Option<&'_ str>,
 ) -> impl Parser<&'a str, &'a str, Error<&'a str>> + '_ {

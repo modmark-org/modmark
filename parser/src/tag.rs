@@ -4,7 +4,7 @@
 //! exposes a function, [extract_tags], which goes through all text segments of an Ast, finds all
 //! tags and moves the content of the tags out to a different Ast structure, [Tag]
 use crate::Ast::Text;
-use crate::{Ast, CompoundAST, Tag};
+use crate::{Ast, Document, Paragraph, Tag};
 
 /// The position of a character inside a compound AST. One compound AST consists of a list of
 /// children, and those children can be any of the types defined in the AST enum. You can position
@@ -13,6 +13,9 @@ use crate::{Ast, CompoundAST, Tag};
 /// index of the element as the first element, and the index oc the character as the second element.
 type CompoundPos = (usize, usize);
 
+/// The definition of a tag. It contains the tag name, a pair of delimiters where the first one is
+/// the opening delimiter and the second one is the closing delimiter (not necessarily the same),
+/// and whether or not the parsed content should recursively be searched for other tags.
 #[derive(Debug, Clone, PartialEq)]
 struct TagDefinition {
     name: String,
@@ -21,6 +24,8 @@ struct TagDefinition {
 }
 
 impl TagDefinition {
+    /// A convenience constructor which takes `&str`s instead of `String`s to easier write
+    /// literals.
     fn new(name: &str, (opening, closing): (&str, &str), recurse: bool) -> Self {
         Self {
             name: name.to_string(),
@@ -144,6 +149,15 @@ where
 /// Note that the function behaves as if it does everything stated above, but the actions done may
 /// differ slightly due to performance gains. See comments in the source code for the function for
 /// more details.
+///
+/// # Arguments:
+/// * `tag`: The tag to extract
+/// * `(idx_elem_start, idx_str_start)`: The position at the start of the extraction point
+/// * `(idx_elem_end, idx_str_end)`: The position at the end of the extraction point
+/// * `ast`: The AST to extract the tag. Modifications will occur in-place
+///
+/// returns: the index where the extracted tag is, within the modified ast
+///
 fn extract_tag<T>(
     tag: &TagDefinition,
     (idx_elem_start, idx_str_start): CompoundPos,
@@ -386,4 +400,60 @@ fn find_first_matching_tag<'a>(
             .map(|t| (*t, extract(t)))
             .find_map(|(t, d)| str[i..].starts_with(d).then_some((i, t)))
     })
+}
+
+/// A trait implemented by data types which contains a Vec of `Ast`s. It contains two methods:
+/// one for getting a reference to that vec, and one for getting a mutable reference to that vec.
+/// CompoundAST is used in this module to simplify the code which requires that an input contains
+/// an iterable over `Ast`s by requiring an `CompoundAST` rather than just an `Ast`, pattern-
+/// matching, and `panic`ing if the wrong datatype.
+///
+/// The data types which implements this is:
+///  * Document
+///  * Paragraph
+///  * Tag
+///  * Vec<Ast>
+pub trait CompoundAST {
+    fn elements(&self) -> &Vec<Ast>;
+    fn elements_mut(&mut self) -> &mut Vec<Ast>;
+}
+
+impl CompoundAST for Document {
+    fn elements(&self) -> &Vec<Ast> {
+        &self.elements
+    }
+
+    fn elements_mut(&mut self) -> &mut Vec<Ast> {
+        &mut self.elements
+    }
+}
+
+impl CompoundAST for Paragraph {
+    fn elements(&self) -> &Vec<Ast> {
+        &self.elements
+    }
+
+    fn elements_mut(&mut self) -> &mut Vec<Ast> {
+        &mut self.elements
+    }
+}
+
+impl CompoundAST for Tag {
+    fn elements(&self) -> &Vec<Ast> {
+        &self.elements
+    }
+
+    fn elements_mut(&mut self) -> &mut Vec<Ast> {
+        &mut self.elements
+    }
+}
+
+impl CompoundAST for Vec<Ast> {
+    fn elements(&self) -> &Vec<Ast> {
+        self
+    }
+
+    fn elements_mut(&mut self) -> &mut Vec<Ast> {
+        self
+    }
 }
