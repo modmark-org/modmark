@@ -289,7 +289,7 @@ fn get_module_args_parser<'a>(
                     ),
 
                 )), 
-                |tuple| MaybeArgs::Error("Unnamed arguments after Named Arguments".to_string()),
+                |_tuple| MaybeArgs::Error("Unnamed arguments after Named Arguments".to_string()),
             ),
             map(
                 separated_pair(

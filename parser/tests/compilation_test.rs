@@ -141,7 +141,6 @@ fn ast_to_json(ast: &Ast) -> JsonValue {
                     }
                 }
             }
-            
         }
     }
 }
