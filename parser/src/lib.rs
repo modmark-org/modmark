@@ -13,6 +13,7 @@ use Element::Node;
 
 use crate::Ast::Text;
 use crate::Element::{Data, ModuleInvocation};
+use crate::tag::CompoundAST;
 
 mod module;
 mod or;
@@ -40,6 +41,10 @@ pub struct ModuleArguments {
     pub named: Option<HashMap<String, String>>,
 }
 
+/// This enum represents an Ast, an Abstract Syntax Tree. It is essentially a tree-like structure
+/// representing the structure and content of a parsed document. `Text` and `Module` are leaf-nodes;
+/// they do not contain any other nodes, and all other nodes are inner nodes (they may contain
+/// other nodes).
 #[derive(Clone, Debug, PartialEq)]
 pub enum Ast {
     Text(String),
@@ -50,6 +55,20 @@ pub enum Ast {
 }
 
 impl Ast {
+    /// Gets a string representation of this Ast and the (possible) tree-formed structure
+    /// within
+    ///
+    /// # Arguments
+    ///
+    /// returns: a string representing the tree
+    ///
+    /// # Examples
+    /// ```text
+    /// Document:
+    ///   Paragraph:
+    ///     > I love the equation
+    ///     math(form=latex){x^2}
+    /// ```
     pub fn tree_string(&self) -> String {
         pretty_ast(self).join("\n")
     }
@@ -106,53 +125,6 @@ pub struct Module {
     pub args: ModuleArguments,
     pub body: String,
     pub one_line: bool,
-}
-
-/// A trait implemented by data types which contains a Vec of `Ast`s. It contains two methods:
-/// one for getting a reference to that vec, and one for getting a mutable reference to that vec.
-trait CompoundAST {
-    fn elements(&self) -> &Vec<Ast>;
-    fn elements_mut(&mut self) -> &mut Vec<Ast>;
-}
-
-impl CompoundAST for Tag {
-    fn elements(&self) -> &Vec<Ast> {
-        &self.elements
-    }
-
-    fn elements_mut(&mut self) -> &mut Vec<Ast> {
-        &mut self.elements
-    }
-}
-
-impl CompoundAST for Paragraph {
-    fn elements(&self) -> &Vec<Ast> {
-        &self.elements
-    }
-
-    fn elements_mut(&mut self) -> &mut Vec<Ast> {
-        &mut self.elements
-    }
-}
-
-impl CompoundAST for Document {
-    fn elements(&self) -> &Vec<Ast> {
-        &self.elements
-    }
-
-    fn elements_mut(&mut self) -> &mut Vec<Ast> {
-        &mut self.elements
-    }
-}
-
-impl CompoundAST for Vec<Ast> {
-    fn elements(&self) -> &Vec<Ast> {
-        self
-    }
-
-    fn elements_mut(&mut self) -> &mut Vec<Ast> {
-        self
-    }
 }
 
 impl Element {
@@ -372,8 +344,18 @@ fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Ast>> {
     )(input)
 }
 
-fn remove_escape_chars(input: &mut [Ast]) {
-    input.iter_mut().for_each(|e| match e {
+/// Remove all appropriate characters related to escaping characters from the string. Currently,
+/// this includes removing the backslashes escaping another character, like this:
+///
+/// |input | output|
+/// |------|-------|
+/// |`\**` | `**`  |
+/// |`\\`  | `\`   |
+/// |`\\\a`| `\a`  |
+///
+/// The function takes a mutable `CompoundAST` and walks through it, mutating its texts in-place
+fn remove_escape_chars<T>(input: &mut T) where T: CompoundAST {
+    input.elements_mut().iter_mut().for_each(|e| match e {
         Text(str) => {
             let mut escaped = false;
             str.retain(|c| {
@@ -406,6 +388,13 @@ fn remove_escape_chars(input: &mut [Ast]) {
     });
 }
 
+/// Converts an Ast into a vector of strings suitable for a text representation.
+///
+/// # Arguments
+///
+/// * `ast`: The Ast to convert
+///
+/// returns: a vector of strings suitable for printing row by row
 fn pretty_ast(ast: &Ast) -> Vec<String> {
     let indent = "  ";
     let mut strs = vec![];
