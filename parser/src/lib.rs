@@ -41,6 +41,18 @@ pub struct ModuleArguments {
     pub named: Option<HashMap<String, String>>,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum MaybeArgs {
+    ModuleArguments(ModuleArguments),
+    Error(String),
+}
+
+impl Default for MaybeArgs {
+    fn default() -> Self {
+        MaybeArgs::ModuleArguments(ModuleArguments::default())
+    }
+}
+
 /// This enum represents an Ast, an Abstract Syntax Tree. It is essentially a tree-like structure
 /// representing the structure and content of a parsed document. `Text` and `Module` are leaf-nodes;
 /// they do not contain any other nodes, and all other nodes are inner nodes (they may contain
@@ -93,12 +105,16 @@ impl From<Ast> for Element {
                 environment: HashMap::new(),
                 children: tag.elements.into_iter().map(|e| e.into()).collect(),
             },
-            Ast::Module(module) => ModuleInvocation {
-                name: module.name,
-                args: module.args,
-                body: module.body,
-                one_line: module.one_line,
-            },
+            Ast::Module(module) => {
+                match module.args {
+                    MaybeArgs::ModuleArguments(args) => ModuleInvocation {
+                        name: module.name,
+                        args,
+                        body: module.body,
+                        one_line: module.one_line,
+                    },
+                    MaybeArgs::Error(error) => panic!("{}", error),
+                }},
         }
     }
 }
@@ -122,7 +138,7 @@ pub struct Document {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Module {
     pub name: String,
-    pub args: ModuleArguments,
+    pub args: MaybeArgs,
     pub body: String,
     pub one_line: bool,
 }
@@ -451,32 +467,40 @@ fn pretty_ast(ast: &Ast) -> Vec<String> {
             body,
             one_line,
         }) => {
-            let args = {
-                let p1 = &args.positioned;
-                let p2 = args.named.as_ref().map(|args| {
-                    args.iter()
-                        .map(|(k, v)| format!("{k}={v}"))
-                        .collect::<Vec<String>>()
-                });
-
-                let mut args_vec = p1.clone().unwrap_or_default();
-                args_vec.extend_from_slice(&p2.unwrap_or_default());
-                args_vec.join(", ")
-            };
-            if *one_line {
-                strs.push(format!("{name}({args}){{{body}}}"));
-            } else {
-                strs.push(format!("{name}({args}){{"));
-                body.lines().enumerate().for_each(|(idx, line)| {
-                    strs.push(format!(
-                        "{indent}{} {line}",
-                        if idx == 0 { '>' } else { '|' }
-                    ))
-                });
-                strs.push("} [multiline invocation]".to_string());
+            match args {
+                MaybeArgs::ModuleArguments(arguments) => {
+                    let args = {
+                        let p1 = &arguments.positioned;
+                        let p2 = arguments.named.as_ref().map(|args| {
+                            args.iter()
+                                .map(|(k, v)| format!("{k}={v}"))
+                                .collect::<Vec<String>>()
+                        });
+        
+                        let mut args_vec = p1.clone().unwrap_or_default();
+                        args_vec.extend_from_slice(&p2.unwrap_or_default());
+                        args_vec.join(", ")
+                    };
+                    if *one_line {
+                        strs.push(format!("{name}({args}){{{body}}}"));
+                    } else {
+                        strs.push(format!("{name}({args}){{"));
+                        body.lines().enumerate().for_each(|(idx, line)| {
+                            strs.push(format!(
+                                "{indent}{} {line}",
+                                if idx == 0 { '>' } else { '|' }
+                            ))
+                        });
+                        strs.push("} [multiline invocation]".to_string());
+                    }
+                }
+                MaybeArgs::Error(err) => {
+                    panic!("{}", err)
+                    }
+            }
             }
         }
-    }
+
 
     strs
 }
