@@ -1,4 +1,4 @@
-use crate::error::CoreError;
+use crate::{error::CoreError, OutputFormat};
 use std::{io::Read, sync::Arc};
 use wasmer::{Instance, Module, Store};
 use wasmer_wasi::{Pipe, WasiState};
@@ -9,7 +9,7 @@ pub type NodeName = String;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Transform {
     pub from: NodeName,
-    pub to: Vec<String>,
+    pub to: Vec<OutputFormat>,
     pub args_info: Vec<ArgInfo>,
 }
 
@@ -67,8 +67,7 @@ impl Package {
         // Read the name from stdout
         let name = {
             let mut buffer = String::new();
-            output
-                .read_to_string(&mut buffer)?;
+            output.read_to_string(&mut buffer)?;
             buffer.trim().to_string()
         };
 
@@ -80,8 +79,7 @@ impl Package {
         // Read the version from stdout
         let version = {
             let mut buffer = String::new();
-            output
-                .read_to_string(&mut buffer)?;
+            output.read_to_string(&mut buffer)?;
             buffer.trim().to_string()
         };
 
@@ -91,8 +89,7 @@ impl Package {
 
         let raw_transforms_str = {
             let mut buffer = String::new();
-            output
-                .read_to_string(&mut buffer)?;
+            output.read_to_string(&mut buffer)?;
             buffer
         };
 
@@ -126,9 +123,9 @@ fn parse_transforms(input: &str) -> Option<Vec<Transform>> {
         // [foo] -> html tex
         let (raw_name, raw_outputs) = line.split_once("->")?;
         let name = raw_name.trim();
-        let outputs: Vec<String> = raw_outputs
+        let outputs: Vec<OutputFormat> = raw_outputs
             .split_whitespace()
-            .map(|output| output.trim().to_string())
+            .map(|output| OutputFormat::new(output.trim()))
             .collect();
 
         // parse the following lines of arguments up until

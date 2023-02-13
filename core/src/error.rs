@@ -1,10 +1,10 @@
+use crate::NodeName;
+use parser::ParseError;
 use thiserror::Error;
 #[cfg(feature = "native")]
 use wasmer::CompileError;
 use wasmer::{ExportError, InstantiationError, RuntimeError};
 use wasmer_wasi::{WasiError, WasiStateCreationError};
-
-use crate::NodeName;
 
 #[derive(Error, Debug)]
 pub enum CoreError {
@@ -37,6 +37,10 @@ pub enum CoreError {
     RepeatedArgument(NodeName, String),
     #[error("Failed to serialize json")]
     JsonError(#[from] serde_json::Error),
+    #[error("Transform does not terminate")]
+    NonTerminatingTransform,
+    #[error("Parsing error: {0:#?}.")]
+    Parsing(#[from] ParseError),
 }
 
 impl From<WasiError> for CoreError {
