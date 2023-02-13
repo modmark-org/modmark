@@ -5,7 +5,7 @@ use std::path::Path;
 use json::{object, JsonValue};
 
 use diffy::create_patch;
-use parser::{parse, parse_to_ast_document, Ast, Document, Element};
+use parser::{parse, parse_to_ast_document, Ast, Document, Element, MaybeArgs};
 
 fn split_test(input: &Path) -> datatest_stable::Result<()> {
     let output = input.with_extension("json");
@@ -126,14 +126,22 @@ fn ast_to_json(ast: &Ast) -> JsonValue {
             }
         }
         Ast::Module(m) => {
-            object! {
-                name: m.name.as_str(),
-                args: JsonValue::from(m.args.positioned.clone().unwrap_or_default().iter().enumerate().map(|(a,b)| (a.to_string(),b.to_string())).chain(
-                    m.args.named.clone().unwrap_or_default().iter().map(|(a,b)| (a.to_string(), b.to_string()))
-                ).collect::<HashMap<String, String>>()),
-                body: m.body.as_str(),
-                one_line: JsonValue::from(m.one_line),
+            match &m.args {
+                MaybeArgs::Error(err) => {
+                    panic!("Error in module args: {}", err)
+                },
+                MaybeArgs::ModuleArguments(args) => {
+                    object! {
+                        name: m.name.as_str(),
+                        args: JsonValue::from(args.positioned.clone().unwrap_or_default().iter().enumerate().map(|(a,b)| (a.to_string(),b.to_string())).chain(
+                            args.named.clone().unwrap_or_default().iter().map(|(a,b)| (a.to_string(), b.to_string()))
+                        ).collect::<HashMap<String, String>>()),
+                        body: m.body.as_str(),
+                        one_line: JsonValue::from(m.one_line),
+                    }
+                }
             }
+            
         }
     }
 }

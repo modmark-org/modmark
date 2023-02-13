@@ -1,14 +1,14 @@
 //! This module provides the function the Parser needs to parse modules. It exposes two functions;
 //! [parse_inline_module] and [parse_multiline_module], which parses inline modules and multiline
 //! modules respectively.
-use crate::{Module, ModuleArguments};
+use crate::{Module, ModuleArguments, MaybeArgs};
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take, take_till, take_until, take_until1, take_while1};
 use nom::character::complete::{char, line_ending, multispace0, multispace1, space0, space1};
 use nom::combinator::{fail, flat_map, map, not, opt, peek, rest, verify};
 use nom::error::Error;
-use nom::multi::separated_list1;
-use nom::sequence::{delimited, pair, preceded, separated_pair, terminated};
+use nom::multi::{separated_list1, separated_list0, many0};
+use nom::sequence::{delimited, pair, preceded, separated_pair, terminated, tuple};
 use nom::{FindSubstring, IResult, InputTake, Parser};
 
 /// This function parses an inline module, such as `[math latex] x^2`, `[url](https://example.com)`
@@ -227,7 +227,7 @@ fn get_multiline_body_parser<'a>(
 ///
 fn get_module_invocation_parser<'a>(
     inline: bool,
-) -> impl Parser<&'a str, (String, ModuleArguments), Error<&'a str>> {
+) -> impl Parser<&'a str, (String, MaybeArgs), Error<&'a str>> {
     map(
         delimited(
             char('['),
@@ -268,9 +268,29 @@ fn parse_module_name(input: &str) -> IResult<&str, &str> {
 ///
 fn get_module_args_parser<'a>(
     inline: bool,
-) -> impl Parser<&'a str, ModuleArguments, Error<&'a str>> {
+) -> impl Parser<&'a str, MaybeArgs, Error<&'a str>> {
     map(
         opt(alt((
+            map(
+                tuple((
+                    separated_list0(
+                        get_arg_separator_parser(inline),
+                        get_unnamed_arg_parser(inline),
+                    ),
+                    many0(get_arg_separator_parser(inline)),
+                    separated_list1(
+                        get_arg_separator_parser(inline),
+                        get_named_arg_parser(inline),
+                    ),
+                    get_arg_separator_parser(inline),
+                    separated_list1(
+                        get_arg_separator_parser(inline),
+                        get_unnamed_arg_parser(inline),
+                    ),
+
+                )), 
+                |tuple| MaybeArgs::Error("Unnamed arguments after Named Arguments".to_string()),
+            ),
             map(
                 separated_pair(
                     separated_list1(
@@ -283,31 +303,35 @@ fn get_module_args_parser<'a>(
                         get_named_arg_parser(inline),
                     ),
                 ),
-                |(unnamed, named)| ModuleArguments {
-                    positioned: Some(unnamed),
+                |(unnamed, named)| MaybeArgs::ModuleArguments(ModuleArguments {
+                    positioned: Some({
+                        unnamed
+                    }),
                     named: Some(named.into_iter().collect()),
-                },
+                },),
             ),
             map(
                 separated_list1(
                     get_arg_separator_parser(inline),
                     get_unnamed_arg_parser(inline),
                 ),
-                |unnamed| ModuleArguments {
-                    positioned: Some(unnamed),
+                |unnamed| MaybeArgs::ModuleArguments(ModuleArguments {
+                    positioned: Some({
+                        unnamed}),
                     named: None,
-                },
+                },),
             ),
             map(
                 separated_list1(
                     get_arg_separator_parser(inline),
                     get_named_arg_parser(inline),
                 ),
-                |named| ModuleArguments {
+                |named| MaybeArgs::ModuleArguments(ModuleArguments {
                     positioned: None,
-                    named: Some(named.into_iter().collect()),
+                    named: Some({
+                        named.into_iter().collect()}),
                 },
-            ),
+            ),),
         ))),
         |x| x.unwrap_or_default(),
     )
