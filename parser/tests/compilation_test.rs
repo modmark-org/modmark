@@ -125,23 +125,21 @@ fn ast_to_json(ast: &Ast) -> JsonValue {
                 children: t.elements.iter().map(ast_to_json).collect::<Vec<JsonValue>>()
             }
         }
-        Ast::Module(m) => {
-            match &m.args {
-                MaybeArgs::Error(err) => {
-                    panic!("Error in module args: {}", err)
-                },
-                MaybeArgs::ModuleArguments(args) => {
-                    object! {
-                        name: m.name.as_str(),
-                        args: JsonValue::from(args.positioned.clone().unwrap_or_default().iter().enumerate().map(|(a,b)| (a.to_string(),b.to_string())).chain(
-                            args.named.clone().unwrap_or_default().iter().map(|(a,b)| (a.to_string(), b.to_string()))
-                        ).collect::<HashMap<String, String>>()),
-                        body: m.body.as_str(),
-                        one_line: JsonValue::from(m.one_line),
-                    }
+        Ast::Module(m) => match &m.args {
+            MaybeArgs::Error(err) => {
+                panic!("Error in module args: {}", err)
+            }
+            MaybeArgs::ModuleArguments(args) => {
+                object! {
+                    name: m.name.as_str(),
+                    args: JsonValue::from(args.positioned.clone().unwrap_or_default().iter().enumerate().map(|(a,b)| (a.to_string(),b.to_string())).chain(
+                        args.named.clone().unwrap_or_default().iter().map(|(a,b)| (a.to_string(), b.to_string()))
+                    ).collect::<HashMap<String, String>>()),
+                    body: m.body.as_str(),
+                    one_line: JsonValue::from(m.one_line),
                 }
             }
-        }
+        },
     }
 }
 
