@@ -4,32 +4,101 @@ body {
     font-family: 'IBM Plex Mono', monospace;
 }
 
+.material-symbols-outlined {
+    position: relative;
+    font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 48;
+    font-size: 1rem;
+    top: 1px;
+}
+
+a {
+    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    text-decoration: none;
+    color: black;
+    transition: 0.3s background-color;
+    box-sizing: border-box;
+    padding: 0.5rem;
+    border-radius: 0.3rem;
+}
+
+a:hover {
+    background-color: rgb(222, 222, 222);
+}
+
+
 pre,
 textarea {
     font-family: 'IBM Plex Mono', monospace;
 }
 
+button,
+select {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    border: none;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.501);
+    border-radius: 0.3rem;
+    padding: 0.5rem 1rem 0.5rem 1rem;
+    background: rgb(231, 231, 231);
+    transition: 0.2s background;
+}
+
+button:hover,
+select:hover {
+    background: rgb(222, 222, 222);
+}
+
 .menu {
+    background: #f3f4f6;
+    box-shadow: 0 0px 2px rgba(0, 0, 0, 0.353);
     position: relative;
     margin: 0;
     height: 4rem;
     width: 100%;
-    display: flex;
-    align-items: center;
     padding: 1rem;
     box-sizing: border-box;
-    gap: 2rem;
+    overflow-y: scroll;
+}
+
+.menu-items {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.left-menu {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
 }
 
 .menu h1 {
     margin: 0;
-    font-size: 1.5rem;
+    font-size: 1.3rem;
 }
 
 #wrapper {
     width: 100%;
     display: flex;
     height: calc(100vh - 4rem);
+}
+
+#editor-view {
+    width: 100%;
+    display: flex;
+    overflow-x: hidden;
+    transition: 0.3s width;
 }
 
 #output,
@@ -40,8 +109,55 @@ textarea {
     overflow: auto;
     margin: 0;
     padding: 1rem;
+    border: none;
+    transition: 0.3s width;
 }
 
 #output {
-    background: rgb(228, 228, 228);
+    background: rgb(242, 242, 242);
+}
+
+#package-view {
+    width: 0;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    transition: 0.3s width;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.16);
+}
+
+#packages {
+    max-width: 60rem;
+    box-sizing: border-box;
+    padding: 1rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#packages h2 {
+    margin-bottom: 0.5rem;
+}
+
+.note {
+    opacity: 0.6;
+    max-width: 30rem;
+}
+
+@media only screen and (max-width: 800px) {
+    #editor-view {
+        height: auto;
+        flex-direction: column;
+    }
+
+    #editor,
+    #output {
+        height: auto;
+        height: calc((100vh - 4rem)/2);
+        width: 100%;
+    }
+
+    .menu-items {
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
 }
