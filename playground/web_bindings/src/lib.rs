@@ -1,5 +1,10 @@
 use core::{eval, Context};
+use std::cell::RefCell;
 use wasm_bindgen::prelude::*;
+
+thread_local! {
+    static CONTEXT: RefCell<Context> = RefCell::new(Context::default());
+}
 
 #[wasm_bindgen]
 pub fn parse(source: &str) -> String {
@@ -25,8 +30,26 @@ pub fn raw_tree(source: &str) -> String {
 #[wasm_bindgen]
 pub fn transpile(source: &str) -> String {
     let document = parser::parse(source);
-    let mut ctx = Context::default();
-    eval(&document, &mut ctx)
+    let mut result = String::new();
+
+    CONTEXT.with(|ctx| {
+        let mut ctx = ctx.borrow_mut();
+        result.push_str(&eval(&document, &mut ctx));
+    });
+
+    result
+}
+
+#[wasm_bindgen]
+pub fn inspect_context() -> String {
+    let mut result = String::new();
+
+    CONTEXT.with(|ctx| {
+        let ctx = ctx.borrow_mut();
+        result.push_str(&format!("{ctx:#?}"));
+    });
+
+    result
 }
 
 pub fn set_panic_hook() {
