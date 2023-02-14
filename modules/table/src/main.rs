@@ -17,7 +17,7 @@ fn main() {
 }
 
 fn manifest() {
-    serde_json::to_string(&json!(
+    print!("{}", serde_json::to_string(&json!(
         {
         "name": "Standard table module",
         "version": "0.1",
@@ -27,13 +27,13 @@ fn manifest() {
                 "from": "table",
                 "to": ["html"],
                 "arguments": [
-                    {"name": "col_delimiter", "default": "|"}
+                    {"name": "col_delimiter", "default": "|", "description": "The string delimiter for columns"}
                 ],
             }
         ]
         }
     ))
-    .unwrap();
+    .unwrap());
 }
 
 fn transform(from: &String, to: &String) {
