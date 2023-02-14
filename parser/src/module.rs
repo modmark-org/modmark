@@ -302,7 +302,7 @@ fn get_module_args_parser<'a>(inline: bool) -> impl Parser<&'a str, MaybeArgs, E
                 ),
                 |(unnamed, named)| {
                     MaybeArgs::ModuleArguments(ModuleArguments {
-                        positioned: Some({ unnamed }),
+                        positioned: Some(unnamed),
                         named: Some(named.into_iter().collect()),
                     })
                 },
@@ -314,7 +314,7 @@ fn get_module_args_parser<'a>(inline: bool) -> impl Parser<&'a str, MaybeArgs, E
                 ),
                 |unnamed| {
                     MaybeArgs::ModuleArguments(ModuleArguments {
-                        positioned: Some({ unnamed }),
+                        positioned: Some(unnamed),
                         named: None,
                     })
                 },
@@ -327,7 +327,7 @@ fn get_module_args_parser<'a>(inline: bool) -> impl Parser<&'a str, MaybeArgs, E
                 |named| {
                     MaybeArgs::ModuleArguments(ModuleArguments {
                         positioned: None,
-                        named: Some({ named.into_iter().collect() }),
+                        named: Some(named.into_iter().collect()),
                     })
                 },
             ),

@@ -86,33 +86,47 @@ impl Ast {
     }
 }
 
-impl From<Ast> for Element {
-    fn from(value: Ast) -> Self {
+impl TryFrom<Ast> for Element {
+    type Error = String;
+
+    fn try_from(value: Ast) -> Result<Self, Self::Error> {
         match value {
-            Text(s) => Data(s),
-            Ast::Document(doc) => Node {
+            Ast::Text(s) => Ok(Data(s)),
+            Ast::Document(doc) => Ok(Node {
                 name: "Document".to_string(),
                 environment: HashMap::new(),
-                children: doc.elements.into_iter().map(|e| e.into()).collect(),
-            },
-            Ast::Paragraph(paragraph) => Node {
+                children: doc
+                    .elements
+                    .into_iter()
+                    .map(|e| e.try_into())
+                    .collect::<Result<Vec<Element>, String>>()?,
+            }),
+            Ast::Paragraph(paragraph) => Ok(Node {
                 name: "Paragraph".to_string(),
                 environment: HashMap::new(),
-                children: paragraph.elements.into_iter().map(|e| e.into()).collect(),
-            },
-            Ast::Tag(tag) => Node {
+                children: paragraph
+                    .elements
+                    .into_iter()
+                    .map(|e| e.try_into())
+                    .collect::<Result<Vec<Element>, String>>()?,
+            }),
+            Ast::Tag(tag) => Ok(Node {
                 name: tag.tag_name,
                 environment: HashMap::new(),
-                children: tag.elements.into_iter().map(|e| e.into()).collect(),
-            },
+                children: tag
+                    .elements
+                    .into_iter()
+                    .map(|e| e.try_into())
+                    .collect::<Result<Vec<Element>, String>>()?,
+            }),
             Ast::Module(module) => match module.args {
-                MaybeArgs::ModuleArguments(args) => ModuleInvocation {
+                MaybeArgs::ModuleArguments(args) => Ok(ModuleInvocation {
                     name: module.name,
                     args,
                     body: module.body,
                     one_line: module.one_line,
-                },
-                MaybeArgs::Error(error) => panic!("{}", error),
+                }),
+                MaybeArgs::Error(error) => Err(error),
             },
         }
     }
@@ -184,7 +198,7 @@ impl Element {
 ///
 /// returns: Element The parsed element
 pub fn parse(source: &str) -> Element {
-    parse_to_ast(source).into()
+    parse_to_ast(source).try_into().unwrap()
 }
 
 pub fn parse_to_ast(source: &str) -> Ast {
