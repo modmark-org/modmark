@@ -1,0 +1,19 @@
+Testing the parsing of modules without arguments
+```mdm
+[code]
+print("hello world")
+```
+
+```json
+{
+  "name": "Document",
+  "children": [
+    {
+      "name": "code",
+      "args": {},
+      "body": "print(\"hello world\")",
+      "one_line": false
+    }
+  ]
+}
+```

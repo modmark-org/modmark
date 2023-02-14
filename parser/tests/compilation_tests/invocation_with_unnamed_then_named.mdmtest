@@ -1,0 +1,23 @@
+Testing the parsing of modules with unnamed then named
+
+```mdm
+[code py indent=tabs]
+print("hello world")
+```
+
+```json
+{
+  "name": "Document",
+  "children": [
+    {
+      "name": "code",
+      "args": {
+        "indent": "tabs",
+        "0": "py"
+      },
+      "body": "print(\"hello world\")",
+      "one_line": false
+    }
+  ]
+}
+```

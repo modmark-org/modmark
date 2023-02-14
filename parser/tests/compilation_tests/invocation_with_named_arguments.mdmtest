@@ -1,0 +1,24 @@
+Testing parsing of modules with only named arguments
+
+```mdm
+[code lang=py indent=tabs]
+print("hello world")
+```
+
+```json
+{
+  "name": "Document",
+  "children": [
+    {
+        "name": "code",
+        "args": {
+            "lang": "py",
+            "indent": "tabs"
+        },
+        "body": "print(\"hello world\")",
+        "one_line": false
+    }
+  ]
+}
+```
+

@@ -1,0 +1,23 @@
+Testing parsing of modules with only unnamed arguments
+
+```mdm
+[code py tabs]
+print("hello world")
+```
+
+```json
+{
+  "name": "Document",
+  "children": [
+    {
+        "name": "code",
+        "args": {
+            "0": "py",
+            "1": "tabs"
+        },
+        "body": "print(\"hello world\")",
+        "one_line": false
+    }
+  ]
+}
+```
