@@ -34,6 +34,11 @@ impl Context {
             "/table/wasm32-wasi/release/table.wasm"
         )))
         .expect("Failed to load standard table module");
+        self.load_package(include_bytes!(concat!(
+            env!("OUT_DIR"),
+            "/html/wasm32-wasi/release/html.wasm"
+        )))
+        .expect("Failed to load standard html module");
     }
 
     pub fn load_package(&mut self, wasm_source: &[u8]) -> Result<(), CoreError> {
