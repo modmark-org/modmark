@@ -56,7 +56,7 @@ fn transform_document(doc: Value) -> String {
 
     write!(
         result,
-        r#"{{"name": raw", "data": "<html><head><title>Document</title></head><body>"}},"#
+        r#"{{"name": "raw", "data": "<html><head><title>Document</title></head><body>"}},"#
     )
     .unwrap();
 
@@ -67,7 +67,8 @@ fn transform_document(doc: Value) -> String {
         }
     }
 
-    write!(result, r#"{{"name": raw", "data": "</body>"}}"#).unwrap();
+    write!(result, r#"{{"name": "raw", "data": "</body>"}}"#).unwrap();
+    result.push(']');
 
     result
 }
