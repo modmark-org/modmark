@@ -82,10 +82,10 @@ fn escape_text(module: Value) -> String {
             .replace('>', "&gt;")
             .replace('"', "&quot;")
             .replace('\'', "&#39;");
-        println!("wow {s}");
+        format!(r#"[{{"name": "raw", "data": "{s}"}}]"#)
+    } else {
+        panic!("Malformed text module");
     }
-
-    format!(r#"[{{"name": "raw", "data": "testing"}}]"#)
 }
 
 fn transform_tag(node: Value, html_tag: &str) -> String {
