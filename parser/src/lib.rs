@@ -291,7 +291,7 @@ fn parse_document_blocks(input: &str) -> IResult<&str, Vec<Ast>> {
 fn parse_heading(input: &str) -> IResult<&str, Heading> {
     map(
         pair(
-            verify(take_while1(|c: char| c.eq(&'#')), |s: &str| s.len() <= 6),
+            verify(take_while1(|c| c == '#'), |s: &str| s.len() <= 6),
             preceded(space0, parse_heading_text),
         ),
         |(start, body)| Heading {
@@ -309,7 +309,7 @@ fn parse_heading(input: &str) -> IResult<&str, Heading> {
 ///
 /// returns: The parsed text, if a successful parse occurs, otherwise the parse error
 fn parse_heading_text(input: &str) -> IResult<&str, &str> {
-    take_till(|c: char| c.eq(&'\r') || c.eq(&'\n'))(input)
+    take_till(|c| c == '\r' || c == '\n')(input)
 }
 
 /// Parses a paragraph which consists of multiple paragraph elements, and puts all those into a
