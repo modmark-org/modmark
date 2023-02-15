@@ -96,27 +96,16 @@ impl Context {
                 name,
                 environment: _,
                 children: _,
-            } => {
-                // FIXME: should do the same stuff as in moduleinvocation
-                Ok(Element::Compound(vec![Element::ModuleInvocation {
-                    name: "raw".to_string(),
-                    args: ModuleArguments {
-                        positioned: None,
-                        named: None,
-                    },
-                    body: "ok".to_string(),
-                    one_line: true,
-                }]))
             }
-            ModuleInvocation {
-                name: module_name,
+            | ModuleInvocation {
+                name,
                 args: _,
                 body: _,
                 one_line: _,
             } => {
                 // We find the package responsible for this transform
-                let Some((transform, package)) = self.transforms.get(&(module_name.clone(), output_format.clone())) else {
-                    return Err(CoreError::MissingTransform(module_name.clone(), output_format.to_string()));
+                let Some((transform, package)) = self.transforms.get(&(name.clone(), output_format.clone())) else {
+                    return Err(CoreError::MissingTransform(name.clone(), output_format.to_string()));
                 };
 
                 let mut input = Pipe::new();
@@ -130,7 +119,7 @@ impl Context {
                 let wasi_env = WasiState::new("")
                     .stdin(Box::new(input))
                     .stdout(Box::new(output.clone()))
-                    .args(["transform", module_name, &output_format.to_string()])
+                    .args(["transform", name, &output_format.to_string()])
                     .finalize(&mut self.store)?;
 
                 let import_object =
