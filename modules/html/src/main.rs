@@ -68,7 +68,7 @@ fn transform_document(doc: Value) -> String {
         }
     }
 
-    write!(result, r#"{{"name": "raw", "data": "</body>"}}"#).unwrap();
+    write!(result, r#"{{"name": "raw", "data": "</body></html>"}}"#).unwrap();
     result.push(']');
 
     result
@@ -130,6 +130,11 @@ fn manifest() -> String {
                 },
                 {
                     "from": "__subscript",
+                    "to": ["html"],
+                    "arguments": [],
+                },
+                {
+                    "from": "__strikethrough",
                     "to": ["html"],
                     "arguments": [],
                 },
