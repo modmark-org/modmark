@@ -1,11 +1,9 @@
+use parser::{Element, ModuleArguments};
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     io::{Read, Write},
 };
-
-use parser::{Element, ModuleArguments};
-use serde::Deserialize;
-use serde_json::json;
 #[cfg(feature = "native")]
 use wasmer::Cranelift;
 use wasmer::{Instance, Store};
@@ -80,8 +78,8 @@ impl Context {
         Ok(())
     }
 
-    /// Transform a node into another node by using the available transforms
-    /// FIXME: maybe should own the Element.
+    /// Transform an Element by using the loaded packages. The function will return a
+    /// Element::Compound.
     pub fn transform(
         &mut self,
         from: &Element,
@@ -174,128 +172,135 @@ fn get_new_store() -> Store {
     return Store::new(Cranelift::new());
 }
 
-fn serialize_element(element: &Element, args_info: &Vec<ArgInfo>) -> Result<String, CoreError> {
-    use Element::*;
-    // [table 10 arg0=20] ge fel om redan finns!
-    // [table b=20 a=10 c=30 foo=50]
-    match element {
-        Data(_) => Ok(serde_json::to_string(element)?),
-        Node {
-            name: node_name,
-            environment: _,
-            children,
-        } => {
-            // FIXME: other node elements should likely support arguments
-            let args: HashMap<String, String> = HashMap::new();
-
-            Ok(serde_json::to_string(&json!({
-                "name": node_name,
-                "arguments": args,
-                "children": children,
-            }))?)
-        }
-        ModuleInvocation {
-            name: node_name,
-            args,
-            body,
-            one_line,
-        } => {
-            let mut arguments: HashMap<&String, &String> = HashMap::new();
-
-            // Look up the name of all the positional arguments specified and insert
-            // them into the arguments map
-            if let Some(positioned) = &args.positioned {
-                for (value, arg_info) in positioned.iter().zip(args_info) {
-                    let ArgInfo {
-                        name,
-                        default: _,
-                        description: _,
-                    } = arg_info;
-                    arguments.insert(name, value);
-                }
-            }
-
-            // Also, add the rest of the key=value paired arguments
-            if let Some(named) = &args.named {
-                for (name, value) in named {
-                    if arguments.contains_key(&name) {
-                        return Err(CoreError::RepeatedArgument(node_name.clone(), name.clone()));
-                    }
-                    arguments.insert(name, value);
-                }
-            }
-
-            Ok(serde_json::to_string(&json!({
-                "name": node_name,
-                "arguments": arguments,
-                "data": body,
-                "inline": one_line,
-            }))?)
-        }
-        Compound(children) => {
-            let serialized_children: Vec<String> = children
-                .iter()
-                .map(|child| serialize_element(child, args_info))
-                .collect::<Result<Vec<String>, CoreError>>()?;
-
-            Ok(serde_json::to_string(&json!(serialized_children))?)
-        }
-    }
+/// This enum is in the same shape as the json objects that
+/// will be sent and recieved when communicating with packages
+#[derive(Serialize, Deserialize)]
+#[serde(untagged)]
+enum JsonEntry {
+    ParentNode {
+        name: String,
+        children: Vec<Self>,
+    },
+    Module {
+        name: String,
+        #[serde(default)]
+        data: String,
+        #[serde(default)]
+        arguments: HashMap<String, String>,
+        #[serde(default = "default_inline")]
+        inline: bool,
+    },
 }
 
+/// This is just a helper to ensure that omited "inline" fields
+/// default to true.
+fn default_inline() -> bool {
+    true
+}
+
+/// Serialize and element into a string that can be sent to a package
+fn serialize_element(element: &Element, args_info: &Vec<ArgInfo>) -> Result<String, CoreError> {
+    let entry = element_to_entry(element, args_info)?;
+    serde_json::to_string(&entry).map_err(|e| e.into())
+}
+
+/// Deserialize a compound (i.e a list of JsonEntries) that are recived from a package
 fn deserialize_compound(input: &str) -> Result<Element, CoreError> {
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum Entry {
-        ParentNode {
-            name: String,
-            children: Vec<Self>,
-        },
-        Module {
-            name: String,
-            #[serde(default)]
-            data: String,
-            #[serde(default)]
-            arguments: HashMap<String, String>,
-            #[serde(default = "default_inline")]
-            inline: bool,
-        },
-    }
-
-    fn entry_to_element(entry: Entry) -> Element {
-        match entry {
-            Entry::ParentNode { name, children } => Element::Node {
-                name,
-                environment: HashMap::new(),
-                children: children
-                    .into_iter()
-                    .map(|child| entry_to_element(child))
-                    .collect(),
-            },
-            Entry::Module {
-                name,
-                data,
-                arguments,
-                inline,
-            } => Element::ModuleInvocation {
-                name,
-                args: ModuleArguments {
-                    positioned: None,
-                    named: Some(arguments),
-                },
-                body: data,
-                one_line: inline,
-            },
-        }
-    }
-
-    let entries: Vec<Entry> = serde_json::from_str(input)?;
+    let entries: Vec<JsonEntry> = serde_json::from_str(input)?;
 
     // Convert the parsed entries into real Elements
     let elements: Vec<Element> = entries.into_iter().map(entry_to_element).collect();
     Ok(Element::Compound(elements))
 }
 
-fn default_inline() -> bool {
-    true
+/// Convert an JsonEntry to a Element
+fn entry_to_element(entry: JsonEntry) -> Element {
+    match entry {
+        JsonEntry::ParentNode { name, children } => Element::Node {
+            name,
+            environment: HashMap::new(),
+            children: children
+                .into_iter()
+                .map(|child| entry_to_element(child))
+                .collect(),
+        },
+        JsonEntry::Module {
+            name,
+            data,
+            arguments,
+            inline,
+        } => Element::ModuleInvocation {
+            name,
+            args: ModuleArguments {
+                positioned: None,
+                named: Some(arguments),
+            },
+            body: data,
+            one_line: inline,
+        },
+    }
+}
+
+/// Convert a Element into a JsonEntry.
+/// The args_info is needed to convert positional arguments into key-value pairs.
+fn element_to_entry(element: &Element, args_info: &Vec<ArgInfo>) -> Result<JsonEntry, CoreError> {
+    match element {
+        Element::Data(_) => unreachable!(),
+        // When the eval function naivly evaluates all children before a parent compund
+        // nodes should never be present here. This may however change in the future.
+        Element::Compound(_) => unreachable!(),
+        Element::Node {
+            name,
+            environment: _,
+            children,
+        } => {
+            let converted_children: Result<Vec<JsonEntry>, CoreError> = children
+                .into_iter()
+                .map(|child| element_to_entry(child, args_info))
+                .collect();
+
+            Ok(JsonEntry::ParentNode {
+                name: name.clone(),
+                children: converted_children?,
+            })
+        }
+        Element::ModuleInvocation {
+            name: module_name,
+            args,
+            body,
+            one_line,
+        } => {
+            let mut arguments: HashMap<String, String> = HashMap::new();
+
+            // Look up the name of all the positional arguments specified and insert
+            // them into the arguments map
+            if let Some(positioned) = &args.positioned {
+                for (value, arg_info) in positioned.into_iter().zip(args_info) {
+                    let ArgInfo {
+                        name,
+                        default: _,
+                        description: _,
+                    } = arg_info;
+                    arguments.insert(name.clone(), value.clone());
+                }
+            }
+
+            // Also, add the rest of the key=value paired arguments
+            if let Some(named) = &args.named {
+                for (name, value) in named {
+                    if arguments.contains_key(name) {
+                        return Err(CoreError::RepeatedArgument(name.clone(), name.clone()));
+                    }
+                    arguments.insert(name.clone(), value.clone());
+                }
+            }
+
+            Ok(JsonEntry::Module {
+                name: module_name.clone(),
+                arguments,
+                data: body.clone(),
+                inline: *one_line,
+            })
+        }
+    }
 }
