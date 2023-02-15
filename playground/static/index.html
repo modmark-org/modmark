@@ -13,12 +13,14 @@
     <title>Modmark Playground</title>
     <link rel="stylesheet" href="style.css">
     <script type="module">
-        import init, {ast, inspect_context, transpile} from "./pkg/web_bindings.js";
+        import init, { ast, inspect_context, transpile } from "./pkg/web_bindings.js";
 
         let view = "editor";
 
         const editor = document.getElementById("editor");
         const output = document.getElementById("output");
+        const errorLog = document.getElementById("error-log");
+        const errorPrompt = document.getElementById("error-prompt");
         const selector = document.getElementById("selector");
         const packageView = document.getElementById("package-view");
         const packageContent = document.getElementById("package-content");
@@ -66,17 +68,36 @@
 
 
         function updateOutput(input) {
+            // Clear the errors
+            errorLog.innerText = "";
+            errorPrompt.style.display = "none";
+
             let pre = document.createElement("pre")
             switch (selector.value) {
                 case "ast":
                     pre.innerText = ast(input)
                     break;
-                case "transpile":
-                    pre.innerText = transpile(input);
-                    break;
-                case "render":
-                    output.innerHTML = transpile(input);
-                    break;
+                case "transpile": {
+                    let result = "";
+                    try {
+                        result += transpile(input);
+                    } catch (error) {
+                        errorPrompt.style.display = "block";
+                        errorLog.innerText = error;
+                    }
+                    pre.innerText = result;
+
+                } break;
+                case "render": {
+                    let result = "";
+                    try {
+                        result += transpile(input);
+                    } catch (error) {
+                        errorPrompt.style.display = "block";
+                        errorLog.innerText = error;
+                    }
+                    output.innerHTML = result;
+                } break;
             }
             if (selector.value !== "render") output.innerHTML = pre.outerHTML;
         }
@@ -100,16 +121,16 @@
 </head>
 
 <body>
-<div class="menu">
-    <div class="menu-items">
-        <div class="left-menu" id="left-menu">
-            <h1>Modmark playground</h1>
-            <select name="selector" id="selector">
-                <option value="ast">Abstract syntax tree</option>
-                <option value="transpile">HTML output</option>
-                <option value="render">Rendered HTML</option>
-            </select>
-            <button id="view-toggle">
+    <div class="menu">
+        <div class="menu-items">
+            <div class="left-menu" id="left-menu">
+                <h1>Modmark playground</h1>
+                <select name="selector" id="selector">
+                    <option value="ast">Abstract syntax tree</option>
+                    <option value="transpile">HTML output</option>
+                    <option value="render">Rendered HTML</option>
+                </select>
+                <button id="view-toggle">
                     <span class="material-symbols-outlined">
                         widgets
                     </span>
@@ -120,26 +141,48 @@
                 <span class="material-symbols-outlined">
                     info
                 </span>
-            GitHub
-        </a>
-    </div>
-</div>
-<main id="wrapper">
-    <div id="editor-view">
-        <textarea id="editor"></textarea>
-        <div id="output"></div>
-    </div>
-    <div id="package-view">
-        <div id="packages">
-            <h2>Packages</h2>
-            <div class="note">Note: this will be made a lot easier to use once we
-                have a more stable package API.
-            </div>
-            <pre id="package-content">
-                </pre>
+                GitHub
+            </a>
         </div>
     </div>
-</main>
+    <main id="wrapper">
+        <div id="editor-view">
+            <textarea id="editor"></textarea>
+            <div id="output"></div>
+        </div>
+        <div id="package-view">
+            <div id="packages">
+                <h2>Packages</h2>
+                <div class="note">Note: this will be made a lot easier to use once we
+                    have a more stable package API.
+                </div>
+                <pre id="package-content">
+                </pre>
+            </div>
+        </div>
+        <main id="wrapper">
+            <div id="editor-view">
+                <textarea id="editor"></textarea>
+                <div id="preview">
+                    <div id="output"></div>
+                    <div id="error-prompt">
+                        <strong>Error</strong>
+                        <pre id="error-log"></pre>
+                    </div>
+
+                </div>
+            </div>
+            <div id="package-view">
+                <div id="packages">
+                    <h2>Packages</h2>
+                    <div class="note">Note: this will be made a lot easier to use once we
+                        have a more stable package API.
+                    </div>
+                    <pre id="package-content">
+                </pre>
+                </div>
+            </div>
+        </main>
 </body>
 
 </html>

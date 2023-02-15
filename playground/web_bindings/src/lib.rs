@@ -1,9 +1,24 @@
-use core::{eval, Context};
+use core::{eval, Context, CoreError, OutputFormat};
 use std::cell::RefCell;
+use thiserror::Error;
 use wasm_bindgen::prelude::*;
 
 thread_local! {
     static CONTEXT: RefCell<Context> = RefCell::new(Context::default());
+}
+
+#[derive(Error, Debug)]
+pub enum PlaygroundError {
+    #[error("An error from core")]
+    Core(#[from] CoreError),
+}
+
+impl From<PlaygroundError> for JsValue {
+    fn from(error: PlaygroundError) -> Self {
+        match error {
+            PlaygroundError::Core(error) => JsValue::from_str(&format!("{error:#?}")),
+        }
+    }
 }
 
 #[wasm_bindgen]
@@ -14,28 +29,21 @@ pub fn ast(source: &str) -> String {
 }
 
 #[wasm_bindgen]
-pub fn transpile(source: &str) -> String {
-    let document = parser::parse(source).unwrap();
-    let mut result = String::new();
-
-    CONTEXT.with(|ctx| {
+pub fn transpile(source: &str) -> Result<String, PlaygroundError> {
+    let result = CONTEXT.with(|ctx| {
         let mut ctx = ctx.borrow_mut();
-        result.push_str(&eval(&document, &mut ctx));
+        eval(source, &mut ctx, &OutputFormat::new("html"))
     });
 
-    result
+    Ok(result?)
 }
 
 #[wasm_bindgen]
 pub fn inspect_context() -> String {
-    let mut result = String::new();
-
     CONTEXT.with(|ctx| {
         let ctx = ctx.borrow_mut();
-        result.push_str(&format!("{ctx:#?}"));
-    });
-
-    result
+        format!("{ctx:#?}")
+    })
 }
 
 pub fn set_panic_hook() {
