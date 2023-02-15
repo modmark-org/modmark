@@ -106,7 +106,7 @@ impl TryFrom<Ast> for Element {
         match value {
             Text(s) => Ok(Data(s)),
             Ast::Document(doc) => Ok(Node {
-                name: "Document".to_string(),
+                name: "__document".to_string(),
                 environment: HashMap::new(),
                 children: doc
                     .elements
@@ -115,7 +115,7 @@ impl TryFrom<Ast> for Element {
                     .collect::<Result<Vec<Element>, ParseError>>()?,
             }),
             Ast::Paragraph(paragraph) => Ok(Node {
-                name: "Paragraph".to_string(),
+                name: "__paragraph".to_string(),
                 environment: HashMap::new(),
                 children: paragraph
                     .elements
@@ -124,7 +124,7 @@ impl TryFrom<Ast> for Element {
                     .collect::<Result<Vec<Element>, ParseError>>()?,
             }),
             Ast::Tag(tag) => Ok(Node {
-                name: tag.tag_name,
+                name: format!("__{}", tag.tag_name.to_lowercase()),
                 environment: HashMap::new(),
                 children: tag
                     .elements
