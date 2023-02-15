@@ -37,6 +37,12 @@ impl Hash for OutputFormat {
     }
 }
 
+impl ToString for OutputFormat {
+    fn to_string(&self) -> String {
+        self.0.to_lowercase()
+    }
+}
+
 impl FromStr for OutputFormat {
     //FIXME this does not work when i do cargo test, might have to refactor
     // type Err = core::convert::Infallible;

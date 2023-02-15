@@ -4,6 +4,7 @@ use std::{
 };
 
 use parser::{Element, ModuleArguments};
+use serde::Deserialize;
 use serde_json::json;
 #[cfg(feature = "native")]
 use wasmer::Cranelift;
@@ -64,7 +65,7 @@ impl Context {
                 {
                     return Err(CoreError::OccupiedTransform(
                         from.clone(),
-                        output_format.0.clone(),
+                        output_format.to_string(),
                         pkg.info.name.clone(),
                     ));
                 }
@@ -89,11 +90,12 @@ impl Context {
         use Element::*;
 
         match from {
-            Data(text) => unreachable!("No transform on data node"),
+            Data(_) => unreachable!("No transform on data node"),
+            Compound(_) => unreachable!("Should not transform compound element"),
             Node {
                 name,
-                environment,
-                children,
+                environment: _,
+                children: _,
             } => {
                 // FIXME: should do the same stuff as in moduleinvocation
                 Ok(Element::Compound(vec![Element::ModuleInvocation {
@@ -108,13 +110,13 @@ impl Context {
             }
             ModuleInvocation {
                 name: module_name,
-                args,
-                body,
-                one_line,
+                args: _,
+                body: _,
+                one_line: _,
             } => {
                 // We find the package responsible for this transform
                 let Some((transform, package)) = self.transforms.get(&(module_name.clone(), output_format.clone())) else {
-                    return Err(CoreError::MissingTransform(module_name.clone(), output_format.0.clone()));
+                    return Err(CoreError::MissingTransform(module_name.clone(), output_format.to_string()));
                 };
 
                 let mut input = Pipe::new();
@@ -128,7 +130,7 @@ impl Context {
                 let wasi_env = WasiState::new("")
                     .stdin(Box::new(input))
                     .stdout(Box::new(output.clone()))
-                    .args(["transform", module_name])
+                    .args(["transform", module_name, &output_format.to_string()])
                     .finalize(&mut self.store)?;
 
                 let import_object =
@@ -150,21 +152,11 @@ impl Context {
                 let result = {
                     let mut buffer = String::new();
                     output.read_to_string(&mut buffer)?;
-                    buffer.trim().to_string()
+                    deserialize_compound(&buffer)
                 };
 
-                // FIXME: we need to deserialize the result value read from stdout
-                Ok(Element::Compound(vec![Element::ModuleInvocation {
-                    name: "raw".to_string(),
-                    args: ModuleArguments {
-                        positioned: None,
-                        named: None,
-                    },
-                    body: "ok".to_string(),
-                    one_line: true,
-                }]))
+                result
             }
-            Compound(_) => unreachable!("Should not transform compound element"),
         }
     }
 
@@ -260,4 +252,61 @@ fn serialize_element(element: &Element, args_info: &Vec<ArgInfo>) -> Result<Stri
             Ok(serde_json::to_string(&json!(serialized_children))?)
         }
     }
+}
+
+fn deserialize_compound(input: &str) -> Result<Element, CoreError> {
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Entry {
+        ParentNode {
+            name: String,
+            children: Vec<Self>,
+        },
+        Module {
+            name: String,
+            #[serde(default)]
+            data: String,
+            #[serde(default)]
+            arguments: HashMap<String, String>,
+            #[serde(default = "default_inline")]
+            inline: bool,
+        },
+    }
+
+    fn entry_to_element(entry: Entry) -> Element {
+        match entry {
+            Entry::ParentNode { name, children } => Element::Node {
+                name,
+                environment: HashMap::new(),
+                children: children
+                    .into_iter()
+                    .map(|child| entry_to_element(child))
+                    .collect(),
+            },
+            Entry::Module {
+                name,
+                data,
+                arguments,
+                inline,
+            } => Element::ModuleInvocation {
+                name,
+                args: ModuleArguments {
+                    positioned: None,
+                    named: Some(arguments),
+                },
+                body: data,
+                one_line: inline,
+            },
+        }
+    }
+
+    let entries: Vec<Entry> = serde_json::from_str(input)?;
+
+    // Convert the parsed entries into real Elements
+    let elements: Vec<Element> = entries.into_iter().map(entry_to_element).collect();
+    Ok(Element::Compound(elements))
+}
+
+fn default_inline() -> bool {
+    true
 }
