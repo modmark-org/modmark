@@ -9,22 +9,38 @@ mod package;
 pub use context::Context;
 pub use error::CoreError;
 pub use package::{ArgInfo, NodeName, Package, PackageInfo, Transform};
+use serde::Deserialize;
+use std::hash::{Hash, Hasher};
 
 #[cfg(all(feature = "web", feature = "native"))]
 compile_error!("feature \"native\" and feature \"web\" cannot be enabled at the same time");
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Eq, Deserialize)]
 pub struct OutputFormat(String);
 
-/// To ensure that "html" and "HTML" is the same.
 impl OutputFormat {
-    pub fn new(format: &str) -> Self {
-        OutputFormat(format.to_lowercase())
+    pub fn new(string: &str) -> Self {
+        OutputFormat(string.to_lowercase())
+    }
+}
+
+/// To ensure that "html" and "HTML" is the same.
+impl PartialEq for OutputFormat {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.to_lowercase() == other.0.to_lowercase()
+    }
+}
+
+impl Hash for OutputFormat {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.to_lowercase().hash(state);
     }
 }
 
 impl FromStr for OutputFormat {
-    type Err = core::convert::Infallible;
+    //FIXME this does not work when i do cargo test, might have to refactor
+    // type Err = core::convert::Infallible;
+    type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(OutputFormat::new(s))
@@ -100,34 +116,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn module_info() {
+    fn table_manifest_test() {
         let ctx = Context::default();
-        let info = ctx.get_package_info("Module test").unwrap().clone();
+        let info = ctx
+            .get_package_info("Standard table module")
+            .unwrap()
+            .clone();
 
         let foo = PackageInfo {
-            name: "Module test".to_string(),
-            version: "1".to_string(),
-            transforms: vec![
-                Transform {
-                    from: "[table]".to_string(),
-                    to: vec![OutputFormat::new("table")],
-                    args_info: vec![ArgInfo {
-                        name: "border".to_string(),
-                        default: Some("black".to_string()),
-                        description: "What color the border should be".to_string(),
-                    }],
-                },
-                Transform {
-                    from: "table".to_string(),
-                    to: vec![OutputFormat::new("html"), OutputFormat::new("latex")],
-                    args_info: vec![],
-                },
-                Transform {
-                    from: "row".to_string(),
-                    to: vec![OutputFormat::new("html"), OutputFormat::new("latex")],
-                    args_info: vec![],
-                },
-            ],
+            name: "Standard table module".to_string(),
+            version: "0.1".to_string(),
+            description: "This package supports [table] modules".to_string(),
+            transforms: vec![Transform {
+                from: "table".to_string(),
+                to: vec![OutputFormat::new("html")],
+                arguments: vec![ArgInfo {
+                    name: "col_delimiter".to_string(),
+                    default: Some("|".to_string()),
+                    description: "The string delimiter for columns".to_string(),
+                }],
+            }],
         };
 
         assert_eq!(info, foo);

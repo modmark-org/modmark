@@ -10,7 +10,7 @@ use wasmer::Cranelift;
 use wasmer::{Instance, Store};
 use wasmer_wasi::{Pipe, WasiState};
 
-use crate::{ArgInfo, CoreError, NodeName, OutputFormat, Package, PackageInfo, Transform};
+use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
 
 #[derive(Debug)]
 pub struct Context {
@@ -31,9 +31,9 @@ impl Context {
     pub fn load_default_packages(&mut self) {
         self.load_package(include_bytes!(concat!(
             env!("OUT_DIR"),
-            "/test-module/wasm32-wasi/release/test-module.wasm"
+            "/table/wasm32-wasi/release/table.wasm"
         )))
-        .expect("Failed to load test-module module");
+        .expect("Failed to load standard table module");
     }
 
     pub fn load_package(&mut self, wasm_source: &[u8]) -> Result<(), CoreError> {
@@ -48,7 +48,7 @@ impl Context {
             let Transform {
                 from,
                 to,
-                args_info: _,
+                arguments: _,
             } = transform;
 
             for output_format in to {
@@ -117,7 +117,7 @@ impl Context {
                 write!(
                     &mut input,
                     "{}",
-                    serialize_element(from, &transform.args_info)?
+                    serialize_element(from, &transform.arguments)?
                 )?;
 
                 let wasi_env = WasiState::new("")
@@ -255,49 +255,4 @@ fn serialize_element(element: &Element, args_info: &Vec<ArgInfo>) -> Result<Stri
             Ok(serde_json::to_string(&json!(serialized_children))?)
         }
     }
-}
-
-#[test]
-fn test_serialize() {
-    let mut ctx = Context::default();
-
-    dbg!(serialize_element(
-        &Element::ModuleInvocation {
-            name: "table".to_string(),
-            args: ModuleArguments {
-                positioned: Some(vec!["foo".to_string(), "bar".to_string()]),
-                named: Some({
-                    let mut map = HashMap::new();
-                    map.insert("baz".to_string(), "100".to_string());
-                    map
-                }),
-            },
-            body: "testing".to_string(),
-            one_line: false,
-        },
-        &vec![]
-    ));
-}
-
-#[test]
-fn test_tranform() {
-    let mut ctx = Context::default();
-    let output_format = OutputFormat::new("html");
-    ctx.transform(
-        &Element::ModuleInvocation {
-            name: "table".to_string(),
-            args: ModuleArguments {
-                positioned: Some(vec!["foo".to_string(), "bar".to_string()]),
-                named: Some({
-                    let mut map = HashMap::new();
-                    map.insert("baz".to_string(), "100".to_string());
-                    map
-                }),
-            },
-            body: "testing".to_string(),
-            one_line: false,
-        },
-        &output_format,
-    )
-    .unwrap();
 }

@@ -1,4 +1,5 @@
 use crate::{error::CoreError, OutputFormat};
+use serde::Deserialize;
 use std::{io::Read, sync::Arc};
 use wasmer::{Instance, Module, Store};
 use wasmer_wasi::{Pipe, WasiState};
@@ -6,24 +7,25 @@ use wasmer_wasi::{Pipe, WasiState};
 pub type NodeName = String;
 
 /// Transform from a node into another node
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 pub struct Transform {
     pub from: NodeName,
     pub to: Vec<OutputFormat>,
-    pub args_info: Vec<ArgInfo>,
+    pub arguments: Vec<ArgInfo>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 pub struct ArgInfo {
     pub name: String,
     pub default: Option<String>,
     pub description: String,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct PackageInfo {
     pub name: String,
     pub version: String,
+    pub description: String,
     pub transforms: Vec<Transform>,
 }
 
@@ -50,6 +52,7 @@ impl Package {
         let wasi_env = WasiState::new("")
             .stdin(Box::new(input))
             .stdout(Box::new(output.clone()))
+            .arg("manifest")
             .finalize(store)?;
 
         let import_object = wasi_env.import_object(store, &module)?;
@@ -61,50 +64,18 @@ impl Package {
 
         // Retrieve name of the package
         // Call the `name` function
-        let name_fn = instance.exports.get_function("name")?;
-        name_fn.call(store, &[])?;
+        let manifest = instance.exports.get_function("_start")?;
+        manifest.call(store, &[])?;
 
-        // Read the name from stdout
-        let name = {
+        // Read package info from stdin
+        let manifest = {
             let mut buffer = String::new();
             output.read_to_string(&mut buffer)?;
-            buffer.trim().to_string()
-        };
-
-        // Retrieve version of the package
-        // Call the `version` function
-        let version_fn = instance.exports.get_function("version")?;
-        version_fn.call(store, &[])?;
-
-        // Read the version from stdout
-        let version = {
-            let mut buffer = String::new();
-            output.read_to_string(&mut buffer)?;
-            buffer.trim().to_string()
-        };
-
-        // Retrieve transform capabilities of the package
-        let transforms_fn = instance.exports.get_function("transforms")?;
-        transforms_fn.call(store, &[])?;
-
-        let raw_transforms_str = {
-            let mut buffer = String::new();
-            output.read_to_string(&mut buffer)?;
-            buffer
-        };
-
-        let Some(transforms) = parse_transforms(&raw_transforms_str) else {
-            return Err(CoreError::ParseTransforms(name))
-        };
-
-        let module_info = PackageInfo {
-            name,
-            version,
-            transforms,
+            serde_json::from_str(&buffer)?
         };
 
         Ok(Package {
-            info: Arc::new(module_info),
+            info: Arc::new(manifest),
             wasm_module: module,
         })
     }
@@ -145,7 +116,7 @@ fn parse_transforms(input: &str) -> Option<Vec<Transform>> {
         transforms.push(Transform {
             from: name.to_string(),
             to: outputs,
-            args_info: arguments,
+            arguments,
         });
     }
 
