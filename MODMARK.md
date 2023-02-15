@@ -87,7 +87,3 @@ Example 5: module with arguments
         print("Hello world!")
 
     The equation [math style=italic] x^2 is simple enough, but for [math style=bold]!x^2 + y^3!, you'll need to study multivariable calculus
-
-## Limitations and valid characters
-
-There are limitations to smart punctuation. Character sequences that could technically be broken up into smaller sequences for smart punctuation will instead be used as is. This means that "----" is not parsed as "&ndash;&ndash;".

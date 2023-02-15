@@ -30,3 +30,5 @@ Source                  | Output
 ```a -- b```            | a &ndash; b
 ```a --- b```           | a &mdash; b
 ```ellipsis...```       | ellipsis&hellip;
+
+*Note: character sequences that could technically be broken up into smaller sequences for smart punctuation will instead be used as is. This means that "----" is not parsed as "&ndash;&ndash;".*
