@@ -44,6 +44,7 @@ fn transform(from: &str) -> String {
         "__subscript" => transform_tag(input, "sub"),
         "__underlined" => transform_tag(input, "u"),
         "__strikethrough" => transform_tag(input, "del"),
+        "__paragraph" => transform_tag(input, "p"),
         "__document" => transform_document(input),
         "__text" => escape_text(input),
         _ => unreachable!(),
@@ -144,6 +145,11 @@ fn manifest() -> String {
                 },
                 {
                     "from": "__text",
+                    "to": ["html"],
+                    "arguments": [],
+                },
+                {
+                    "from": "__paragraph",
                     "to": ["html"],
                     "arguments": [],
                 },
