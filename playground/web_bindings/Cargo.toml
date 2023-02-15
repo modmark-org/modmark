@@ -10,6 +10,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 parser = {version= "*", path = "../../parser/"}
+thiserror = "1.0.38"
 core = {version= "*", path = "../../core/", default-features = false, features = ["web"]}
 wasm-bindgen = "0.2.63"
 # The `console_error_panic_hook` crate provides better debugging of panics by

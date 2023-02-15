@@ -102,7 +102,7 @@ select:hover {
     transition: 0.3s width;
 }
 
-#output,
+#preview,
 #editor {
     width: 50%;
     height: 100%;
@@ -114,8 +114,21 @@ select:hover {
     transition: 0.3s width;
 }
 
-#output {
+#preview {
     background: rgb(242, 242, 242);
+}
+
+#error-prompt {
+    display: none;
+    padding: 1rem;
+    background: #fceced;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.501);
+    border-radius: 0.3rem;
+    overflow: scroll;
+}
+
+#error-prompt strong {
+    color: #de455a;
 }
 
 #package-view {
