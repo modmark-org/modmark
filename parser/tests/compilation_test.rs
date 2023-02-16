@@ -125,6 +125,12 @@ fn ast_to_json(ast: &Ast) -> JsonValue {
                 }
             }
         },
+        Ast::Heading(h) => {
+            object! {
+                name: format!("Heading{}", h.level).as_str(),
+                children: h.elements.iter().map(ast_to_json).collect::<Vec<JsonValue>>()
+            }
+        }
     }
 }
 
