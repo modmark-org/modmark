@@ -5,7 +5,7 @@ use std::path::Path;
 use json::{object, JsonValue};
 
 use diffy::create_patch;
-use parser::{parse, parse_to_ast_document, Ast, Document, Element, MaybeArgs};
+use parser::{parse_to_ast_document, Ast, Document, MaybeArgs};
 
 fn split_test(input: &Path) -> datatest_stable::Result<()> {
     let output = input.with_extension("json");
@@ -49,21 +49,11 @@ fn unified_test(input: &Path) -> datatest_stable::Result<()> {
 }
 
 fn test_lf(input: &str, output: &str) {
-    let mdm_obj = elem_to_json(&parse(input));
     let ast_obj = doc_to_json(parse_to_ast_document(input));
     let json_obj = json::parse(output).expect("JSON should be parsable");
 
     // note: we DO NOT want assert_eq here since that would print the mismatched
     // json IR:s, but the custom error message is much easier to read
-    if mdm_obj != json_obj {
-        panic!(
-            "Failed using LF,\nEXPECTED\n{}\nGOT\n{}\nDIFF\n{}",
-            json_obj.pretty(2),
-            mdm_obj.pretty(2),
-            create_patch(&json_obj.pretty(2), &mdm_obj.pretty(2))
-        );
-    }
-
     if ast_obj != json_obj {
         panic!(
             "Failed using LF,\nEXPECTED\n{}\nGOT\n{}\nDIFF\n{}",
@@ -75,21 +65,11 @@ fn test_lf(input: &str, output: &str) {
 }
 
 fn test_crlf(input: &str, output: &str) {
-    let mdm_obj = elem_to_json(&parse(&input.replace('\n', "\r\n")));
     let ast_obj = doc_to_json(parse_to_ast_document(&input.replace('\n', "\r\n")));
     let json_obj = json::parse(&output.replace(r"\n", r"\r\n")).expect("JSON should be parsable");
 
     // note: we DO NOT want assert_eq here since that would print the mismatched
     // json IR:s, but the custom error message is much easier to read
-    if mdm_obj != json_obj {
-        panic!(
-            "Failed using CRLF,\nEXPECTED\n{}\nGOT\n{}\nDIFF\n{}",
-            json_obj.pretty(2),
-            mdm_obj.pretty(2),
-            create_patch(&json_obj.pretty(2), &mdm_obj.pretty(2))
-        );
-    }
-
     if ast_obj != json_obj {
         panic!(
             "Failed using CRLF,\nEXPECTED\n{}\nGOT\n{}\nDIFF\n{}",
@@ -127,7 +107,12 @@ fn ast_to_json(ast: &Ast) -> JsonValue {
         }
         Ast::Module(m) => match &m.args {
             MaybeArgs::Error(err) => {
-                panic!("Error in module args: {}", err)
+                object! {
+                    name: m.name.as_str(),
+                    args: err.to_string(),
+                    body: m.body.as_str(),
+                    one_line: JsonValue::from(m.one_line),
+                }
             }
             MaybeArgs::ModuleArguments(args) => {
                 object! {
@@ -143,39 +128,6 @@ fn ast_to_json(ast: &Ast) -> JsonValue {
     }
 }
 
-// this is used to compare the resulting parsed Element to the expected Json
-// since the Ast JSON representation is compared as well, if Element is changed
-// too much, this may possibly be removed
-fn elem_to_json(elem: &Element) -> JsonValue {
-    match elem {
-        Element::Data(str) => str.as_str().into(),
-        Element::Node {
-            name,
-            environment: _environment,
-            children,
-        } => {
-            object! {
-                name: name.as_str(),
-                children: children.iter().map(elem_to_json).collect::<Vec<JsonValue>>()
-            }
-        }
-        Element::ModuleInvocation {
-            name,
-            args,
-            body,
-            one_line,
-        } => {
-            object! {
-                name: name.as_str(),
-                args: JsonValue::from(args.positioned.clone().unwrap_or_default().iter().enumerate().map(|(a,b)| (a.to_string(),b.to_string())).chain(
-                    args.named.clone().unwrap_or_default().iter().map(|(a,b)| (a.to_string(), b.to_string()))
-                ).collect::<HashMap<String, String>>()),
-                body: body.as_str(),
-                one_line: JsonValue::from(*one_line),
-            }
-        }
-    }
-}
 
 datatest_stable::harness!(
     split_test,

@@ -9,6 +9,8 @@ use nom::multi::{fold_many1, many0, many1, separated_list0};
 use nom::sequence::{preceded, terminated};
 use nom::{combinator::*, Finish, IResult, Parser};
 
+use thiserror::Error;
+
 use Element::Node;
 
 use crate::tag::CompoundAST;
@@ -66,8 +68,9 @@ pub enum Ast {
     Module(Module),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Error)]
 pub enum ParseError {
+    #[error("Unnamed argument after named argument")]
     ArgumentOrderError,
 }
 
@@ -202,8 +205,8 @@ impl Element {
 /// * `source`: The source text to parse
 ///
 /// returns: Element The parsed element
-pub fn parse(source: &str) -> Element{
-    parse_to_ast(source).try_into().unwrap()
+pub fn parse(source: &str) -> Result<Element, ParseError>{
+    parse_to_ast(source).try_into()
 }
 
 pub fn parse_to_ast(source: &str) -> Ast {
