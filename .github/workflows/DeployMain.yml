@@ -1,5 +1,5 @@
-# This is a workflow based on an example provided by GitHub
-name: Deploy Playground to Pages
+# This is a workflow based on an example provided by GitHub and on rossjrw/pr-preview-action
+name: Deploy main Playground to Pages
 
 on:
   # Runs on pushes targeting the default branch
@@ -11,13 +11,12 @@ on:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
-  contents: read
-  pages: write
+  contents: write
   id-token: write
 
 # Allow one concurrent deployment
 concurrency:
-  group: "pages"
+  group: "deploy-main"
   cancel-in-progress: true
 
 jobs:
@@ -41,20 +40,21 @@ jobs:
         uses: jetli/wasm-pack-action@v0.4.0
       - name: Make build script executable
         run: chmod +x ./build-playground.sh
-      - name: Build playground
+      - name: Build Playground
         run: ./build-playground.sh
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
+      - name: Remove auto-generated .gitignore
+        run: rm build/pkg/.gitignore
+      - name: Copy deployment files
+        run: |
+          mkdir site-deploy
+          cp -r build/* site-deploy
+      - name: Print generated files
+        run: ls -R site-deploy
+      - name: Deploy Playground
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          path: ./playground/build
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v1
+          folder: ./playground/site-deploy/
+          branch: gh-pages
+          clean: true
+          clean-exclude: pr-preview
+          single-commit: true
