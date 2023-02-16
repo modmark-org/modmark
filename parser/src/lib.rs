@@ -44,7 +44,7 @@ pub struct ModuleArguments {
 #[derive(Clone, Debug, PartialEq)]
 pub enum MaybeArgs {
     ModuleArguments(ModuleArguments),
-    Error(String),
+    Error(ParseError),
 }
 
 impl Default for MaybeArgs {
@@ -64,6 +64,11 @@ pub enum Ast {
     Paragraph(Paragraph),
     Tag(Tag),
     Module(Module),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ParseError {
+    ArgumentOrderError,
 }
 
 impl Ast {
@@ -87,7 +92,7 @@ impl Ast {
 }
 
 impl TryFrom<Ast> for Element {
-    type Error = String;
+    type Error = ParseError;
 
     fn try_from(value: Ast) -> Result<Self, Self::Error> {
         match value {
@@ -99,7 +104,7 @@ impl TryFrom<Ast> for Element {
                     .elements
                     .into_iter()
                     .map(|e| e.try_into())
-                    .collect::<Result<Vec<Element>, String>>()?,
+                    .collect::<Result<Vec<Element>, ParseError>>()?,
             }),
             Ast::Paragraph(paragraph) => Ok(Node {
                 name: "Paragraph".to_string(),
@@ -108,7 +113,7 @@ impl TryFrom<Ast> for Element {
                     .elements
                     .into_iter()
                     .map(|e| e.try_into())
-                    .collect::<Result<Vec<Element>, String>>()?,
+                    .collect::<Result<Vec<Element>, ParseError>>()?,
             }),
             Ast::Tag(tag) => Ok(Node {
                 name: tag.tag_name,
@@ -117,7 +122,7 @@ impl TryFrom<Ast> for Element {
                     .elements
                     .into_iter()
                     .map(|e| e.try_into())
-                    .collect::<Result<Vec<Element>, String>>()?,
+                    .collect::<Result<Vec<Element>, ParseError>>()?,
             }),
             Ast::Module(module) => match module.args {
                 MaybeArgs::ModuleArguments(args) => Ok(ModuleInvocation {
@@ -197,7 +202,7 @@ impl Element {
 /// * `source`: The source text to parse
 ///
 /// returns: Element The parsed element
-pub fn parse(source: &str) -> Element {
+pub fn parse(source: &str) -> Element{
     parse_to_ast(source).try_into().unwrap()
 }
 
