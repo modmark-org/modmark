@@ -1,0 +1,86 @@
+Tests headings with tags such as **bold**.
+The test also includes cases with nested tags,
+and one with an inline module (which shouldn't
+be parsed as a module).
+
+```mdm
+# nnn **bbb** nnn
+
+# // italic text //
+
+# // italic
+text //
+
+# **bbbb //ibib// bbbb** nnnn
+
+# title [math]{x^2}
+```
+
+```json
+{
+    "name": "Document",
+    "children": [
+        {
+            "name": "Heading1",
+            "children": [
+                "nnn ",
+                {
+                    "name": "Bold",
+                    "children": [
+                        "bbb"
+                    ]
+                },
+                " nnn"
+            ]
+        },
+        {
+            "name": "Heading1",
+            "children": [
+                {
+                    "name": "Italic",
+                    "children": [
+                        " italic text "
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Heading1",
+            "children": [
+                "// italic"
+            ]
+        },
+        {
+            "name": "Paragraph",
+            "children": [
+                "text //"
+            ]
+        },
+        {
+            "name": "Heading1",
+            "children": [
+                {
+                    "name": "Bold",
+                    "children": [
+                        "bbbb ",
+                        {
+                            "name": "Italic",
+                            "children": [
+                                "ibib"
+                            ]
+                        },
+                        " bbbb"
+                    ]
+                },
+                " nnnn"
+            ]
+        },
+        {
+            "name": "Heading1",
+            "children": [
+                "title [math]{x^2}"
+            ]
+        }
+    ]
+}
+```

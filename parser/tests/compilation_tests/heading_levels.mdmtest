@@ -1,4 +1,4 @@
-Testing headings of different levels. Seven consecutive hashtags
+Tests headings of different levels. Seven consecutive hashtags
 is not allowed and should therefore be parsed as a paragraph.
 
 ```mdm

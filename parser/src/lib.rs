@@ -141,7 +141,7 @@ impl TryFrom<Ast> for Element {
             Ast::Heading(heading) => Node {
                 name: format!("Heading{}", heading.level),
                 environment: HashMap::new(),
-                children: vec![(*heading.body).into()],
+                children: heading.elements.into_iter().map(|e| e.into()).collect(),
             },
         }
     }
@@ -174,7 +174,7 @@ pub struct Module {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Heading {
     pub level: usize,
-    pub body: Box<Ast>,
+    pub elements: Vec<Ast>,
 }
 
 impl Element {
@@ -296,7 +296,7 @@ fn parse_heading(input: &str) -> IResult<&str, Heading> {
         ),
         |(start, body)| Heading {
             level: start.len(),
-            body: Box::new(Text(body.into())),
+            elements: tag::extract_tags(vec![Text(body.into())]),
         },
     )(input)
 }
@@ -561,9 +561,13 @@ fn pretty_ast(ast: &Ast) -> Vec<String> {
             };
         }
 
-        Ast::Heading(Heading { level, body }) => {
+        Ast::Heading(Heading { level, elements }) => {
             strs.push(format!("Heading{level}:"));
-            strs.push(format!("{indent}{}", pretty_ast(body).concat()));
+            elements.iter().for_each(|c| {
+                pretty_ast(c)
+                    .iter()
+                    .for_each(|s| strs.push(format!("{indent}{s}")))
+            });
         }
     }
 
