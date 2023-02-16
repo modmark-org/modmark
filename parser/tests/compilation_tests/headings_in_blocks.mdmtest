@@ -1,5 +1,4 @@
-Testing headings of different levels. Seven consecutive hashtags
-is not allowed and should therefore be parsed as a paragraph.
+Tests behaviour of parser when combining headings, paragraphs and modules
 
 ```mdm
 This is a paragraph.
@@ -7,8 +6,7 @@ This is a paragraph.
 instead of a heading.
 
 # Heading
-Using headings and paragraphs like
-this is allowed.
+Using headings and paragraphs like this works.
 
 # Headings work in the same manner with modules
 [module]
@@ -35,7 +33,7 @@ of the module.
         {
             "name": "Paragraph",
             "children": [
-                "Using headings and paragraphs like\nthis is allowed."
+                "Using headings and paragraphs like this works."
             ]
         },
         {
