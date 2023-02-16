@@ -208,9 +208,13 @@ fn parse_heading(input: &str) -> IResult<&str, Heading> {
             }),
             preceded(space0, parse_heading_text),
         ),
-        |(start, body)| Heading {
-            level: start.len() as u8,
-            elements: tag::extract_tags(vec![Text(body.into())]),
+        |(start, body)| {
+            let mut elements = tag::extract_tags(vec![Text(body.into())]);
+            smart_punctuate(&mut elements);
+            Heading {
+                level: start.len() as u8,
+                elements,
+            }
         },
     )(input)
 }
@@ -334,6 +338,7 @@ fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Ast>> {
         ),
         |mut x| {
             remove_escape_chars(&mut x);
+            smart_punctuate(&mut x);
             x
         },
     )(input)
@@ -384,6 +389,79 @@ where
         }
         _ => {}
     });
+}
+
+/// Replace certain sequences with unicode characters according to our specification for
+/// smart punctuation.
+///
+/// The function takes a mutable `CompoundAST` and walks through it, mutating its texts in-place
+fn smart_punctuate<T>(input: &mut T)
+where
+    T: CompoundAST,
+{
+    let mut sgl_open = false;
+    let mut dbl_open = false;
+
+    input.elements_mut().iter_mut().for_each(|e| match e {
+        Text(str) => {
+            let mut acc = String::new();
+            let mut lines = str.lines().peekable();
+
+            while let Some(line) = lines.next() {
+                let mut tmp = line
+                    .replace("...", "\u{2026}")
+                    .replace("---", "\u{2014}")
+                    .replace("--", "\u{2013}");
+
+
+                if sgl_open {
+                    tmp = tmp.replacen("\'", "\u{2019}", 1)
+                }
+                if dbl_open {
+                    tmp = tmp.replacen("\"", "\u{201D}", 1);
+                }
+
+                let sgl_occs = tmp.matches("\'").count();
+                for _ in 0..sgl_occs/2 {
+                    tmp = tmp
+                        .replacen("\'", "\u{2018}", 1)
+                        .replacen("\'", "\u{2019}", 1);
+                }
+                let dbl_occs = tmp.matches("\"").count();
+                for _ in 0..dbl_occs/2 {
+                    tmp = tmp
+                        .replacen("\"", "\u{201C}", 1)
+                        .replacen("\"", "\u{201D}", 1);
+                }
+
+                if lines.peek().is_none() {
+                    sgl_open = sgl_occs % 2 != 0;
+                    dbl_open = dbl_occs % 2 != 0;
+                } else {
+                    dbl_open = false;
+                    sgl_open = false;
+                }
+
+                acc.push_str(tmp.as_str());
+                acc.push('\n');
+            }
+
+            mem::swap(str, &mut acc);
+        }
+        Ast::Document(d) => {
+            smart_punctuate(&mut d.elements);
+        }
+        Ast::Paragraph(p) => {
+            smart_punctuate(&mut p.elements);
+        }
+        Ast::Tag(t) => {
+            smart_punctuate(&mut t.elements);
+        }
+        Ast::Heading(h) => {
+            smart_punctuate(&mut h.elements);
+        }
+        _ => {}
+    })
 }
 
 /// Converts an Ast into a vector of strings suitable for a text representation.
