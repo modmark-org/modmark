@@ -3,10 +3,11 @@ extern crate core;
 use std::collections::HashMap;
 use std::mem;
 
-use nom::character::complete::{char, line_ending, none_of};
+use nom::bytes::complete::{take_till, take_while1};
+use nom::character::complete::{char, line_ending, none_of, space0};
 use nom::error::Error;
 use nom::multi::{fold_many1, many0, many1, separated_list0};
-use nom::sequence::{preceded, terminated};
+use nom::sequence::{pair, preceded, terminated};
 use nom::{combinator::*, Finish, IResult, Parser};
 
 use thiserror::Error;
@@ -66,6 +67,7 @@ pub enum Ast {
     Paragraph(Paragraph),
     Tag(Tag),
     Module(Module),
+    Heading(Heading),
 }
 
 #[derive(Clone, Debug, PartialEq, Error)]
@@ -136,6 +138,11 @@ impl TryFrom<Ast> for Element {
                 }),
                 MaybeArgs::Error(error) => Err(error),
             },
+            Ast::Heading(heading) => Node {
+                name: format!("Heading{}", heading.level),
+                environment: HashMap::new(),
+                children: vec![(*heading.body).into()],
+            },
         }
     }
 }
@@ -162,6 +169,12 @@ pub struct Module {
     pub args: MaybeArgs,
     pub body: String,
     pub one_line: bool,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Heading {
+    pub level: usize,
+    pub body: Box<Ast>,
 }
 
 impl Element {
@@ -259,11 +272,44 @@ fn parse_document_blocks(input: &str) -> IResult<&str, Vec<Ast>> {
     preceded(
         many0(line_ending),
         separated_list0(
-            preceded(line_ending, many1(line_ending)),
+            many1(line_ending),
             map(module::parse_multiline_module, Ast::Module)
+                .or(map(parse_heading, Ast::Heading))
                 .or(map(parse_paragraph, Ast::Paragraph)),
         ),
     )(input)
+}
+
+/// Parses a heading which consists of a sequence of hashtags to indicate heading level
+/// followed by text. The level and text are put into a `Heading` node.
+///
+/// # Arguments
+///
+/// * `input`: The text to parse
+///
+/// returns: The heading node, if a successful parse occurs, otherwise the parse error
+fn parse_heading(input: &str) -> IResult<&str, Heading> {
+    map(
+        pair(
+            verify(take_while1(|c: char| c.eq(&'#')), |s: &str| s.len() <= 6),
+            preceded(space0, parse_heading_text),
+        ),
+        |(start, body)| Heading {
+            level: start.len(),
+            body: Box::new(Text(body.into())),
+        },
+    )(input)
+}
+
+/// Parses the text for a heading, consuming until a line ending is found.
+///
+/// # Arguments
+///
+/// * `input`: The text to parse
+///
+/// returns: The parsed text, if a successful parse occurs, otherwise the parse error
+fn parse_heading_text(input: &str) -> IResult<&str, &str> {
+    take_till(|c: char| c.eq(&'\r') || c.eq(&'\n'))(input)
 }
 
 /// Parses a paragraph which consists of multiple paragraph elements, and puts all those into a
@@ -513,6 +559,11 @@ fn pretty_ast(ast: &Ast) -> Vec<String> {
                 });
                 strs.push("} [multiline invocation]".to_string());
             };
+        }
+
+        Ast::Heading(Heading { level, body }) => {
+            strs.push(format!("Heading{level}:"));
+            strs.push(format!("{indent}{}", pretty_ast(body).concat()));
         }
     }
 
