@@ -58,7 +58,7 @@ fn compile_file(args: &Args) -> Result<Element, CliError> {
     output_file.write_all(output.as_bytes())?;
 
     // Also return the Element tree for debug purposes
-    Ok(parse(&source))
+    Ok(parse(&source).unwrap())
 }
 
 fn watch(args: &Args, target: &String) -> Result<(), CliError> {

@@ -104,7 +104,15 @@ impl TryFrom<Ast> for Element {
 
     fn try_from(value: Ast) -> Result<Self, Self::Error> {
         match value {
-            Text(s) => Ok(Data(s)),
+            Ast::Text(s) => Ok(ModuleInvocation {
+                name: "__text".to_string(),
+                args: ModuleArguments {
+                    positioned: None,
+                    named: None,
+                },
+                body: s,
+                one_line: true,
+            }),
             Ast::Document(doc) => Ok(Node {
                 name: "__document".to_string(),
                 environment: HashMap::new(),
