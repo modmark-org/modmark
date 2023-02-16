@@ -124,10 +124,18 @@ select:hover {
     background: #fceced;
     box-shadow: 0 0 2px rgba(0, 0, 0, 0.501);
     border-radius: 0.3rem;
+}
+
+#error-log pre {
     overflow: scroll;
+    opacity: 0.4;
 }
 
 #error-prompt strong {
+    color: #de455a;
+}
+
+#error-prompt .material-symbols-outlined {
     color: #de455a;
 }
 

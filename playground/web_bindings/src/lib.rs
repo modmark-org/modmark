@@ -16,7 +16,9 @@ pub enum PlaygroundError {
 impl From<PlaygroundError> for JsValue {
     fn from(error: PlaygroundError) -> Self {
         match error {
-            PlaygroundError::Core(error) => JsValue::from_str(&format!("{error:#?}")),
+            PlaygroundError::Core(error) => {
+                JsValue::from_str(&format!("<p>{error}</p><pre>{error:#?}</pre>"))
+            }
         }
     }
 }

@@ -83,7 +83,7 @@
                         result += transpile(input);
                     } catch (error) {
                         errorPrompt.style.display = "block";
-                        errorLog.innerText = error;
+                        errorLog.innerHTML = error;
                     }
                     pre.innerText = result;
 
@@ -94,7 +94,7 @@
                         result += transpile(input);
                     } catch (error) {
                         errorPrompt.style.display = "block";
-                        errorLog.innerText = error;
+                        errorLog.innerHTML = error;
                     }
                     output.innerHTML = result;
                 } break;
@@ -148,7 +148,17 @@
     <main id="wrapper">
         <div id="editor-view">
             <textarea id="editor"></textarea>
-            <div id="output"></div>
+            <div id="preview">
+                <div id="output"></div>
+                <div id="error-prompt">
+                    <span class="material-symbols-outlined">
+                        report
+                    </span>
+                    <strong>Error</strong>
+                    <div id="error-log"></div>
+                </div>
+
+            </div>
         </div>
         <div id="package-view">
             <div id="packages">
