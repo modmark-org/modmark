@@ -8,7 +8,7 @@ is not allowed and should therefore be parsed as a paragraph.
 
 ### Level 3
 
-####### paragraph text
+########## Level 10
 ```
 
 ```json
@@ -34,9 +34,9 @@ is not allowed and should therefore be parsed as a paragraph.
             ]
         },
         {
-            "name": "Paragraph",
+            "name": "Heading10",
             "children": [
-                "####### paragraph text"
+                "Level 10"
             ]
         }
     ]

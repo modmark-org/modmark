@@ -177,7 +177,7 @@ pub struct Module {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Heading {
-    pub level: usize,
+    pub level: u8,
     pub elements: Vec<Ast>,
 }
 
@@ -295,11 +295,13 @@ fn parse_document_blocks(input: &str) -> IResult<&str, Vec<Ast>> {
 fn parse_heading(input: &str) -> IResult<&str, Heading> {
     map(
         pair(
-            verify(take_while1(|c| c == '#'), |s: &str| s.len() <= 6),
+            verify(take_while1(|c| c == '#'), |s: &str| {
+                s.len() <= u8::MAX as usize
+            }),
             preceded(space0, parse_heading_text),
         ),
         |(start, body)| Heading {
-            level: start.len(),
+            level: start.len() as u8,
             elements: tag::extract_tags(vec![Text(body.into())]),
         },
     )(input)
