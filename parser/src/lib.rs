@@ -226,9 +226,9 @@ pub fn parse_to_ast_document(source: &str) -> Document {
         .finish()
         .map(|(_, x)| x)
         .unwrap_or_else(|e: Error<&str>| Document {
-            elements: vec![
-                Text(format!("A nom error occurred when parsing the document\nError: {e}"))
-            ],
+            elements: vec![Text(format!(
+                "A nom error occurred when parsing the document\nError: {e}"
+            ))],
         })
 }
 
