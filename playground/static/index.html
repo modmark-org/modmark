@@ -13,7 +13,7 @@
     <title>Modmark Playground</title>
     <link rel="stylesheet" href="style.css">
     <script type="module">
-        import init, {transpile, inspect_context, ast } from "./pkg/web_bindings.js";
+        import init, {ast, inspect_context, transpile} from "./pkg/web_bindings.js";
 
         let view = "editor";
 
@@ -24,6 +24,7 @@
         const packageContent = document.getElementById("package-content");
         const editorView = document.getElementById("editor-view");
         const viewToggle = document.getElementById("view-toggle");
+        const leftMenu = document.getElementById("left-menu");
 
 
         function buttonContent(text, icon) {
@@ -83,6 +84,15 @@
         init().then(() => {
             editor.oninput = (event) => updateOutput(event.target.value);
             selector.onchange = () => updateOutput(editor.value);
+            const regex = /pr-preview\/pr-(\d+)/;
+            const match = document.location.href.match(regex);
+            if (match !== null) {
+                const branch = match[1]
+                const button = document.createElement("button");
+                button.innerHTML = buttonContent("Previewing #" + branch, "alt_route");
+                button.onclick = () => window.location = `https://github.com/modmark-org/modmark/pull/${branch}`;
+                leftMenu.appendChild(button);
+            }
         });
 
 
@@ -90,16 +100,16 @@
 </head>
 
 <body>
-    <div class="menu">
-        <div class="menu-items">
-            <div class="left-menu">
-                <h1>Modmark playground</h1>
-                <select name="selector" id="selector">
-                    <option value="ast">Abstract syntax tree</option>
-                    <option value="transpile">HTML output</option>
-                    <option value="render">Rendered HTML</option>
-                </select>
-                <button id="view-toggle">
+<div class="menu">
+    <div class="menu-items">
+        <div class="left-menu" id="left-menu">
+            <h1>Modmark playground</h1>
+            <select name="selector" id="selector">
+                <option value="ast">Abstract syntax tree</option>
+                <option value="transpile">HTML output</option>
+                <option value="render">Rendered HTML</option>
+            </select>
+            <button id="view-toggle">
                     <span class="material-symbols-outlined">
                         widgets
                     </span>
@@ -110,26 +120,26 @@
                 <span class="material-symbols-outlined">
                     info
                 </span>
-                GitHub
-            </a>
+            GitHub
+        </a>
+    </div>
+</div>
+<main id="wrapper">
+    <div id="editor-view">
+        <textarea id="editor"></textarea>
+        <div id="output"></div>
+    </div>
+    <div id="package-view">
+        <div id="packages">
+            <h2>Packages</h2>
+            <div class="note">Note: this will be made a lot easier to use once we
+                have a more stable package API.
+            </div>
+            <pre id="package-content">
+                </pre>
         </div>
     </div>
-    <main id="wrapper">
-        <div id="editor-view">
-            <textarea id="editor"></textarea>
-            <div id="output"> </div>
-        </div>
-        <div id="package-view">
-            <div id="packages">
-                <h2>Packages</h2>
-                <div class="note">Note: this will be made a lot easier to use once we
-                    have a more stable package API.
-                </div>
-                <pre id="package-content">
-                </pre>
-            </div>
-        </div>
-    </main>
+</main>
 </body>
 
 </html>
