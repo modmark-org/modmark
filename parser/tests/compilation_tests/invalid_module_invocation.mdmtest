@@ -1,0 +1,30 @@
+Testing parsing of modules with only named arguments
+
+```mdm
+[code lang=py indent=tabs missplacedArgument]
+print("hello world")
+
+[code py indent=tabs missplacedArgument]
+print("hello world")
+```
+
+```json
+{
+  "name": "Document",
+  "children": [
+    {
+      "name": "code",
+      "args": "Unnamed argument after named argument",
+      "body": "print(\"hello world\")",
+      "one_line": false
+    },
+    {
+      "name": "code",
+      "args": "Unnamed argument after named argument",
+      "body": "print(\"hello world\")",
+      "one_line": false
+    }
+  ]
+}
+```
+
