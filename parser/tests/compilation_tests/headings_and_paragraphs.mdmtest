@@ -1,0 +1,55 @@
+Testing headings of different levels. Seven consecutive hashtags
+is not allowed and should therefore be parsed as a paragraph.
+
+```mdm
+This is a paragraph.
+# and this is part of the paragraph
+instead of a heading.
+
+# Heading
+Using headings and paragraphs like
+this is allowed.
+
+# Headings work in the same manner with modules
+[module]
+This actually creates a multiline invocation
+of the module.
+```
+
+```json
+{
+    "name": "Document",
+    "children": [
+        {
+            "name": "Paragraph",
+            "children": [
+                "This is a paragraph.\n# and this is part of the paragraph\ninstead of a heading."
+            ]
+        },
+        {
+            "name": "Heading1",
+            "children": [
+                "Heading"
+            ]
+        },
+        {
+            "name": "Paragraph",
+            "children": [
+                "Using headings and paragraphs like\nthis is allowed."
+            ]
+        },
+        {
+            "name": "Heading1",
+            "children": [
+                "Headings work in the same manner with modules"
+            ]
+        },
+        {
+            "name": "module",
+            "args": {},
+            "body": "This actually creates a multiline invocation\nof the module.",
+            "one_line": false
+        }
+    ]
+}
+```
