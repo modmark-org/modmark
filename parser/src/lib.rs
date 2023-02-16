@@ -479,9 +479,9 @@ fn pretty_ast(ast: &Ast) -> Vec<String> {
             args,
             body,
             one_line,
-        }) => match args {
-            MaybeArgs::ModuleArguments(arguments) => {
-                let args = {
+        }) => {
+            let args = match args {
+                MaybeArgs::ModuleArguments(arguments) => {
                     let p1 = &arguments.positioned;
                     let p2 = arguments.named.as_ref().map(|args| {
                         args.iter()
@@ -492,24 +492,22 @@ fn pretty_ast(ast: &Ast) -> Vec<String> {
                     let mut args_vec = p1.clone().unwrap_or_default();
                     args_vec.extend_from_slice(&p2.unwrap_or_default());
                     args_vec.join(", ")
-                };
-                if *one_line {
-                    strs.push(format!("{name}({args}){{{body}}}"));
-                } else {
-                    strs.push(format!("{name}({args}){{"));
-                    body.lines().enumerate().for_each(|(idx, line)| {
-                        strs.push(format!(
-                            "{indent}{} {line}",
-                            if idx == 0 { '>' } else { '|' }
-                        ))
-                    });
-                    strs.push("} [multiline invocation]".to_string());
                 }
-            }
-            MaybeArgs::Error(err) => {
-                panic!("{}", err)
-            }
-        },
+                MaybeArgs::Error(_) => "ERR".to_string(),
+            };
+            if *one_line {
+                strs.push(format!("{name}({args}){{{body}}}"));
+            } else {
+                strs.push(format!("{name}({args}){{"));
+                body.lines().enumerate().for_each(|(idx, line)| {
+                    strs.push(format!(
+                        "{indent}{} {line}",
+                        if idx == 0 { '>' } else { '|' }
+                    ))
+                });
+                strs.push("} [multiline invocation]".to_string());
+            };
+        }
     }
 
     strs
