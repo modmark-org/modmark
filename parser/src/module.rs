@@ -1,13 +1,13 @@
 //! This module provides the function the Parser needs to parse modules. It exposes two functions;
 //! [parse_inline_module] and [parse_multiline_module], which parses inline modules and multiline
 //! modules respectively.
-use crate::{MaybeArgs, Module, ModuleArguments};
+use crate::{MaybeArgs, Module, ModuleArguments, ParseError};
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take, take_till, take_until, take_until1, take_while1};
 use nom::character::complete::{char, line_ending, multispace0, multispace1, space0, space1};
 use nom::combinator::{fail, flat_map, map, not, opt, peek, rest, verify};
 use nom::error::Error;
-use nom::multi::{many0, separated_list0, separated_list1};
+use nom::multi::{separated_list0, separated_list1};
 use nom::sequence::{delimited, pair, preceded, separated_pair, terminated, tuple};
 use nom::{FindSubstring, IResult, InputTake, Parser};
 
@@ -275,7 +275,7 @@ fn get_module_args_parser<'a>(inline: bool) -> impl Parser<&'a str, MaybeArgs, E
                         get_arg_separator_parser(inline),
                         get_unnamed_arg_parser(inline),
                     ),
-                    many0(get_arg_separator_parser(inline)),
+                    opt(get_arg_separator_parser(inline)),
                     separated_list1(
                         get_arg_separator_parser(inline),
                         get_named_arg_parser(inline),
@@ -286,7 +286,7 @@ fn get_module_args_parser<'a>(inline: bool) -> impl Parser<&'a str, MaybeArgs, E
                         get_unnamed_arg_parser(inline),
                     ),
                 )),
-                |_tuple| MaybeArgs::Error("Unnamed arguments after Named Arguments".to_string()),
+                |_tuple| MaybeArgs::Error(ParseError::ArgumentOrderError),
             ),
             map(
                 separated_pair(
