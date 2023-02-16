@@ -7,13 +7,6 @@ thread_local! {
 }
 
 #[wasm_bindgen]
-pub fn parse(source: &str) -> String {
-    set_panic_hook();
-    let document = parser::parse(source);
-    document.tree_string(true)
-}
-
-#[wasm_bindgen]
 pub fn ast(source: &str) -> String {
     set_panic_hook();
     let document = parser::parse_to_ast(source);
@@ -21,15 +14,8 @@ pub fn ast(source: &str) -> String {
 }
 
 #[wasm_bindgen]
-pub fn raw_tree(source: &str) -> String {
-    set_panic_hook();
-    let document = parser::parse(source);
-    format!("{document:#?}")
-}
-
-#[wasm_bindgen]
 pub fn transpile(source: &str) -> String {
-    let document = parser::parse(source);
+    let document = parser::parse(source).unwrap();
     let mut result = String::new();
 
     CONTEXT.with(|ctx| {
