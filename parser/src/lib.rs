@@ -99,7 +99,7 @@ impl TryFrom<Ast> for Element {
 
     fn try_from(value: Ast) -> Result<Self, Self::Error> {
         match value {
-            Ast::Text(s) => Ok(Data(s)),
+            Text(s) => Ok(Data(s)),
             Ast::Document(doc) => Ok(Node {
                 name: "Document".to_string(),
                 environment: HashMap::new(),
@@ -225,11 +225,9 @@ pub fn parse_to_ast_document(source: &str) -> Document {
     parse_document(source)
         .finish()
         .map(|(_, x)| x)
-        .map_err(|e| dbg!(e))
         .unwrap_or_else(|e: Error<&str>| Document {
             elements: vec![
-                Text("Document failed to parse".to_string()),
-                Text(format!("Error: {e}")),
+                Text(format!("A nom error occurred when parsing the document\nError: {e}"))
             ],
         })
 }
