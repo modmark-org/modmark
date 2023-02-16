@@ -205,7 +205,7 @@ impl Element {
 /// * `source`: The source text to parse
 ///
 /// returns: Element The parsed element
-pub fn parse(source: &str) -> Result<Element, ParseError>{
+pub fn parse(source: &str) -> Result<Element, ParseError> {
     parse_to_ast(source).try_into()
 }
 

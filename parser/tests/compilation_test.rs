@@ -128,7 +128,6 @@ fn ast_to_json(ast: &Ast) -> JsonValue {
     }
 }
 
-
 datatest_stable::harness!(
     split_test,
     "tests/compilation_tests",
