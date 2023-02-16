@@ -1,0 +1,44 @@
+Testing headings of different levels. Seven consecutive hashtags
+is not allowed and should therefore be parsed as a paragraph.
+
+```mdm
+# Level 1
+
+## Level 2
+
+### Level 3
+
+####### paragraph text
+```
+
+```json
+{
+    "name": "Document",
+    "children": [
+        {
+            "name": "Heading1",
+            "children": [
+                "Level 1"
+            ]
+        },
+        {
+            "name": "Heading2",
+            "children": [
+                "Level 2"
+            ]
+        },
+        {
+            "name": "Heading3",
+            "children": [
+                "Level 3"
+            ]
+        },
+        {
+            "name": "Paragraph",
+            "children": [
+                "####### paragraph text"
+            ]
+        }
+    ]
+}
+```
