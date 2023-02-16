@@ -138,11 +138,15 @@ impl TryFrom<Ast> for Element {
                 }),
                 MaybeArgs::Error(error) => Err(error),
             },
-            Ast::Heading(heading) => Node {
+            Ast::Heading(heading) => Ok(Node {
                 name: format!("Heading{}", heading.level),
                 environment: HashMap::new(),
-                children: heading.elements.into_iter().map(|e| e.into()).collect(),
-            },
+                children: heading
+                    .elements
+                    .into_iter()
+                    .map(|e| e.try_into())
+                    .collect::<Result<Vec<Element>, ParseError>>()?,
+            }),
         }
     }
 }
