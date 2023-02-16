@@ -42,7 +42,7 @@ fn print_tree(tree: parser::Element) {
 
 fn compile_file(args: &Args) -> Result<Element, CliError> {
     let source = fs::read_to_string(&args.input)?;
-    let document = parse(&source);
+    let document = parse(&source).unwrap();
 
     let mut ctx = Context::default();
     let output = eval(&document, &mut ctx);
