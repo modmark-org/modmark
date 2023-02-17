@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
+use diffy::create_patch;
 use json::{object, JsonValue};
 
-use diffy::create_patch;
 use parser::{parse_to_ast_document, Ast, Document, MaybeArgs};
 
 fn split_test(input: &Path) -> datatest_stable::Result<()> {
@@ -49,7 +49,7 @@ fn unified_test(input: &Path) -> datatest_stable::Result<()> {
 }
 
 fn test_lf(input: &str, output: &str) {
-    let ast_obj = doc_to_json(parse_to_ast_document(input));
+    let ast_obj = doc_to_json(parse_to_ast_document(input).unwrap());
     let json_obj = json::parse(output).expect("JSON should be parsable");
 
     // note: we DO NOT want assert_eq here since that would print the mismatched
@@ -65,7 +65,7 @@ fn test_lf(input: &str, output: &str) {
 }
 
 fn test_crlf(input: &str, output: &str) {
-    let ast_obj = doc_to_json(parse_to_ast_document(&input.replace('\n', "\r\n")));
+    let ast_obj = doc_to_json(parse_to_ast_document(&input.replace('\n', "\r\n")).unwrap());
     let json_obj = json::parse(&output.replace(r"\n", r"\r\n")).expect("JSON should be parsable");
 
     // note: we DO NOT want assert_eq here since that would print the mismatched
