@@ -13,33 +13,13 @@ use std::mem;
 use thiserror::Error;
 
 use serde::{Deserialize, Serialize};
-use Element::Node;
 
 use crate::tag::CompoundAST;
 use crate::Ast::Text;
-use crate::Element::{Data, ModuleInvocation};
 
 mod module;
 mod or;
 mod tag;
-
-// FIXME Move element to core
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum Element {
-    Data(String),
-    Node {
-        name: String,
-        environment: HashMap<String, String>,
-        children: Vec<Element>,
-    },
-    ModuleInvocation {
-        name: String,
-        args: ModuleArguments,
-        body: String,
-        one_line: bool,
-    },
-    Compound(Vec<Self>),
-}
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct ModuleArguments {
@@ -110,69 +90,6 @@ impl Ast {
     }
 }
 
-impl TryFrom<Ast> for Element {
-    type Error = ParseError;
-
-    fn try_from(value: Ast) -> Result<Self, Self::Error> {
-        match value {
-            Ast::Text(s) => Ok(ModuleInvocation {
-                name: "__text".to_string(),
-                args: ModuleArguments {
-                    positioned: None,
-                    named: None,
-                },
-                body: s,
-                one_line: true,
-            }),
-            Ast::Document(doc) => Ok(Node {
-                name: "__document".to_string(),
-                environment: HashMap::new(),
-                children: doc
-                    .elements
-                    .into_iter()
-                    .map(|e| e.try_into())
-                    .collect::<Result<Vec<Element>, ParseError>>()?,
-            }),
-            Ast::Paragraph(paragraph) => Ok(Node {
-                name: "__paragraph".to_string(),
-                environment: HashMap::new(),
-                children: paragraph
-                    .elements
-                    .into_iter()
-                    .map(|e| e.try_into())
-                    .collect::<Result<Vec<Element>, ParseError>>()?,
-            }),
-            Ast::Tag(tag) => Ok(Node {
-                name: format!("__{}", tag.tag_name.to_lowercase()),
-                environment: HashMap::new(),
-                children: tag
-                    .elements
-                    .into_iter()
-                    .map(|e| e.try_into())
-                    .collect::<Result<Vec<Element>, ParseError>>()?,
-            }),
-            Ast::Module(module) => match module.args {
-                MaybeArgs::ModuleArguments(args) => Ok(ModuleInvocation {
-                    name: module.name,
-                    args,
-                    body: module.body,
-                    one_line: module.one_line,
-                }),
-                MaybeArgs::Error(error) => Err(error),
-            },
-            Ast::Heading(heading) => Ok(Node {
-                name: format!("Heading{}", heading.level),
-                environment: HashMap::new(),
-                children: heading
-                    .elements
-                    .into_iter()
-                    .map(|e| e.try_into())
-                    .collect::<Result<Vec<Element>, ParseError>>()?,
-            }),
-        }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct Tag {
     pub tag_name: String,
@@ -203,39 +120,6 @@ pub struct Heading {
     pub elements: Vec<Ast>,
 }
 
-impl Element {
-    /// Gets a string representation of this element and the (possible) tree-formed structure
-    /// within
-    ///
-    /// # Arguments
-    ///
-    /// * `include_environment`: whether or not the environment variables of the node
-    ///         should be printed out individually. If false, only the amount of variables
-    ///         will be printed.
-    ///
-    /// returns: a string representing the tree
-    ///
-    /// # Examples
-    ///
-    /// ```text
-    /// Document {
-    ///   env: { <empty> }
-    ///   children: [
-    ///     Paragraph {
-    ///       env: { <empty> }
-    ///       children: [
-    ///         > I love the equation
-    ///         math(form=latex){x^2}
-    ///       ]
-    ///     }
-    ///   ]
-    /// }
-    /// ```
-    pub fn tree_string(&self, include_environment: bool) -> String {
-        pretty_rows(self, include_environment).join("\n")
-    }
-}
-
 /// Parses the source document. If the parser errors out, a placeholder `Document` is returned
 /// with the error inserted
 ///
@@ -243,13 +127,8 @@ impl Element {
 ///
 /// * `source`: The source text to parse
 ///
-/// returns: Element The parsed element
-pub fn parse(source: &str) -> Result<Element, ParseError> {
-    let ast = parse_to_ast(source)?;
-    ast.try_into()
-}
-
-pub fn parse_to_ast(source: &str) -> Result<Ast, ParseError> {
+/// returns: The parsed document tree
+pub fn parse(source: &str) -> Result<Ast, ParseError> {
     Ok(Ast::Document(parse_to_ast_document(source)?))
 }
 
@@ -282,22 +161,14 @@ fn parse_document(input: &str) -> IResult<&str, Document> {
     })(input)
 }
 
-pub fn parse_blocks(input: &str) -> Result<Vec<Element>, ParseError> {
+pub fn parse_blocks(input: &str) -> Result<Vec<Ast>, ParseError> {
     let (_, blocks) = parse_document_blocks(input).finish()?;
-
-    Ok(blocks
-        .into_iter()
-        .map(|block| block.try_into())
-        .collect::<Result<Vec<Element>, _>>()?)
+    Ok(blocks)
 }
 
-pub fn parse_inline(input: &str) -> Result<Vec<Element>, ParseError> {
-    let (_, blocks) = parse_paragraph_elements(input).finish()?;
-
-    Ok(blocks
-        .into_iter()
-        .map(|block| block.try_into())
-        .collect::<Result<Vec<Element>, _>>()?)
+pub fn parse_inline(input: &str) -> Result<Vec<Ast>, ParseError> {
+    let (_, inline) = parse_paragraph_elements(input).finish()?;
+    Ok(inline)
 }
 
 /// Parses multiple paragraphs or multiline modules, separated by two or more line endings.
@@ -614,97 +485,5 @@ fn pretty_ast(ast: &Ast) -> Vec<String> {
         }
     }
 
-    strs
-}
-
-/// Converts an Element into a vector of strings suitable for a text representation.
-///
-/// # Arguments
-///
-/// * `element`: The element to convert
-/// * `include_environment`: whether or not the environment variables of the node
-///         should be printed out individually. If false, only the amount of variables
-///         will be printed.
-///
-/// returns: a vector of strings suitable for printing row by row
-fn pretty_rows(element: &Element, include_environment: bool) -> Vec<String> {
-    let indent = "  ";
-    let mut strs = vec![];
-
-    match element {
-        Data(str) => str.lines().enumerate().for_each(|(idx, line)| {
-            strs.push(format!("{} {line}", if idx == 0 { '>' } else { '|' }))
-        }),
-        Node {
-            name,
-            environment,
-            children,
-        } => {
-            strs.push(format!("{name} {{"));
-            if environment.is_empty() {
-                strs.push(format!("{indent}env: {{ <empty> }}"));
-            } else if include_environment {
-                strs.push(format!("{indent}env: {{"));
-                environment
-                    .iter()
-                    .for_each(|(k, v)| strs.push(format!(r#"{indent}{indent}"{k}": "{v}""#)));
-
-                strs.push(format!("{indent}}}"));
-            } else {
-                strs.push(format!(
-                    "{indent}env: {{ < {len} entries > }}",
-                    len = &environment.len().to_string()
-                ))
-            }
-
-            if children.is_empty() {
-                strs.push(format!("{indent}children: [ none ]"));
-            } else {
-                strs.push(format!("{indent}children: ["));
-
-                children.iter().for_each(|c| {
-                    pretty_rows(c, include_environment)
-                        .iter()
-                        .for_each(|s| strs.push(format!("{indent}{indent}{s}")))
-                });
-
-                strs.push(format!("{indent}]"));
-            }
-            strs.push("}".to_string());
-        }
-
-        ModuleInvocation {
-            name,
-            args,
-            body,
-            one_line,
-        } => {
-            let args = {
-                let p1 = &args.positioned;
-                let p2 = args.named.as_ref().map(|args| {
-                    args.iter()
-                        .map(|(k, v)| format!("{k}={v}"))
-                        .collect::<Vec<String>>()
-                });
-
-                let mut args_vec = p1.clone().unwrap_or_default();
-                args_vec.extend_from_slice(&p2.unwrap_or_default());
-                args_vec.join(", ")
-            };
-            if *one_line {
-                strs.push(format!("{name}({args}){{{body}}}"));
-            } else {
-                strs.push(format!("{name}({args}){{"));
-                body.lines().enumerate().for_each(|(idx, line)| {
-                    strs.push(format!(
-                        "{indent}{} {line}",
-                        if idx == 0 { '>' } else { '|' }
-                    ))
-                });
-                strs.push("} [multiline invocation]".to_string());
-            }
-        }
-        Element::Compound(_) => todo!(),
-    }
     strs
 }

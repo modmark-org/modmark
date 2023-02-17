@@ -1,4 +1,5 @@
-use parser::{Element, ModuleArguments};
+use crate::Element;
+use parser::ModuleArguments;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -88,13 +89,8 @@ impl Context {
         use Element::*;
 
         match from {
-            Data(_) => unreachable!("No transform on data node"),
             Compound(_) => unreachable!("Should not transform compound element"),
-            Node {
-                name,
-                environment: _,
-                children: _,
-            }
+            Node { name, children: _ }
             | ModuleInvocation {
                 name,
                 args: _,
@@ -218,7 +214,6 @@ fn entry_to_element(entry: JsonEntry) -> Element {
     match entry {
         JsonEntry::ParentNode { name, children } => Element::Node {
             name,
-            environment: HashMap::new(),
             children: children
                 .into_iter()
                 .map(|child| entry_to_element(child))
@@ -245,15 +240,10 @@ fn entry_to_element(entry: JsonEntry) -> Element {
 /// The args_info is needed to convert positional arguments into key-value pairs.
 fn element_to_entry(element: &Element, args_info: &Vec<ArgInfo>) -> Result<JsonEntry, CoreError> {
     match element {
-        Element::Data(_) => unreachable!(),
         // When the eval function naivly evaluates all children before a parent compund
         // nodes should never be present here. This may however change in the future.
         Element::Compound(_) => unreachable!(),
-        Element::Node {
-            name,
-            environment: _,
-            children,
-        } => {
+        Element::Node { name, children } => {
             let converted_children: Result<Vec<JsonEntry>, CoreError> = children
                 .into_iter()
                 .map(|child| element_to_entry(child, args_info))
