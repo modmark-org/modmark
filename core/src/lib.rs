@@ -66,7 +66,7 @@ pub fn eval_elem(
 ) -> Result<String, CoreError> {
     use Element::*;
     match root {
-        Node {
+        Parent {
             name: _,
             children: _,
         } => {
@@ -83,11 +83,11 @@ pub fn eval_elem(
             // FIXME: should add a Element::Raw variant.
             Ok(raw_content)
         }
-        ModuleInvocation {
+        Module {
             ref name,
             args: _,
             ref body,
-            one_line: _,
+            inline: _,
         } => {
             // Base case, if its just raw content, stop.
             if name == "raw" {
