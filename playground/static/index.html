@@ -13,7 +13,7 @@
     <title>Modmark Playground</title>
     <link rel="stylesheet" href="style.css">
     <script type="module">
-        import init, { ast, inspect_context, transpile } from "./pkg/web_bindings.js";
+        import init, { ast, ast_debug, inspect_context, transpile } from "./pkg/web_bindings.js";
 
         let view = "editor";
 
@@ -74,9 +74,27 @@
 
             let pre = document.createElement("pre")
             switch (selector.value) {
-                case "ast":
-                    pre.innerText = ast(input)
-                    break;
+                case "ast": {
+                    let result = "";
+                    try {
+                        result += ast(input);
+                    } catch (error) {
+                        errorPrompt.style.display = "block";
+                        errorLog.innerHTML = error;
+                    }
+                    pre.innerText = result;
+                } break;
+                case "ast-debug": {
+                    let result = "";
+                    try {
+                        result += ast_debug(input);
+                    } catch (error) {
+                        errorPrompt.style.display = "block";
+                        errorLog.innerHTML = error;
+                    }
+                    pre.innerText = result;
+
+                } break;
                 case "transpile": {
                     let result = "";
                     try {
@@ -127,6 +145,7 @@
                 <h1>Modmark playground</h1>
                 <select name="selector" id="selector">
                     <option value="ast">Abstract syntax tree</option>
+                    <option value="ast-debug">Debug AST</option>
                     <option value="transpile">HTML output</option>
                     <option value="render">Rendered HTML</option>
                 </select>

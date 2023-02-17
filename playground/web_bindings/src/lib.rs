@@ -1,4 +1,5 @@
 use core::{eval, Context, CoreError, OutputFormat};
+use parser::ParseError;
 use std::cell::RefCell;
 use thiserror::Error;
 use wasm_bindgen::prelude::*;
@@ -9,8 +10,10 @@ thread_local! {
 
 #[derive(Error, Debug)]
 pub enum PlaygroundError {
-    #[error("An error from core")]
+    #[error("Failed to evaluate the document")]
     Core(#[from] CoreError),
+    #[error("Failed to parse")]
+    Parsing(#[from] ParseError),
 }
 
 impl From<PlaygroundError> for JsValue {
@@ -19,15 +22,24 @@ impl From<PlaygroundError> for JsValue {
             PlaygroundError::Core(error) => {
                 JsValue::from_str(&format!("<p>{error}</p><pre>{error:#?}</pre>"))
             }
+            PlaygroundError::Parsing(error) => {
+                JsValue::from_str(&format!("<p>{error}</p><pre>{error:#?}</pre>"))
+            }
         }
     }
 }
 
 #[wasm_bindgen]
-pub fn ast(source: &str) -> String {
+pub fn ast(source: &str) -> Result<String, PlaygroundError> {
     set_panic_hook();
-    let document = parser::parse_to_ast(source);
-    document.tree_string()
+    let document = parser::parse_to_ast(source)?;
+    Ok(document.tree_string())
+}
+
+#[wasm_bindgen]
+pub fn ast_debug(source: &str) -> Result<String, PlaygroundError> {
+    let document = parser::parse_to_ast(source)?;
+    Ok(format!("{document:#?}"))
 }
 
 #[wasm_bindgen]
