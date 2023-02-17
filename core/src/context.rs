@@ -260,34 +260,59 @@ fn element_to_entry(element: &Element, args_info: &Vec<ArgInfo>) -> Result<JsonE
             body,
             inline: one_line,
         } => {
-            let mut arguments: HashMap<String, String> = HashMap::new();
+            // Start by converting the positonal and named args into a single
+            // hashmap of key value pairs. Also remember to use any provided default
+            // if a argument is left unspecified.
+            let mut pos_args = args.positioned.clone().unwrap_or_default().into_iter();
+            let mut named_args = args.named.clone().unwrap_or_default();
+            let mut collected_arguments = HashMap::new();
+            for arg_info in args_info {
+                let ArgInfo {
+                    name,
+                    default,
+                    description: _,
+                } = arg_info;
 
-            // Look up the name of all the positional arguments specified and insert
-            // them into the arguments map
-            if let Some(positioned) = &args.positioned {
-                for (value, arg_info) in positioned.into_iter().zip(args_info) {
-                    let ArgInfo {
-                        name,
-                        default: _,
-                        description: _,
-                    } = arg_info;
-                    arguments.insert(name.clone(), value.clone());
+                // If we have a positional argument, return that
+                if let Some(value) = pos_args.next() {
+                    collected_arguments.insert(name.clone(), value);
+                    continue;
                 }
+
+                // Use the keyword args
+                if let Some(value) = named_args.remove(name) {
+                    // Check for repeated args
+                    if collected_arguments.contains_key(name) {
+                        return Err(CoreError::RepeatedArgument(
+                            name.clone(),
+                            module_name.clone(),
+                        ));
+                    }
+                    collected_arguments.insert(name.clone(), value);
+                    continue;
+                }
+
+                // For the rest of the arguments that are left unspecified use
+                // the default if there is one
+                if let Some(value) = default {
+                    collected_arguments.insert(name.clone(), value.clone());
+                    continue;
+                }
+
+                return Err(CoreError::MissingArgument(
+                    name.clone(),
+                    module_name.clone(),
+                )); 
             }
 
-            // Also, add the rest of the key=value paired arguments
-            if let Some(named) = &args.named {
-                for (name, value) in named {
-                    if arguments.contains_key(name) {
-                        return Err(CoreError::RepeatedArgument(name.clone(), name.clone()));
-                    }
-                    arguments.insert(name.clone(), value.clone());
-                }
+            // Check if there are any stray arguments left that should not be there
+            if let Some((key, _)) = named_args.into_iter().next() {
+                return Err(CoreError::InvalidArgument(key, module_name.clone()));
             }
 
             Ok(JsonEntry::Module {
                 name: module_name.clone(),
-                arguments,
+                arguments: collected_arguments,
                 data: body.clone(),
                 inline: *one_line,
             })
