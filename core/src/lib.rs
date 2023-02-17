@@ -1,12 +1,12 @@
 use std::str::FromStr;
 
-use parser::{Element, ModuleArguments};
-
 mod context;
+mod element;
 mod error;
 mod package;
 
 pub use context::Context;
+pub use element::Element;
 pub use error::CoreError;
 pub use package::{ArgInfo, NodeName, Package, PackageInfo, Transform};
 use serde::Deserialize;
@@ -55,7 +55,7 @@ impl FromStr for OutputFormat {
 
 /// Evaluates a document using the given context
 pub fn eval(source: &str, ctx: &mut Context, format: &OutputFormat) -> Result<String, CoreError> {
-    let document = parser::parse(source)?;
+    let document = parser::parse(source)?.try_into()?;
     eval_elem(document, ctx, format)
 }
 
@@ -66,25 +66,8 @@ pub fn eval_elem(
 ) -> Result<String, CoreError> {
     use Element::*;
     match root {
-        Data(text) => {
-            // FIXME: den här borde inte finnas, men kan så länge konvertera till en Module {name: "escape_text"}
-            eval_elem(
-                ModuleInvocation {
-                    name: "escape_text".to_string(),
-                    args: ModuleArguments {
-                        positioned: None,
-                        named: None,
-                    },
-                    body: text.clone(),
-                    one_line: true,
-                },
-                ctx,
-                format,
-            )
-        }
         Node {
             name: _,
-            environment: _,
             children: _,
         } => {
             // skicka in allt till ctx.transform utan att evaluera barnen först, det får transformen göra bäst den vill med
@@ -112,12 +95,20 @@ pub fn eval_elem(
             }
 
             if name == "inline_content" {
-                let elements = parser::parse_inline(body)?;
+                let elements = parser::parse_inline(body)?
+                    .into_iter()
+                    .map(|ast| ast.try_into())
+                    .collect::<Result<Vec<Element>, _>>()?;
+
                 return Ok(eval_elem(Element::Compound(elements), ctx, format)?);
             }
 
             if name == "block_content" {
-                let elements = parser::parse_blocks(body)?;
+                let elements = parser::parse_blocks(body)?
+                    .into_iter()
+                    .map(|ast| ast.try_into())
+                    .collect::<Result<Vec<Element>, _>>()?;
+
                 return Ok(eval_elem(Element::Compound(elements), ctx, format)?);
             }
 

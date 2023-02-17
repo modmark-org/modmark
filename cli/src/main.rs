@@ -10,7 +10,7 @@ use crossterm::{
 };
 use error::CliError;
 use notify::{Config, Event, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher, WatcherKind};
-use parser::{parse, Element};
+use parser::{parse, Ast};
 use std::env;
 use std::io::{stdout, Write};
 use std::{fs, path::Path};
@@ -44,11 +44,7 @@ struct Args {
     dev: bool,
 }
 
-fn print_tree(tree: parser::Element) {
-    println!("\n{}", tree.tree_string(false));
-}
-
-fn compile_file(args: &Args) -> Result<Element, CliError> {
+fn compile_file(args: &Args) -> Result<Ast, CliError> {
     let source = fs::read_to_string(&args.input)?;
     let mut ctx = Context::default();
     let output =
@@ -59,6 +55,10 @@ fn compile_file(args: &Args) -> Result<Element, CliError> {
 
     // Also return the Element tree for debug purposes
     Ok(parse(&source).unwrap())
+}
+
+fn print_tree(tree: &Ast) {
+    println!("{}", tree.tree_string());
 }
 
 fn watch(args: &Args, target: &String) -> Result<(), CliError> {
@@ -93,7 +93,7 @@ fn watch(args: &Args, target: &String) -> Result<(), CliError> {
         );
 
         if args.dev {
-            print_tree(tree?);
+            print_tree(&tree?);
         }
 
         stdout.flush()?;
@@ -144,7 +144,7 @@ fn main() -> Result<(), CliError> {
                 println!("Output file can be found at {}", location.display());
 
                 if args.dev {
-                    print_tree(tree);
+                    print_tree(&tree);
                 }
                 stdout.flush()?;
             }

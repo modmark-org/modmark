@@ -32,13 +32,13 @@ impl From<PlaygroundError> for JsValue {
 #[wasm_bindgen]
 pub fn ast(source: &str) -> Result<String, PlaygroundError> {
     set_panic_hook();
-    let document = parser::parse_to_ast(source)?;
+    let document = parser::parse(source)?;
     Ok(document.tree_string())
 }
 
 #[wasm_bindgen]
 pub fn ast_debug(source: &str) -> Result<String, PlaygroundError> {
-    let document = parser::parse_to_ast(source)?;
+    let document = parser::parse(source)?;
     Ok(format!("{document:#?}"))
 }
 
