@@ -1,5 +1,5 @@
 # This is a workflow based on an example provided by GitHub and on rossjrw/pr-preview-action
-name: Deploy Playground preview to Pages
+name: Deploy Playground Preview
 
 on:
   # Runs on pushes targeting the default branch
@@ -26,6 +26,7 @@ concurrency:
 
 jobs:
   build-and-deploy:
+    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -33,40 +34,43 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Setup Pages
-        uses: actions/configure-pages@v2
       - name: Setup output directory
-        if: github.event.action != 'closed'
         run: mkdir build
       - name: Install toolchain (minimal, stable, wasm32-unknown-unknown + wasm32-wasi)
-        if: github.event.action != 'closed'
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown, wasm32-wasi
       - name: Install wasm-pack
-        if: github.event.action != 'closed'
         uses: jetli/wasm-pack-action@v0.4.0
       - name: Make build script executable
-        if: github.event.action != 'closed'
         run: chmod +x ./build-playground.sh
       - name: Build Playground
-        if: github.event.action != 'closed'
         run: ./build-playground.sh
       - name: Remove auto-generated .gitignore
-        if: github.event.action != 'closed'
         run: rm build/pkg/.gitignore
       - name: Copy deployment files
-        if: github.event.action != 'closed'
         run: |
           mkdir site-deploy
           cp -r build/* site-deploy
       - name: Print generated files
-        if: github.event.action != 'closed'
         run: ls -R site-deploy
       - name: Deploy Playground preview
         uses: rossjrw/pr-preview-action@v1
         with:
+          custom-url: modmark.org
           source-dir: ./playground/site-deploy/
           preview-branch: gh-pages
           umbrella-dir: pr-preview
-          action: auto
+          action: deploy
+  teardown:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Teardown Playground preview
+        uses: rossjrw/pr-preview-action@v1
+        with:
+          preview-branch: gh-pages
+          umbrella-dir: pr-preview
+          action: remove
