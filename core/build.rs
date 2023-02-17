@@ -1,3 +1,4 @@
+use std::process::Child;
 use std::{
     env, fs,
     path::{Path, PathBuf},
@@ -23,22 +24,23 @@ fn main() {
     let modules_dir = fs::read_dir(&modules_path).expect("No modules directory found.");
 
     // Build the wasm file for every crate in the modules directory.
-    for module in modules_dir {
-        // Ensure that it is a directory.
-        let module = module.unwrap();
-        if !module.file_type().unwrap().is_dir() {
-            continue;
-        }
-
-        build_wasm_module(
-            &module.file_name().to_string_lossy(),
-            &modules_path,
-            &out_path,
-        );
-    }
+    modules_dir
+        .into_iter()
+        .map(|f| f.unwrap())
+        .filter(|f| f.file_type().unwrap().is_dir())
+        .map(|module| {
+            build_wasm_module(
+                &module.file_name().to_string_lossy(),
+                &modules_path,
+                &out_path,
+            )
+        })
+        .for_each(|mut f| {
+            f.wait().expect("failed to launch wasm build");
+        });
 }
 
-fn build_wasm_module(name: &str, modules_path: &Path, output_path: &Path) {
+fn build_wasm_module(name: &str, modules_path: &Path, output_path: &Path) -> Child {
     let manifest_path = modules_path.join(name).join("Cargo.toml");
     let output_sub_dir = output_path.join(name);
 
@@ -52,6 +54,6 @@ fn build_wasm_module(name: &str, modules_path: &Path, output_path: &Path) {
         .arg("--target")
         .arg("wasm32-wasi")
         .arg(format!("--target-dir={}", output_sub_dir.to_string_lossy()))
-        .output()
-        .expect("failed to start wasm build");
+        .spawn()
+        .expect("failed to start wasm build")
 }
