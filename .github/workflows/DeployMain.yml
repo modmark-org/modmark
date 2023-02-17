@@ -1,5 +1,5 @@
 # This is a workflow based on an example provided by GitHub and on rossjrw/pr-preview-action
-name: Deploy main Playground to Pages
+name: Deploy main Playground
 
 on:
   # Runs on pushes targeting the default branch
