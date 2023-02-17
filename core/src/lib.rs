@@ -111,6 +111,16 @@ pub fn eval_elem(
                 return Ok(body.clone());
             }
 
+            if name == "inline_content" {
+                let elements = parser::parse_inline(body)?;
+                return Ok(eval_elem(Element::Compound(elements), ctx, format)?);
+            }
+
+            if name == "block_content" {
+                let elements = parser::parse_blocks(body)?;
+                return Ok(eval_elem(Element::Compound(elements), ctx, format)?);
+            }
+
             let compound = ctx.transform(&root, format)?;
             eval_elem(compound, ctx, format)
         }
