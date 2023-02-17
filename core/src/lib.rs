@@ -44,8 +44,6 @@ impl ToString for OutputFormat {
 }
 
 impl FromStr for OutputFormat {
-    //FIXME this does not work when i do cargo test, might have to refactor
-    // type Err = core::convert::Infallible;
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -70,7 +68,6 @@ pub fn eval_elem(
             name: _,
             children: _,
         } => {
-            // skicka in allt till ctx.transform utan att evaluera barnen först, det får transformen göra bäst den vill med
             let compound = ctx.transform(&root, format)?;
             eval_elem(compound, ctx, format)
         }
@@ -80,7 +77,6 @@ pub fn eval_elem(
             for child in children {
                 raw_content.push_str(&eval_elem(child, ctx, format)?);
             }
-            // FIXME: should add a Element::Raw variant.
             Ok(raw_content)
         }
         Module {
