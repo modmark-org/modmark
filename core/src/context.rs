@@ -90,12 +90,12 @@ impl Context {
 
         match from {
             Compound(_) => unreachable!("Should not transform compound element"),
-            Node { name, children: _ }
-            | ModuleInvocation {
+            Parent { name, children: _ }
+            | Module {
                 name,
                 args: _,
                 body: _,
-                one_line: _,
+                inline: _,
             } => {
                 // We find the package responsible for this transform
                 let Some((transform, package)) = self.transforms.get(&(name.clone(), output_format.clone())) else {
@@ -212,7 +212,7 @@ fn deserialize_compound(input: &str) -> Result<Element, CoreError> {
 /// Convert an JsonEntry to a Element
 fn entry_to_element(entry: JsonEntry) -> Element {
     match entry {
-        JsonEntry::ParentNode { name, children } => Element::Node {
+        JsonEntry::ParentNode { name, children } => Element::Parent {
             name,
             children: children
                 .into_iter()
@@ -224,14 +224,14 @@ fn entry_to_element(entry: JsonEntry) -> Element {
             data,
             arguments,
             inline,
-        } => Element::ModuleInvocation {
+        } => Element::Module {
             name,
             args: ModuleArguments {
                 positioned: None,
                 named: Some(arguments),
             },
             body: data,
-            one_line: inline,
+            inline,
         },
     }
 }
@@ -243,7 +243,7 @@ fn element_to_entry(element: &Element, args_info: &Vec<ArgInfo>) -> Result<JsonE
         // When the eval function naivly evaluates all children before a parent compund
         // nodes should never be present here. This may however change in the future.
         Element::Compound(_) => unreachable!(),
-        Element::Node { name, children } => {
+        Element::Parent { name, children } => {
             let converted_children: Result<Vec<JsonEntry>, CoreError> = children
                 .into_iter()
                 .map(|child| element_to_entry(child, args_info))
@@ -254,11 +254,11 @@ fn element_to_entry(element: &Element, args_info: &Vec<ArgInfo>) -> Result<JsonE
                 children: converted_children?,
             })
         }
-        Element::ModuleInvocation {
+        Element::Module {
             name: module_name,
             args,
             body,
-            one_line,
+            inline: one_line,
         } => {
             let mut arguments: HashMap<String, String> = HashMap::new();
 

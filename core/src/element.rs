@@ -2,15 +2,15 @@ use parser::{Ast, MaybeArgs, ModuleArguments, ParseError};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Element {
-    Node {
+    Parent {
         name: String,
         children: Vec<Element>,
     },
-    ModuleInvocation {
+    Module {
         name: String,
         args: ModuleArguments,
         body: String,
-        one_line: bool,
+        inline: bool,
     },
     Compound(Vec<Self>),
 }
@@ -20,16 +20,16 @@ impl TryFrom<Ast> for Element {
 
     fn try_from(value: Ast) -> Result<Self, Self::Error> {
         match value {
-            Ast::Text(s) => Ok(Element::ModuleInvocation {
+            Ast::Text(s) => Ok(Element::Module {
                 name: "__text".to_string(),
                 args: ModuleArguments {
                     positioned: None,
                     named: None,
                 },
                 body: s,
-                one_line: true,
+                inline: true,
             }),
-            Ast::Document(doc) => Ok(Element::Node {
+            Ast::Document(doc) => Ok(Element::Parent {
                 name: "__document".to_string(),
                 children: doc
                     .elements
@@ -37,7 +37,7 @@ impl TryFrom<Ast> for Element {
                     .map(|e| e.try_into())
                     .collect::<Result<Vec<Element>, ParseError>>()?,
             }),
-            Ast::Paragraph(paragraph) => Ok(Element::Node {
+            Ast::Paragraph(paragraph) => Ok(Element::Parent {
                 name: "__paragraph".to_string(),
                 children: paragraph
                     .elements
@@ -45,7 +45,7 @@ impl TryFrom<Ast> for Element {
                     .map(|e| e.try_into())
                     .collect::<Result<Vec<Element>, ParseError>>()?,
             }),
-            Ast::Tag(tag) => Ok(Element::Node {
+            Ast::Tag(tag) => Ok(Element::Parent {
                 name: format!("__{}", tag.tag_name.to_lowercase()),
                 children: tag
                     .elements
@@ -54,15 +54,15 @@ impl TryFrom<Ast> for Element {
                     .collect::<Result<Vec<Element>, ParseError>>()?,
             }),
             Ast::Module(module) => match module.args {
-                MaybeArgs::ModuleArguments(args) => Ok(Element::ModuleInvocation {
+                MaybeArgs::ModuleArguments(args) => Ok(Element::Module {
                     name: module.name,
                     args,
                     body: module.body,
-                    one_line: module.one_line,
+                    inline: module.one_line,
                 }),
                 MaybeArgs::Error(error) => Err(error),
             },
-            Ast::Heading(heading) => Ok(Element::Node {
+            Ast::Heading(heading) => Ok(Element::Parent {
                 name: format!("Heading{}", heading.level),
                 children: heading
                     .elements
