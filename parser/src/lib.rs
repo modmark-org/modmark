@@ -1,14 +1,14 @@
 extern crate core;
 
-use std::collections::HashMap;
-use std::mem;
-
 use nom::bytes::complete::{take_till, take_while1};
 use nom::character::complete::{char, line_ending, none_of, space0};
 use nom::error::Error;
 use nom::multi::{fold_many1, many0, many1, separated_list0};
 use nom::sequence::{pair, preceded, terminated};
 use nom::{combinator::*, Finish, IResult, Parser};
+use std::collections::HashMap;
+use std::fmt;
+use std::mem;
 
 use thiserror::Error;
 
@@ -77,6 +77,17 @@ pub enum Ast {
 pub enum ParseError {
     #[error("Unnamed argument after named argument")]
     ArgumentOrderError,
+    #[error("Nom error: '{0}'")]
+    NomError(String),
+}
+
+impl<T> From<Error<T>> for ParseError
+where
+    T: fmt::Debug,
+{
+    fn from(value: Error<T>) -> Self {
+        ParseError::NomError(format!("{value:?}"))
+    }
 }
 
 impl Ast {
@@ -234,11 +245,12 @@ impl Element {
 ///
 /// returns: Element The parsed element
 pub fn parse(source: &str) -> Result<Element, ParseError> {
-    parse_to_ast(source).try_into()
+    let ast = parse_to_ast(source)?;
+    ast.try_into()
 }
 
-pub fn parse_to_ast(source: &str) -> Ast {
-    Ast::Document(parse_to_ast_document(source))
+pub fn parse_to_ast(source: &str) -> Result<Ast, ParseError> {
+    Ok(Ast::Document(parse_to_ast_document(source)?))
 }
 
 /// Parses the source document and returns it as a `document`. If the parser errors out, a
@@ -249,15 +261,11 @@ pub fn parse_to_ast(source: &str) -> Ast {
 /// * `source`: The source text to parse
 ///
 /// returns: Element The parsed element
-pub fn parse_to_ast_document(source: &str) -> Document {
+pub fn parse_to_ast_document(source: &str) -> Result<Document, ParseError> {
     parse_document(source)
         .finish()
         .map(|(_, x)| x)
-        .unwrap_or_else(|e: Error<&str>| Document {
-            elements: vec![Text(format!(
-                "A nom error occurred when parsing the document\nError: {e}"
-            ))],
-        })
+        .map_err(|e| e.into())
 }
 
 /// Parses a document, which consists of multiple paragraphs and block modules, and returns a
@@ -272,6 +280,24 @@ fn parse_document(input: &str) -> IResult<&str, Document> {
     map(parse_document_blocks, |blocks| Document {
         elements: blocks,
     })(input)
+}
+
+pub fn parse_blocks(input: &str) -> Result<Vec<Element>, ParseError> {
+    let (_, blocks) = parse_document_blocks(input).finish()?;
+
+    Ok(blocks
+        .into_iter()
+        .map(|block| block.try_into())
+        .collect::<Result<Vec<Element>, _>>()?)
+}
+
+pub fn parse_inline(input: &str) -> Result<Vec<Element>, ParseError> {
+    let (_, blocks) = parse_paragraph_elements(input).finish()?;
+
+    Ok(blocks
+        .into_iter()
+        .map(|block| block.try_into())
+        .collect::<Result<Vec<Element>, _>>()?)
 }
 
 /// Parses multiple paragraphs or multiline modules, separated by two or more line endings.
@@ -579,7 +605,7 @@ fn pretty_ast(ast: &Ast) -> Vec<String> {
         }
 
         Ast::Heading(Heading { level, elements }) => {
-            strs.push(format!("Heading{level}:"));
+            strs.push(format!("Heading [level {level}]:"));
             elements.iter().for_each(|c| {
                 pretty_ast(c)
                     .iter()
