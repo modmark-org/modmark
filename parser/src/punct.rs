@@ -20,73 +20,69 @@ where
     T: CompoundAST,
 {
     let elems: &mut Vec<Ast> = input.elements_mut();
-    let mut open_elem_sg: Option<usize> = None;
-    let mut open_elem_db: Option<usize> = None;
+    let mut open_single: Option<usize> = None;
+    let mut open_double: Option<usize> = None;
 
     for i in 0..elems.len() {
         let (prev, rest) = elems.as_mut_slice().split_at_mut(i);
         if let Some(e) = rest.get_mut(0) {
             match e {
                 Text(str) => {
-                    let mut res = String::new();
-                    let mut curr = String::new();
-                    let mut open_sg = open_elem_sg.is_some();
-                    let mut open_db = open_elem_db.is_some();
+                    let mut acc = String::new();
+                    let mut row = String::new();
 
-                    if let Some(ii) = open_elem_sg {
-                        if let Some(e) = prev.get_mut(ii) {
-                            try_close_quote(&str, e, "\'", LSQUO)
+                    if let Some(ii) = open_single {
+                        if let Some(ee) = prev.get_mut(ii) {
+                            try_close_quote(&str, ee, "\'", LSQUO)
                         }
                     }
 
-                    if let Some(ii) = open_elem_db {
-                        if let Some(e) = prev.get_mut(ii) {
-                            try_close_quote(&str, e, "\"", LDQUO)
+                    if let Some(ii) = open_double {
+                        if let Some(ee) = prev.get_mut(ii) {
+                            try_close_quote(&str, ee, "\"", LDQUO)
                         }
                     }
 
                     for c in str.chars() {
                         match c {
                             '\r' | '\n' => {
-                                curr.push(c);
-                                res = format!("{}{}", res, curr);
-                                curr = String::new();
-                                open_sg = false;
-                                open_db = false;
-                            }
-                            '\"' => {
-                                if open_db {
-                                    curr = curr.replace("\"", LDQUO);
-                                    curr.push_str(RDQUO)
-                                } else {
-                                    curr.push(c)
-                                }
-                                open_db = !open_db
+                                row.push(c);
+                                acc = format!("{}{}", acc, row);
+                                row = String::new();
+                                open_single = None;
+                                open_double = None;
                             }
                             '\'' => {
-                                if open_sg {
-                                    curr = curr.replace("\'", LSQUO);
-                                    curr.push_str(RSQUO)
+                                if open_single.is_some() {
+                                    row = row.replace("\'", LSQUO);
+                                    row.push_str(RSQUO);
+                                    open_single = None;
                                 } else {
-                                    curr.push(c)
+                                    row.push(c);
+                                    open_single = Some(i);
                                 }
-                                open_sg = !open_sg
+                            }
+                            '\"' => {
+                                if open_double.is_some() {
+                                    row = row.replace("\"", LDQUO);
+                                    row.push_str(RDQUO);
+                                    open_double = None;
+                                } else {
+                                    row.push(c);
+                                    open_double = Some(i);
+                                }
                             }
                             _ => {
-                                curr.push(c);
+                                row.push(c);
                             }
                         }
                     }
 
-                    res = format!("{}{}", res, curr)
+                    acc = format!("{}{}", acc, row)
                         .replace("...", ELLIP)
                         .replace("---", EMDASH)
                         .replace("--", ENDASH);
-
-                    mem::swap(str, &mut res);
-
-                    open_elem_sg = if open_sg { Some(i) } else { None };
-                    open_elem_db = if open_db { Some(i) } else { None };
+                    mem::swap(str, &mut acc);
                 }
                 Ast::Document(d) => {
                     smart_punctuate(&mut d.elements);
