@@ -30,6 +30,8 @@ where
                 Text(str) => {
                     let mut acc = String::new();
                     let mut row = String::new();
+                    let mut seq = String::new();
+                    //let mut escaped = false;
 
                     if let Some(ii) = open_single {
                         if let Some(ee) = prev.get_mut(ii) {
@@ -44,6 +46,10 @@ where
                     }
 
                     for c in str.chars() {
+                        if c != '.' && c != '-' {
+                            row = format!("{}{}", row, smart_sequence(seq));
+                            seq = String::new();
+                        }
                         match c {
                             '\r' | '\n' => {
                                 row.push(c);
@@ -72,34 +78,41 @@ where
                                     open_double = Some(i);
                                 }
                             }
+                            /*
+                            '\\' => {
+                                escaped = !escaped;
+                            }
+                            */
+                            '.' | '-' => {
+                                if seq.is_empty() || seq.contains(c) {
+                                    seq.push(c);
+                                }
+                            }
                             _ => {
                                 row.push(c);
                             }
                         }
                     }
 
-                    acc = format!("{}{}", acc, row)
-                        .replace("...", ELLIP)
-                        .replace("---", EMDASH)
-                        .replace("--", ENDASH);
-                    mem::swap(str, &mut acc);
+                    mem::swap(str, &mut format!("{}{}{}", acc, row, seq));
                 }
-                Ast::Document(d) => {
-                    smart_punctuate(&mut d.elements);
-                }
-                Ast::Paragraph(p) => {
-                    smart_punctuate(&mut p.elements);
-                }
-                Ast::Tag(t) => {
-                    smart_punctuate(&mut t.elements);
-                }
-                Ast::Heading(h) => {
-                    smart_punctuate(&mut h.elements);
-                }
+                Ast::Document(d) => smart_punctuate(d),
+                Ast::Paragraph(p) => smart_punctuate(p),
+                Ast::Tag(t) => smart_punctuate(t),
+                Ast::Heading(h) => smart_punctuate(h),
                 _ => {}
             }
         }
     }
+}
+
+fn smart_sequence(seq: String) -> String {
+    return match seq.as_str() {
+        "..." => ELLIP.to_string(),
+        "--" => ENDASH.to_string(),
+        "---" => EMDASH.to_string(),
+        _ => seq,
+    };
 }
 
 fn try_close_quote(str: &String, e: &mut Ast, pat: &str, to: &str) {
