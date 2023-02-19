@@ -1,9 +1,11 @@
 use parser::{Ast, MaybeArgs, ModuleArguments, ParseError};
+use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Element {
     Parent {
         name: String,
+        args: HashMap<String, String>,
         children: Vec<Element>,
     },
     Module {
@@ -31,6 +33,7 @@ impl TryFrom<Ast> for Element {
             }),
             Ast::Document(doc) => Ok(Element::Parent {
                 name: "__document".to_string(),
+                args: HashMap::new(),
                 children: doc
                     .elements
                     .into_iter()
@@ -39,6 +42,7 @@ impl TryFrom<Ast> for Element {
             }),
             Ast::Paragraph(paragraph) => Ok(Element::Parent {
                 name: "__paragraph".to_string(),
+                args: HashMap::new(),
                 children: paragraph
                     .elements
                     .into_iter()
@@ -47,6 +51,7 @@ impl TryFrom<Ast> for Element {
             }),
             Ast::Tag(tag) => Ok(Element::Parent {
                 name: format!("__{}", tag.tag_name.to_lowercase()),
+                args: HashMap::new(),
                 children: tag
                     .elements
                     .into_iter()
@@ -63,7 +68,12 @@ impl TryFrom<Ast> for Element {
                 MaybeArgs::Error(error) => Err(error),
             },
             Ast::Heading(heading) => Ok(Element::Parent {
-                name: format!("Heading{}", heading.level),
+                name: "__heading".to_string(),
+                args: {
+                    let mut map = HashMap::new();
+                    map.insert("level".to_string(), heading.level.to_string());
+                    map
+                },
                 children: heading
                     .elements
                     .into_iter()

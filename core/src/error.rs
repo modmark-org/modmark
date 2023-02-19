@@ -33,11 +33,11 @@ pub enum CoreError {
     IoError(#[from] std::io::Error),
     #[error("Failed to parse transforms of package '{0}'.")]
     ParseTransforms(String),
-    #[error("You repeated the argument '{0}' for the '{1}' module.")]
+    #[error("You repeated the argument '{0}' for the '{1}' element.")]
     RepeatedArgument(String, NodeName),
-    #[error("Argument {0} is missing in module '{1}'.")]
+    #[error("Argument '{0}' is missing in element '{1}'.")]
     MissingArgument(String, NodeName),
-    #[error("Argument {0} is not supported by the module '{1}'.")]
+    #[error("Argument '{0}' is not supported by the element '{1}'.")]
     InvalidArgument(String, NodeName),
     #[error("Failed to serialize json")]
     JsonError(#[from] serde_json::Error),

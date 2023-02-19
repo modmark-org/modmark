@@ -47,7 +47,8 @@ fn transform(from: &str) -> String {
         "__paragraph" => transform_tag(input, "p"),
         "__document" => transform_document(input),
         "__text" => escape_text(input),
-        _ => unreachable!(),
+        "__heading" => transform_heading(input),
+        _ => panic!("element not supported"),
     }
 }
 
@@ -69,6 +70,38 @@ fn transform_document(doc: Value) -> String {
     }
 
     write!(result, r#"{{"name": "raw", "data": "</body></html>"}}"#).unwrap();
+    result.push(']');
+
+    result
+}
+
+fn transform_heading(heading: Value) -> String {
+    let mut result = String::new();
+    result.push('[');
+
+    let Value::String(s) = &heading["arguments"]["level"] else {
+        panic!();
+    };
+    let level = s.parse::<u8>().unwrap().clamp(1, 6);
+
+    write!(
+            result,
+        r#"{{"name": "raw", "data": "<h{level}>"}},"#,
+    )
+    .unwrap();
+
+    if let Value::Array(children) = &heading["children"] {
+        for child in children {
+            result.push_str(&serde_json::to_string(child).unwrap());
+            result.push(',');
+        }
+    }
+
+    write!(
+            result,
+        r#"{{"name": "raw", "data": "</h{level}>"}}"#,
+    )
+    .unwrap();
     result.push(']');
 
     result
@@ -157,6 +190,17 @@ fn manifest() -> String {
                     "from": "__paragraph",
                     "to": ["html"],
                     "arguments": [],
+                },
+                {
+                  "from": "__heading",
+                    "to": ["html"],
+                    "arguments": [
+                        {
+                            "name": "level",
+                            "description": "The level of the heading",
+                            "default": "1"
+                        }
+                    ],
                 },
 
             ]
