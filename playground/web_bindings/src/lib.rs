@@ -47,9 +47,20 @@ pub fn transpile(source: &str) -> Result<String, PlaygroundError> {
     let result = CONTEXT.with(|ctx| {
         let mut ctx = ctx.borrow_mut();
         eval(source, &mut ctx, &OutputFormat::new("html"))
-    });
+    })?;
 
-    Ok(result?)
+    Ok(result)
+}
+
+#[wasm_bindgen]
+pub fn json_output(source: &str) -> Result<String, PlaygroundError> {
+    let result = CONTEXT.with(|ctx| {
+        let ctx = ctx.borrow_mut();
+        let doc = parser::parse(source)?.try_into()?;
+        ctx.serialize_element(&doc, &OutputFormat::new("html"))
+    })?;
+
+    Ok(result)
 }
 
 #[wasm_bindgen]

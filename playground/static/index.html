@@ -13,7 +13,7 @@
     <title>Modmark Playground</title>
     <link rel="stylesheet" href="style.css">
     <script type="module">
-        import init, { ast, ast_debug, inspect_context, transpile } from "./pkg/web_bindings.js";
+        import init, { ast, ast_debug, inspect_context, transpile, json_output } from "./pkg/web_bindings.js";
 
         let view = "editor";
 
@@ -40,7 +40,6 @@
 
 
         function toggleView() {
-            console.log("yo");
             switch (view) {
                 case "editor":
                     // open the package view
@@ -106,6 +105,16 @@
                     pre.innerText = result;
 
                 } break;
+                case "json-output": {
+                    let result = "";
+                    try {
+                        result += json_output(input);
+                    } catch (error) {
+                        errorPrompt.style.display = "block";
+                        errorLog.innerHTML = error;
+                    }
+                    pre.innerText = result;
+                } break;
                 case "render": {
                     let result = "";
                     try {
@@ -146,6 +155,7 @@
                 <select name="selector" id="selector">
                     <option value="ast">Abstract syntax tree</option>
                     <option value="ast-debug">Debug AST</option>
+                    <option value="json-output">JSON output</option>
                     <option value="transpile">HTML output</option>
                     <option value="render">Rendered HTML</option>
                 </select>
