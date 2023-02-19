@@ -164,7 +164,7 @@ impl Context {
     }
 
     /// Serialize and element into a string that can be sent to a package
-    fn serialize_element(
+    pub fn serialize_element(
         &self,
         element: &Element,
         output_format: &OutputFormat,
@@ -174,7 +174,7 @@ impl Context {
     }
 
     /// Deserialize a compound (i.e a list of JsonEntries) that are recived from a package
-    fn deserialize_compound(input: &str) -> Result<Element, CoreError> {
+    pub fn deserialize_compound(input: &str) -> Result<Element, CoreError> {
         let entries: Vec<JsonEntry> = serde_json::from_str(input)?;
 
         // Convert the parsed entries into real Elements
