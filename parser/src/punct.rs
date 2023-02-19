@@ -31,19 +31,9 @@ where
                     let mut acc = String::new();
                     let mut row = String::new();
                     let mut seq = String::new();
-                    //let mut escaped = false;
-
-                    if let Some(ii) = open_single {
-                        if let Some(ee) = prev.get_mut(ii) {
-                            try_close_quote(&str, ee, "\'", LSQUO)
-                        }
-                    }
-
-                    if let Some(ii) = open_double {
-                        if let Some(ee) = prev.get_mut(ii) {
-                            try_close_quote(&str, ee, "\"", LDQUO)
-                        }
-                    }
+                    let mut escaped = false;
+                    let mut prev_closable_sg = true;
+                    let mut prev_closable_db = true;
 
                     for c in str.chars() {
                         if c != '.' && c != '-' {
@@ -57,44 +47,77 @@ where
                                 row = String::new();
                                 open_single = None;
                                 open_double = None;
+                                prev_closable_sg = false;
+                                prev_closable_db = false;
+                                escaped = false;
                             }
                             '\'' => {
-                                if open_single.is_some() {
-                                    row = row.replace("\'", LSQUO);
-                                    row.push_str(RSQUO);
-                                    open_single = None;
+                                if !escaped {
+                                    if open_single.is_some() {
+                                        if prev_closable_sg {
+                                            if let Some(ee) = prev.get_mut(open_single.unwrap()) {
+                                                close_prev_quote(ee, "\'", LSQUO);
+                                            }
+                                        } else {
+                                            row = row.replace("\'", LSQUO);
+                                        }
+                                        row.push_str(RSQUO);
+                                        open_single = None;
+                                    } else {
+                                        row.push(c);
+                                        open_single = Some(i);
+                                    }
+                                    prev_closable_sg = false;
                                 } else {
-                                    row.push(c);
-                                    open_single = Some(i);
+                                    row.push(c)
                                 }
+                                escaped = false;
                             }
                             '\"' => {
-                                if open_double.is_some() {
-                                    row = row.replace("\"", LDQUO);
-                                    row.push_str(RDQUO);
-                                    open_double = None;
+                                if !escaped {
+                                    if open_double.is_some() {
+                                        if prev_closable_db {
+                                            if let Some(ee) = prev.get_mut(open_double.unwrap()) {
+                                                close_prev_quote(ee, "\"", LDQUO);
+                                            }
+                                        } else {
+                                            row = row.replace("\"", LDQUO);
+                                        }
+                                        row.push_str(RDQUO);
+                                        open_double = None;
+                                    } else {
+                                        row.push(c);
+                                        open_double = Some(i);
+                                    }
+                                    prev_closable_db = false;
                                 } else {
-                                    row.push(c);
-                                    open_double = Some(i);
+                                    row.push(c)
                                 }
+                                escaped = false;
                             }
-                            /*
-                            '\\' => {
-                                escaped = !escaped;
-                            }
-                            */
                             '.' | '-' => {
-                                if seq.is_empty() || seq.contains(c) {
-                                    seq.push(c);
+                                if !escaped {
+                                    if seq.is_empty() || seq.contains(c) {
+                                        seq.push(c);
+                                    } else {
+                                        row = format!("{}{}", row, smart_sequence(seq));
+                                        seq = String::from(c)
+                                    }
+                                } else {
+                                    row.push(c)
                                 }
+                            }
+                            '\\' => {
+                                row.push(c);
+                                escaped = !escaped;
                             }
                             _ => {
                                 row.push(c);
+                                escaped = false;
                             }
                         }
                     }
-
-                    mem::swap(str, &mut format!("{}{}{}", acc, row, seq));
+                    mem::swap(str, &mut format!("{}{}{}", acc, row, smart_sequence(seq)));
                 }
                 Ast::Document(d) => smart_punctuate(d),
                 Ast::Paragraph(p) => smart_punctuate(p),
@@ -115,20 +138,30 @@ fn smart_sequence(seq: String) -> String {
     };
 }
 
-fn try_close_quote(str: &String, e: &mut Ast, pat: &str, to: &str) {
+fn close_prev_quote(e: &mut Ast, pat: &str, to: &str) {
     if let Text(other) = e {
-        if let Some(line) = str.lines().next() {
-            if line.contains(pat) {
-                let mut res = other
-                    .chars()
-                    .rev()
-                    .collect::<String>()
-                    .replacen(pat, to, 1)
-                    .chars()
-                    .rev()
-                    .collect::<String>();
-                mem::swap(other, &mut res)
+        let mut acc = String::new();
+        let rev = other.chars().rev().collect::<String>();
+        let mut split = rev.split_inclusive(pat);
+
+        if let Some(mut prev) = split.next() {
+            while let Some(str) = split.next() {
+                if str.chars().take_while(|c| c == &'\\').count() % 2 == 0 {
+                    acc.push_str(&prev[..prev.len() - 1]);
+                    acc.push_str(to);
+                    acc.push_str(str);
+                    break;
+                } else {
+                    acc.push_str(prev);
+                }
+                prev = str;
+            }
+            if acc.is_empty() {
+                acc.push_str(&prev[..prev.len() - 1]);
+                acc.push_str(to);
             }
         }
+        acc = format!("{}{}", acc, split.collect::<String>());
+        mem::swap(other, &mut acc.chars().rev().collect::<String>());
     }
 }

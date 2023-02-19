@@ -339,8 +339,8 @@ fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Ast>> {
             tag::extract_tags,
         ),
         |mut x| {
-            remove_escape_chars(&mut x);
             smart_punctuate(&mut x);
+            remove_escape_chars(&mut x);
             x
         },
     )(input)
