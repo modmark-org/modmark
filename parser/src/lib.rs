@@ -14,11 +14,13 @@ use thiserror::Error;
 
 use serde::{Deserialize, Serialize};
 
+use crate::punct::smart_punctuate;
 use crate::tag::CompoundAST;
 use crate::Ast::Text;
 
 mod module;
 mod or;
+mod punct;
 mod tag;
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
@@ -389,98 +391,6 @@ where
         }
         _ => {}
     });
-}
-
-/// Replace certain sequences with unicode characters according to our specification for
-/// smart punctuation.
-///
-/// The function takes a mutable `CompoundAST` and walks through it, mutating its texts in-place
-fn smart_punctuate<T>(input: &mut T)
-where
-    T: CompoundAST,
-{
-    let mut backtrack: Vec<(usize, bool)> = vec![]; // bool indicates dbl or sgl
-    let mut sgl_open: Option<usize> = None;
-    let mut dbl_open: Option<usize> = None;
-
-    input
-        .elements_mut()
-        .iter_mut()
-        .enumerate()
-        .for_each(|(i, e)| match e {
-            Text(str) => {
-                let mut acc = String::new();
-                let mut lines = str.lines().peekable();
-
-                while let Some(line) = lines.next() {
-                    let mut tmp = line
-                        .replace("...", "\u{2026}")
-                        .replace("---", "\u{2014}")
-                        .replace("--", "\u{2013}");
-
-                    if let Some(ii) = &sgl_open {
-                        tmp = tmp.replacen("\'", "\u{2019}", 1);
-                        backtrack.push((*ii, false));
-                    }
-                    if let Some(ii) = &dbl_open {
-                        tmp = tmp.replacen("\"", "\u{201D}", 1);
-                        backtrack.push((*ii, true));
-                    }
-
-                    let sgl_occs = tmp.matches("\'").count();
-                    for _ in 0..sgl_occs / 2 {
-                        tmp = tmp
-                            .replacen("\'", "\u{2018}", 1)
-                            .replacen("\'", "\u{2019}", 1);
-                    }
-                    let dbl_occs = tmp.matches("\"").count();
-                    for _ in 0..dbl_occs / 2 {
-                        tmp = tmp
-                            .replacen("\"", "\u{201C}", 1)
-                            .replacen("\"", "\u{201D}", 1);
-                    }
-
-                    acc.push_str(tmp.as_str());
-
-                    if lines.peek().is_none() {
-                        sgl_open = if sgl_occs % 2 != 0 { Some(i) } else { None };
-                        dbl_open = if dbl_occs % 2 != 0 { Some(i) } else { None };
-                    } else {
-                        acc.push_str("\n");
-                        dbl_open = None;
-                        sgl_open = None;
-                    }
-                }
-
-                mem::swap(str, &mut acc);
-            }
-            Ast::Document(d) => {
-                smart_punctuate(&mut d.elements);
-            }
-            Ast::Paragraph(p) => {
-                smart_punctuate(&mut p.elements);
-            }
-            Ast::Tag(t) => {
-                smart_punctuate(&mut t.elements);
-            }
-            Ast::Heading(h) => {
-                smart_punctuate(&mut h.elements);
-            }
-            _ => {}
-        });
-
-    let v = input.elements_mut();
-    for (i, b) in backtrack {
-        if let Some(Text(str)) = v.get_mut(i) {
-            let mut tmp;
-            if b {
-                tmp = str.replacen("\"", "\u{201C}", 1);
-            } else {
-                tmp = str.replacen("\'", "\u{2018}", 1);
-            }
-            mem::swap(str, &mut tmp);
-        }
-    }
 }
 
 /// Converts an Ast into a vector of strings suitable for a text representation.
