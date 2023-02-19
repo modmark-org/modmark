@@ -79,6 +79,17 @@ impl Context {
         Ok(())
     }
 
+    pub fn get_transform_info(
+        &self,
+        element_name: &str,
+        output_format: &OutputFormat,
+    ) -> Option<&Transform> {
+        // FIXME: would be a lot cleaner if we could do this without cloning the strings
+        self.transforms
+            .get(&(element_name.to_string(), output_format.clone()))
+            .map(|(transform, _)| transform)
+    }
+
     /// Transform an Element by using the loaded packages. The function will return a
     /// Element::Compound.
     pub fn transform(
@@ -90,7 +101,11 @@ impl Context {
 
         match from {
             Compound(_) => unreachable!("Should not transform compound element"),
-            Parent { name, children: _ }
+            Parent {
+                name,
+                args: _,
+                children: _,
+            }
             | Module {
                 name,
                 args: _,
@@ -98,7 +113,7 @@ impl Context {
                 inline: _,
             } => {
                 // We find the package responsible for this transform
-                let Some((transform, package)) = self.transforms.get(&(name.clone(), output_format.clone())) else {
+                let Some((_, package)) = self.transforms.get(&(name.clone(), output_format.clone())) else {
                     return Err(CoreError::MissingTransform(name.clone(), output_format.to_string()));
                 };
 
@@ -107,7 +122,7 @@ impl Context {
                 write!(
                     &mut input,
                     "{}",
-                    serialize_element(from, &transform.arguments)?
+                    self.serialize_element(from, output_format)?
                 )?;
 
                 let wasi_env = WasiState::new("")
@@ -135,7 +150,7 @@ impl Context {
                 let result = {
                     let mut buffer = String::new();
                     output.read_to_string(&mut buffer)?;
-                    deserialize_compound(&buffer)
+                    Self::deserialize_compound(&buffer)
                 };
 
                 result
@@ -146,6 +161,199 @@ impl Context {
     /// Borrow information about a package with a given name
     pub fn get_package_info(&self, name: &str) -> Option<&PackageInfo> {
         self.packages.get(name).map(|pkg| pkg.info.as_ref())
+    }
+
+    /// Serialize and element into a string that can be sent to a package
+    fn serialize_element(
+        &self,
+        element: &Element,
+        output_format: &OutputFormat,
+    ) -> Result<String, CoreError> {
+        let entry = self.element_to_entry(element, output_format)?;
+        serde_json::to_string(&entry).map_err(|e| e.into())
+    }
+
+    /// Deserialize a compound (i.e a list of JsonEntries) that are recived from a package
+    fn deserialize_compound(input: &str) -> Result<Element, CoreError> {
+        let entries: Vec<JsonEntry> = serde_json::from_str(input)?;
+
+        // Convert the parsed entries into real Elements
+        let elements: Vec<Element> = entries.into_iter().map(Self::entry_to_element).collect();
+        Ok(Element::Compound(elements))
+    }
+
+    /// Convert an JsonEntry to a Element
+    fn entry_to_element(entry: JsonEntry) -> Element {
+        match entry {
+            JsonEntry::ParentNode {
+                name,
+                arguments,
+                children,
+            } => Element::Parent {
+                name,
+                args: arguments,
+                children: children.into_iter().map(Self::entry_to_element).collect(),
+            },
+            JsonEntry::Module {
+                name,
+                data,
+                arguments,
+                inline,
+            } => Element::Module {
+                name,
+                args: ModuleArguments {
+                    positioned: None,
+                    named: Some(arguments),
+                },
+                body: data,
+                inline,
+            },
+        }
+    }
+
+    /// Convert a Element into a JsonEntry.
+    fn element_to_entry(
+        &self,
+        element: &Element,
+        output_format: &OutputFormat,
+    ) -> Result<JsonEntry, CoreError> {
+        match element {
+            // When the eval function naivly evaluates all children before a parent compund
+            // nodes should never be present here. This may however change in the future.
+            Element::Compound(_) => unreachable!(),
+            Element::Parent {
+                name: parent_name,
+                args,
+                children,
+            } => {
+                let converted_children: Result<Vec<JsonEntry>, CoreError> = children
+                    .into_iter()
+                    .map(|child| self.element_to_entry(child, output_format))
+                    .collect();
+
+                // Collect the arguments and add default values for unspecifed arguments
+                let mut collected_args = HashMap::new();
+                let mut given_args = args.clone();
+
+                // Get info about what args this parent node
+                let empty_vec = vec![];
+                let args_info: &Vec<ArgInfo> = self
+                    .get_transform_info(parent_name, output_format)
+                    .map(|info| info.arguments.as_ref())
+                    .unwrap_or(&empty_vec);
+
+                for arg_info in args_info {
+                    let ArgInfo {
+                        name,
+                        default,
+                        description: _,
+                    } = arg_info;
+
+                    if let Some(value) = given_args.remove(name) {
+                        collected_args.insert(name.clone(), value);
+                        continue;
+                    }
+
+                    if let Some(value) = default {
+                        collected_args.insert(name.clone(), value.clone());
+                    }
+
+                    return Err(CoreError::MissingArgument(
+                        name.clone(),
+                        parent_name.clone(),
+                    ));
+                }
+
+                // Check if there are any stray arguments left that should not be there
+                if let Some((key, _)) = given_args.into_iter().next() {
+                    return Err(CoreError::InvalidArgument(key, parent_name.clone()));
+                }
+
+                Ok(JsonEntry::ParentNode {
+                    name: parent_name.clone(),
+                    arguments: args.clone(),
+                    children: converted_children?,
+                })
+            }
+            Element::Module {
+                name: module_name,
+                args,
+                body,
+                inline: one_line,
+            } => {
+                let empty_vec = vec![];
+                let mut pos_args = args.positioned.as_ref().unwrap_or(&empty_vec).iter();
+                let mut named_args = args.named.clone().unwrap_or_default();
+                let mut collected_args = HashMap::new();
+
+                // Get info about what args this parent node supports
+                let empty_vec = vec![];
+                let args_info = self
+                    .get_transform_info(module_name, output_format)
+                    .map(|info| info.arguments.as_ref())
+                    .unwrap_or(&empty_vec);
+
+                for arg_info in args_info {
+                    let ArgInfo {
+                        name,
+                        default,
+                        description: _,
+                    } = arg_info;
+
+                    // First empty the positional arguments
+                    if let Some(value) = pos_args.next() {
+                        // Check that this key is not repeated later too
+                        if named_args.contains_key(name) {
+                            return Err(CoreError::RepeatedArgument(
+                                name.to_string(),
+                                module_name.to_string(),
+                            ));
+                        }
+                        collected_args.insert(name.to_string(), value.clone());
+                        continue;
+                    }
+
+                    // Check if it was specified as a named key=value pair
+                    if let Some(value) = named_args.remove(name) {
+                        collected_args.insert(name.to_string(), value.clone());
+                        continue;
+                    }
+
+                    // Use the default value as a fallback
+                    if let Some(value) = default {
+                        collected_args.insert(name.to_string(), value.clone());
+                        continue;
+                    }
+
+                    // Oops, the user seem to be missing a required argument
+                    return Err(CoreError::MissingArgument(
+                        name.to_string(),
+                        module_name.to_string(),
+                    ));
+                }
+
+                if let Some(value) = pos_args.next() {
+                    return Err(CoreError::InvalidArgument(
+                        value.to_string(),
+                        module_name.to_string(),
+                    ));
+                }
+
+                if let Some((key, _)) = named_args.iter().next() {
+                    return Err(CoreError::InvalidArgument(
+                        key.clone(),
+                        module_name.to_string(),
+                    ));
+                }
+
+                Ok(JsonEntry::Module {
+                    name: module_name.clone(),
+                    arguments: collected_args,
+                    data: body.clone(),
+                    inline: *one_line,
+                })
+            }
+        }
     }
 }
 
@@ -175,6 +383,7 @@ fn get_new_store() -> Store {
 enum JsonEntry {
     ParentNode {
         name: String,
+        arguments: HashMap<String, String>,
         children: Vec<Self>,
     },
     Module {
@@ -192,130 +401,4 @@ enum JsonEntry {
 /// default to true.
 fn default_inline() -> bool {
     true
-}
-
-/// Serialize and element into a string that can be sent to a package
-fn serialize_element(element: &Element, args_info: &Vec<ArgInfo>) -> Result<String, CoreError> {
-    let entry = element_to_entry(element, args_info)?;
-    serde_json::to_string(&entry).map_err(|e| e.into())
-}
-
-/// Deserialize a compound (i.e a list of JsonEntries) that are recived from a package
-fn deserialize_compound(input: &str) -> Result<Element, CoreError> {
-    let entries: Vec<JsonEntry> = serde_json::from_str(input)?;
-
-    // Convert the parsed entries into real Elements
-    let elements: Vec<Element> = entries.into_iter().map(entry_to_element).collect();
-    Ok(Element::Compound(elements))
-}
-
-/// Convert an JsonEntry to a Element
-fn entry_to_element(entry: JsonEntry) -> Element {
-    match entry {
-        JsonEntry::ParentNode { name, children } => Element::Parent {
-            name,
-            children: children
-                .into_iter()
-                .map(|child| entry_to_element(child))
-                .collect(),
-        },
-        JsonEntry::Module {
-            name,
-            data,
-            arguments,
-            inline,
-        } => Element::Module {
-            name,
-            args: ModuleArguments {
-                positioned: None,
-                named: Some(arguments),
-            },
-            body: data,
-            inline,
-        },
-    }
-}
-
-/// Convert a Element into a JsonEntry.
-/// The args_info is needed to convert positional arguments into key-value pairs.
-fn element_to_entry(element: &Element, args_info: &Vec<ArgInfo>) -> Result<JsonEntry, CoreError> {
-    match element {
-        // When the eval function naivly evaluates all children before a parent compund
-        // nodes should never be present here. This may however change in the future.
-        Element::Compound(_) => unreachable!(),
-        Element::Parent { name, children } => {
-            let converted_children: Result<Vec<JsonEntry>, CoreError> = children
-                .into_iter()
-                .map(|child| element_to_entry(child, args_info))
-                .collect();
-
-            Ok(JsonEntry::ParentNode {
-                name: name.clone(),
-                children: converted_children?,
-            })
-        }
-        Element::Module {
-            name: module_name,
-            args,
-            body,
-            inline: one_line,
-        } => {
-            // Start by converting the positonal and named args into a single
-            // hashmap of key value pairs. Also remember to use any provided default
-            // if a argument is left unspecified.
-            let mut pos_args = args.positioned.clone().unwrap_or_default().into_iter();
-            let mut named_args = args.named.clone().unwrap_or_default();
-            let mut collected_arguments = HashMap::new();
-            for arg_info in args_info {
-                let ArgInfo {
-                    name,
-                    default,
-                    description: _,
-                } = arg_info;
-
-                // If we have a positional argument, return that
-                if let Some(value) = pos_args.next() {
-                    collected_arguments.insert(name.clone(), value);
-                    continue;
-                }
-
-                // Use the keyword args
-                if let Some(value) = named_args.remove(name) {
-                    // Check for repeated args
-                    if collected_arguments.contains_key(name) {
-                        return Err(CoreError::RepeatedArgument(
-                            name.clone(),
-                            module_name.clone(),
-                        ));
-                    }
-                    collected_arguments.insert(name.clone(), value);
-                    continue;
-                }
-
-                // For the rest of the arguments that are left unspecified use
-                // the default if there is one
-                if let Some(value) = default {
-                    collected_arguments.insert(name.clone(), value.clone());
-                    continue;
-                }
-
-                return Err(CoreError::MissingArgument(
-                    name.clone(),
-                    module_name.clone(),
-                )); 
-            }
-
-            // Check if there are any stray arguments left that should not be there
-            if let Some((key, _)) = named_args.into_iter().next() {
-                return Err(CoreError::InvalidArgument(key, module_name.clone()));
-            }
-
-            Ok(JsonEntry::Module {
-                name: module_name.clone(),
-                arguments: collected_arguments,
-                data: body.clone(),
-                inline: *one_line,
-            })
-        }
-    }
 }

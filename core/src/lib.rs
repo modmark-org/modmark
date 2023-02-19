@@ -66,6 +66,7 @@ pub fn eval_elem(
     match root {
         Parent {
             name: _,
+            args: _,
             children: _,
         } => {
             let compound = ctx.transform(&root, format)?;
