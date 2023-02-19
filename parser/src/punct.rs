@@ -28,12 +28,14 @@ where
         if let Some(e) = rest.get_mut(0) {
             match e {
                 Text(str) => {
+                    let mut chars = str.chars().peekable();
                     let mut acc = String::new();
                     let mut row = String::new();
                     let mut seq = String::new();
                     let mut escaped = false;
+                    let mut right_flanking = true;
 
-                    for c in str.chars() {
+                    while let Some(c) = chars.next() {
                         if c != '.' && c != '-' && !seq.is_empty() {
                             row = format!("{}{}", row, smart_sequence(seq));
                             seq = String::new();
@@ -48,8 +50,11 @@ where
                                 escaped = false;
                             }
                             '\'' => {
+                                let left_flanking =
+                                    chars.peek().unwrap_or(&' ').is_ascii_whitespace();
                                 if !escaped {
-                                    if let Some(ii) = open_single {
+                                    if open_single.is_some() && left_flanking {
+                                        let ii = open_single.unwrap();
                                         if ii != i {
                                             if let Some(ee) = prev.get_mut(ii) {
                                                 close_prev_quote(ee, "\'", LSQUO);
@@ -61,7 +66,7 @@ where
                                         open_single = None;
                                     } else {
                                         row.push(c);
-                                        open_single = Some(i);
+                                        open_single = right_flanking.then_some(i);
                                     }
                                 } else {
                                     row.push(c)
@@ -110,6 +115,7 @@ where
                                 escaped = false;
                             }
                         }
+                        right_flanking = c.is_ascii_whitespace();
                     }
                     mem::swap(str, &mut format!("{}{}{}", acc, row, smart_sequence(seq)));
                 }
@@ -146,6 +152,6 @@ fn close_prev_quote(e: &mut Ast, pat: &str, to: &str) {
                 escaped = false;
             }
         }
-        other.replace_range(index..index+1, to);
+        other.replace_range(index..index + 1, to);
     }
 }
