@@ -32,11 +32,9 @@ where
                     let mut row = String::new();
                     let mut seq = String::new();
                     let mut escaped = false;
-                    let mut prev_closable_sg = true;
-                    let mut prev_closable_db = true;
 
                     for c in str.chars() {
-                        if c != '.' && c != '-' {
+                        if c != '.' && c != '-' && !seq.is_empty() {
                             row = format!("{}{}", row, smart_sequence(seq));
                             seq = String::new();
                         }
@@ -47,15 +45,13 @@ where
                                 row = String::new();
                                 open_single = None;
                                 open_double = None;
-                                prev_closable_sg = false;
-                                prev_closable_db = false;
                                 escaped = false;
                             }
                             '\'' => {
                                 if !escaped {
-                                    if open_single.is_some() {
-                                        if prev_closable_sg {
-                                            if let Some(ee) = prev.get_mut(open_single.unwrap()) {
+                                    if let Some(ii) = open_single {
+                                        if ii != i {
+                                            if let Some(ee) = prev.get_mut(ii) {
                                                 close_prev_quote(ee, "\'", LSQUO);
                                             }
                                         } else {
@@ -67,7 +63,6 @@ where
                                         row.push(c);
                                         open_single = Some(i);
                                     }
-                                    prev_closable_sg = false;
                                 } else {
                                     row.push(c)
                                 }
@@ -75,9 +70,9 @@ where
                             }
                             '\"' => {
                                 if !escaped {
-                                    if open_double.is_some() {
-                                        if prev_closable_db {
-                                            if let Some(ee) = prev.get_mut(open_double.unwrap()) {
+                                    if let Some(ii) = open_double {
+                                        if ii != i {
+                                            if let Some(ee) = prev.get_mut(ii) {
                                                 close_prev_quote(ee, "\"", LDQUO);
                                             }
                                         } else {
@@ -89,7 +84,6 @@ where
                                         row.push(c);
                                         open_double = Some(i);
                                     }
-                                    prev_closable_db = false;
                                 } else {
                                     row.push(c)
                                 }
@@ -140,28 +134,18 @@ fn smart_sequence(seq: String) -> String {
 
 fn close_prev_quote(e: &mut Ast, pat: &str, to: &str) {
     if let Text(other) = e {
-        let mut acc = String::new();
-        let rev = other.chars().rev().collect::<String>();
-        let mut split = rev.split_inclusive(pat);
+        let mut index = 0;
+        let mut escaped = false;
 
-        if let Some(mut prev) = split.next() {
-            while let Some(str) = split.next() {
-                if str.chars().take_while(|c| c == &'\\').count() % 2 == 0 {
-                    acc.push_str(&prev[..prev.len() - 1]);
-                    acc.push_str(to);
-                    acc.push_str(str);
-                    break;
-                } else {
-                    acc.push_str(prev);
-                }
-                prev = str;
-            }
-            if acc.is_empty() {
-                acc.push_str(&prev[..prev.len() - 1]);
-                acc.push_str(to);
+        for (i, c) in other.chars().enumerate() {
+            if c == '\\' {
+                escaped = !escaped;
+            } else if pat.contains(c) && !escaped {
+                index = i
+            } else {
+                escaped = false;
             }
         }
-        acc = format!("{}{}", acc, split.collect::<String>());
-        mem::swap(other, &mut acc.chars().rev().collect::<String>());
+        other.replace_range(index..index+1, to);
     }
 }
