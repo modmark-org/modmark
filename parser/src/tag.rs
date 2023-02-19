@@ -4,7 +4,7 @@
 //! exposes a function, [extract_tags], which goes through all text segments of an Ast, finds all
 //! tags and moves the content of the tags out to a different Ast structure, [Tag]
 use crate::Ast::Text;
-use crate::{Ast, Document, Paragraph, Tag};
+use crate::{Ast, Document, Heading, Paragraph, Tag};
 
 /// The position of a character inside a compound AST. One compound AST consists of a list of
 /// children, and those children can be any of the types defined in the AST enum. You can position
@@ -439,6 +439,16 @@ impl CompoundAST for Paragraph {
 }
 
 impl CompoundAST for Tag {
+    fn elements(&self) -> &Vec<Ast> {
+        &self.elements
+    }
+
+    fn elements_mut(&mut self) -> &mut Vec<Ast> {
+        &mut self.elements
+    }
+}
+
+impl CompoundAST for Heading {
     fn elements(&self) -> &Vec<Ast> {
         &self.elements
     }
