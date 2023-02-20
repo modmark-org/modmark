@@ -13,7 +13,7 @@
 //! of the parsers match, the or combinator fails.
 //!
 //! The functions are called `or{n}` with `n` being the amount of parsers to be combined, currently
-//! implemented from 2 up to 26. The functions are generated using macros, and comments are attached
+//! implemented from 2 up to 10. The functions are generated using macros, and comments are attached
 //! to the macros themselves, as well as code leftovers from before using macros.
 //!
 //! Example
@@ -56,35 +56,17 @@ where
 // prone process, and hopefully serves as a reason to use the macros :)
 /*
 pub fn or7_old<I: Clone, O1, O2, O3, O4, O5, O6, O7, E, F, G, H, J, K, L, M>(
-    p1: F,
-    p2: G,
-    p3: H,
-    p4: J,
-    p5: K,
-    p6: L,
-    p7: M,
+    p1: F, p2: G, p3: H, p4: J, p5: K, p6: L, p7: M,
 ) -> impl Parser<
     I,
-    (
-        Option<O1>,
-        Option<O2>,
-        Option<O3>,
-        Option<O4>,
-        Option<O5>,
-        Option<O6>,
-        Option<O7>,
-    ),
+    (Option<O1>, Option<O2>, Option<O3>, Option<O4>, Option<O5>, Option<O6>, Option<O7>,),
     E,
 >
 where
-    E: nom::error::ParseError<I>,
-    F: Parser<I, O1, E>,
-    G: Parser<I, O2, E>,
-    H: Parser<I, O3, E>,
-    J: Parser<I, O4, E>,
-    K: Parser<I, O5, E>,
-    L: Parser<I, O6, E>,
-    M: Parser<I, O7, E>,
+    E: nom::error::ParseError<I>, F: Parser<I, O1, E>,
+    G: Parser<I, O2, E>, H: Parser<I, O3, E>,
+    J: Parser<I, O4, E>, K: Parser<I, O5, E>,
+    L: Parser<I, O6, E>, M: Parser<I, O7, E>,
 {
     or_other(
         p1,
@@ -248,6 +230,7 @@ or_func!(7, a b c d e f g);
 or_func!(8, a b c d e f g h);
 or_func!(9, a b c d e f g h i);
 or_func!(10, a b c d e f g h i j);
+/* Implementations for 11-26 parsers are commented out to improve build times targeting wasm
 or_func!(11, a b c d e f g h i j k);
 or_func!(12, a b c d e f g h i j k l);
 or_func!(13, a b c d e f g h i j k l m);
@@ -264,3 +247,4 @@ or_func!(23, a b c d e f g h i j k l m n o p q r s t u v w);
 or_func!(24, a b c d e f g h i j k l m n o p q r s t u v w x);
 or_func!(25, a b c d e f g h i j k l m n o p q r s t u v w x y);
 or_func!(26, a b c d e f g h i j k l m n o p q r s t u v w x y z);
+*/
