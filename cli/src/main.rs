@@ -47,14 +47,13 @@ struct Args {
 fn compile_file(args: &Args) -> Result<Ast, CliError> {
     let source = fs::read_to_string(&args.input)?;
     let mut ctx = Context::default();
-    let output =
-        eval(&source, &mut ctx, &OutputFormat::new(&args.format)).expect("Failed to evaluate file");
+    let output = eval(&source, &mut ctx, &OutputFormat::new(&args.format))?;
 
     let mut output_file = File::create(&args.output)?;
     output_file.write_all(output.as_bytes())?;
 
     // Also return the Element tree for debug purposes
-    Ok(parse(&source).unwrap())
+    Ok(parse(&source)?)
 }
 
 fn print_tree(tree: &Ast) {
