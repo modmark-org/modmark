@@ -8,7 +8,7 @@ mod package;
 pub use context::Context;
 pub use element::Element;
 pub use error::CoreError;
-pub use package::{ArgInfo, NodeName, Package, PackageInfo, Transform};
+pub use package::{ArgInfo, Package, PackageInfo, Transform};
 use serde::Deserialize;
 use std::hash::{Hash, Hasher};
 

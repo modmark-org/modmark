@@ -4,12 +4,10 @@ use std::{io::Read, sync::Arc};
 use wasmer::{Instance, Module, Store};
 use wasmer_wasi::{Pipe, WasiState};
 
-pub type NodeName = String;
-
 /// Transform from a node into another node
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 pub struct Transform {
-    pub from: NodeName,
+    pub from: String,
     pub to: Vec<OutputFormat>,
     pub arguments: Vec<ArgInfo>,
 }

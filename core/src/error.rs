@@ -1,4 +1,3 @@
-use crate::NodeName;
 use parser::ParseError;
 use thiserror::Error;
 #[cfg(feature = "native")]
@@ -13,7 +12,7 @@ pub enum CoreError {
     #[error(
         "Could not load package '{2}'. There is another package that transforms '{0}' to '{1}'."
     )]
-    OccupiedTransform(NodeName, NodeName, String),
+    OccupiedTransform(String, String, String),
     #[cfg(feature = "native")]
     #[error("Compiler error")]
     WasmerCompiler(Box<CompileError>),
@@ -34,11 +33,11 @@ pub enum CoreError {
     #[error("Failed to parse transforms of package '{0}'.")]
     ParseTransforms(String),
     #[error("You repeated the argument '{0}' for the '{1}' element.")]
-    RepeatedArgument(String, NodeName),
+    RepeatedArgument(String, String),
     #[error("Argument '{0}' is missing in element '{1}'.")]
-    MissingArgument(String, NodeName),
+    MissingArgument(String, String),
     #[error("Argument '{0}' is not supported by the element '{1}'.")]
-    InvalidArgument(String, NodeName),
+    InvalidArgument(String, String),
     #[error("Failed to serialize json")]
     JsonError(#[from] serde_json::Error),
     #[error("Transform does not terminate")]
