@@ -19,7 +19,7 @@ fn main() {
 fn manifest() {
     print!("{}", serde_json::to_string(&json!(
         {
-        "name": "Standard table module",
+        "name": "Standard table package",
         "version": "0.1",
         "description": "This package supports [table] modules",
         "transforms": [
@@ -59,7 +59,6 @@ fn transform_table(to: &String) {
                 panic!("No col_delimiter argument was provided");
             };
 
-            //FIXME read delimiter from args
             let rows: Vec<Vec<&str>> = input["data"]
                 .as_str()
                 .unwrap()
