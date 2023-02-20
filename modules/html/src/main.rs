@@ -84,11 +84,7 @@ fn transform_heading(heading: Value) -> String {
     };
     let level = s.parse::<u8>().unwrap().clamp(1, 6);
 
-    write!(
-            result,
-        r#"{{"name": "raw", "data": "<h{level}>"}},"#,
-    )
-    .unwrap();
+    write!(result, r#"{{"name": "raw", "data": "<h{level}>"}},"#,).unwrap();
 
     if let Value::Array(children) = &heading["children"] {
         for child in children {
@@ -97,11 +93,7 @@ fn transform_heading(heading: Value) -> String {
         }
     }
 
-    write!(
-            result,
-        r#"{{"name": "raw", "data": "</h{level}>"}}"#,
-    )
-    .unwrap();
+    write!(result, r#"{{"name": "raw", "data": "</h{level}>"}}"#,).unwrap();
     result.push(']');
 
     result
@@ -114,7 +106,9 @@ fn escape_text(module: Value) -> String {
             .replace('<', "&lt;")
             .replace('>', "&gt;")
             .replace('"', "&quot;")
-            .replace('\'', "&#39;");
+            .replace('\'', "&#39;")
+            .replace("\r\n", "\\n")
+            .replace('\n', "\\n");
         format!(r#"[{{"name": "raw", "data": "{s}"}}]"#)
     } else {
         panic!("Malformed text module");
