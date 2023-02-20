@@ -170,7 +170,7 @@ impl Context {
         output_format: &OutputFormat,
     ) -> Result<String, CoreError> {
         let entry = self.element_to_entry(element, output_format)?;
-        serde_json::to_string(&entry).map_err(|e| e.into())
+        serde_json::to_string_pretty(&entry).map_err(|e| e.into())
     }
 
     /// Deserialize a compound (i.e a list of JsonEntries) that are recived from a package
