@@ -20,111 +20,111 @@ where
     T: CompoundAST,
 {
     let elems: &mut Vec<Ast> = input.elements_mut();
-    let mut open_single: Option<usize> = None;
-    let mut open_double: Option<usize> = None;
+    let mut open_single: Option<(usize, usize)> = None;
+    let mut open_double: Option<(usize, usize)> = None;
 
-    for i in 0..elems.len() {
-        let (prev, rest) = elems.as_mut_slice().split_at_mut(i);
-        if let Some(e) = rest.get_mut(0) {
-            match e {
-                Text(str) => {
-                    let mut chars = str.chars().peekable();
-                    let mut acc = String::new();
-                    let mut row = String::new();
-                    let mut seq = String::new();
-                    let mut escaped = false;
-                    let mut right_flanking = true;
+    for elem_index in 0..elems.len() {
+        let (prev, rest) = elems.as_mut_slice().split_at_mut(elem_index);
+        match rest.get_mut(0) {
+            Some(Text(str)) => {
+                let mut chars = str.chars().peekable();
+                let mut acc = String::new();
+                let mut row = String::new();
+                let mut seq = String::new();
+                let mut escaped = false;
+                let mut last_char = ' ';
+                let mut left_flanking;
+                let mut right_flanking;
 
-                    while let Some(c) = chars.next() {
-                        if c != '.' && c != '-' && !seq.is_empty() {
-                            row = format!("{}{}", row, smart_sequence(seq));
-                            seq = String::new();
-                        }
-                        match c {
-                            '\r' | '\n' => {
-                                row.push(c);
-                                acc = format!("{}{}", acc, row);
-                                row = String::new();
-                                open_single = None;
-                                open_double = None;
-                                escaped = false;
-                            }
-                            '\'' => {
-                                let left_flanking =
-                                    chars.peek().unwrap_or(&' ').is_ascii_whitespace();
-                                if !escaped {
-                                    if open_single.is_some() && left_flanking {
-                                        let ii = open_single.unwrap();
-                                        if ii != i {
-                                            if let Some(ee) = prev.get_mut(ii) {
-                                                close_prev_quote(ee, "\'", LSQUO);
-                                            }
-                                        } else {
-                                            row = row.replace("\'", LSQUO);
-                                        }
-                                        row.push_str(RSQUO);
-                                        open_single = None;
-                                    } else {
-                                        row.push(c);
-                                        open_single = right_flanking.then_some(i);
-                                    }
-                                } else {
-                                    row.push(c)
-                                }
-                                escaped = false;
-                            }
-                            '\"' => {
-                                if !escaped {
-                                    if let Some(ii) = open_double {
-                                        if ii != i {
-                                            if let Some(ee) = prev.get_mut(ii) {
-                                                close_prev_quote(ee, "\"", LDQUO);
-                                            }
-                                        } else {
-                                            row = row.replace("\"", LDQUO);
-                                        }
-                                        row.push_str(RDQUO);
-                                        open_double = None;
-                                    } else {
-                                        row.push(c);
-                                        open_double = Some(i);
-                                    }
-                                } else {
-                                    row.push(c)
-                                }
-                                escaped = false;
-                            }
-                            '.' | '-' => {
-                                if !escaped {
-                                    if seq.is_empty() || seq.contains(c) {
-                                        seq.push(c);
-                                    } else {
-                                        row = format!("{}{}", row, smart_sequence(seq));
-                                        seq = String::from(c)
-                                    }
-                                } else {
-                                    row.push(c)
-                                }
-                            }
-                            '\\' => {
-                                row.push(c);
-                                escaped = !escaped;
-                            }
-                            _ => {
-                                row.push(c);
-                                escaped = false;
-                            }
-                        }
-                        right_flanking = c.is_ascii_whitespace();
+                while let Some(c) = chars.next() {
+                    left_flanking = last_char.is_ascii_whitespace();
+                    right_flanking = chars.peek().unwrap_or(&' ').is_ascii_whitespace();
+
+                    if c != '.' && c != '-' && !seq.is_empty() {
+                        row = format!("{}{}", row, smart_sequence(seq));
+                        seq = String::new();
                     }
-                    mem::swap(str, &mut format!("{}{}{}", acc, row, smart_sequence(seq)));
+                    match c {
+                        '\r' | '\n' => {
+                            row.push(c);
+                            acc = format!("{}{}", acc, row);
+                            row = String::new();
+                            open_single = None;
+                            open_double = None;
+                            escaped = false;
+                        }
+                        '\'' => {
+                            if escaped {
+                                row.push(c);
+                            } else if left_flanking {
+                                open_single = Some((elem_index, acc.len() + row.len()));
+                                row.push(c);
+                            } else if open_single.is_some() && right_flanking {
+                                let (ei, i) = open_single.unwrap();
+                                if ei != elem_index {
+                                    if let Some(Text(str)) = prev.get_mut(ei) {
+                                        str.replace_range(i..i + 1, LSQUO);
+                                    }
+                                } else {
+                                    let curr_i = i - acc.len();
+                                    row.replace_range(curr_i..curr_i + 1, LSQUO);
+                                }
+                                row.push_str(RSQUO);
+                                open_single = None;
+                            } else {
+                                row.push(c);
+                            }
+                            escaped = false;
+                        }
+                        '\"' => {
+                            if escaped {
+                                row.push(c)
+                            } else if open_double.is_some() {
+                                let (ei, i) = open_double.unwrap();
+                                if ei != elem_index {
+                                    if let Some(Text(str)) = prev.get_mut(ei) {
+                                        str.replace_range(i..i + 1, LDQUO);
+                                    }
+                                } else {
+                                    let curr_i = i - acc.len();
+                                    row.replace_range(curr_i..curr_i + 1, LDQUO);
+                                }
+                                row.push_str(RDQUO);
+                                open_double = None;
+                            } else {
+                                open_double = Some((elem_index, acc.len() + row.len()));
+                                row.push(c);
+                            }
+                            escaped = false;
+                        }
+                        '.' | '-' => {
+                            if escaped {
+                                row.push(c);
+                            } else if seq.is_empty() || seq.contains(c) {
+                                seq.push(c);
+                            } else {
+                                row = format!("{}{}", row, smart_sequence(seq));
+                                seq = String::from(c)
+                            }
+                        }
+                        '\\' => {
+                            row.push(c);
+                            escaped = !escaped;
+                        }
+                        _ => {
+                            row.push(c);
+                            escaped = false;
+                        }
+                    }
+                    last_char = c;
                 }
-                Ast::Document(d) => smart_punctuate(d),
-                Ast::Paragraph(p) => smart_punctuate(p),
-                Ast::Tag(t) => smart_punctuate(t),
-                Ast::Heading(h) => smart_punctuate(h),
-                _ => {}
+                mem::swap(str, &mut format!("{}{}{}", acc, row, smart_sequence(seq)));
             }
+            Some(Ast::Document(d)) => smart_punctuate(d),
+            Some(Ast::Paragraph(p)) => smart_punctuate(p),
+            Some(Ast::Tag(t)) => smart_punctuate(t),
+            Some(Ast::Heading(h)) => smart_punctuate(h),
+            _ => {}
         }
     }
 }
@@ -136,22 +136,4 @@ fn smart_sequence(seq: String) -> String {
         "---" => EMDASH.to_string(),
         _ => seq,
     };
-}
-
-fn close_prev_quote(e: &mut Ast, pat: &str, to: &str) {
-    if let Text(other) = e {
-        let mut index = 0;
-        let mut escaped = false;
-
-        for (i, c) in other.chars().enumerate() {
-            if c == '\\' {
-                escaped = !escaped;
-            } else if pat.contains(c) && !escaped {
-                index = i
-            } else {
-                escaped = false;
-            }
-        }
-        other.replace_range(index..index + 1, to);
-    }
 }
