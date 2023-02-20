@@ -1,12 +1,13 @@
 [workspace]
-members = [
-    "cli",
-    "core",
-    "parser",
-    "package-tests"
-]
+members = ["cli", "core", "parser", "package-tests"]
 
-exclude = ["packages/table", "packages/html", "playground/web_bindings"]
+exclude = [
+    "packages/table",
+    "packages/html",
+    "packages/link",
+    "packages/list",
+    "playground/web_bindings",
+]
 
 # We need to specifiy that we use the new resolver to
 # get wasmer to build correctly when using a workspace

@@ -1,0 +1,8 @@
+{
+  "name": "link",
+  "arguments": {
+    "label": "Google"
+  },
+  "data": "https://www.google.com/",
+  "inline": true
+}
