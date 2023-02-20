@@ -55,17 +55,16 @@ fn transform_table(to: &String) {
                 serde_json::from_str(&buffer).unwrap()
             };
 
-            let delimiter = input["arguments"]
-                .get("col_delimiter")
-                .map(|val| serde_json::to_string(val).unwrap())
-                .unwrap_or_else(|| "|".to_string());
+            let Value::String(delimiter) = &input["arguments"]["col_delimiter"] else {
+                panic!("No col_delimiter argument was provided");
+            };
 
             //FIXME read delimiter from args
             let rows: Vec<Vec<&str>> = input["data"]
                 .as_str()
                 .unwrap()
                 .lines()
-                .map(|row| row.split(&delimiter).collect())
+                .map(|row| row.split(delimiter).collect())
                 .collect();
 
             let mut output = String::new();
