@@ -72,62 +72,35 @@
             errorPrompt.style.display = "none";
 
             let pre = document.createElement("pre")
-            switch (selector.value) {
-                case "ast": {
-                    let result = "";
-                    try {
-                        result += ast(input);
-                    } catch (error) {
-                        errorPrompt.style.display = "block";
-                        errorLog.innerHTML = error;
-                    }
-                    pre.innerText = result;
-                } break;
-                case "ast-debug": {
-                    let result = "";
-                    try {
-                        result += ast_debug(input);
-                    } catch (error) {
-                        errorPrompt.style.display = "block";
-                        errorLog.innerHTML = error;
-                    }
-                    pre.innerText = result;
-
-                } break;
-                case "transpile": {
-                    let result = "";
-                    try {
-                        result += transpile(input);
-                    } catch (error) {
-                        errorPrompt.style.display = "block";
-                        errorLog.innerHTML = error;
-                    }
-                    pre.innerText = result;
-
-                } break;
-                case "json-output": {
-                    let result = "";
-                    try {
-                        result += json_output(input);
-                    } catch (error) {
-                        errorPrompt.style.display = "block";
-                        errorLog.innerHTML = error;
-                    }
-                    pre.innerText = result;
-                } break;
-                case "render": {
-                    let result = "";
-                    try {
-                        result += transpile(input);
-                    } catch (error) {
-                        errorPrompt.style.display = "block";
-                        errorLog.innerHTML = error;
-                    }
-                    output.innerHTML = result;
-                } break;
+            try {
+                switch (selector.value) {
+                    case "ast":
+                        pre.innerText = ast(input);
+                        break;
+                    case "ast-debug":
+                        pre.innerText = ast_debug(input);
+                        break;
+                    case "transpile":
+                        pre.innerHTML = transpile(input);
+                        break;
+                    case "json-output":
+                        pre.innerHTML = json_output(input);
+                        break;
+                    case "render":
+                        output.innerHTML = transpile(input);
+                        break;
+                }
+            } catch (error) {
+                errorPrompt.style.display = "block";
+                errorLog.innerHTML = error;
             }
-            if (selector.value !== "render") output.innerHTML = pre.outerHTML;
+
+            if (selector.value !== "render") {
+                output.innerHTML = pre.outerHTML;
+            }
         }
+
+
 
         init().then(() => {
             editor.oninput = (event) => updateOutput(event.target.value);
