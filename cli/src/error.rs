@@ -1,3 +1,5 @@
+use core::CoreError;
+use parser::ParseError;
 use std::io;
 use thiserror::Error;
 
@@ -8,4 +10,10 @@ pub enum CliError {
 
     #[error("IO error '{0}'")]
     Io(#[from] io::Error),
+
+    #[error("Parse error: {0}")]
+    Parse(#[from] ParseError),
+
+    #[error("Core error: {0}")]
+    Core(#[from] CoreError),
 }
