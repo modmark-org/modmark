@@ -40,6 +40,20 @@ pub enum PackageImplementation {
     Native,
 }
 
+/// Implements PartialEq for PackageImplementation in a way where two
+/// `PackageImplementation::Native` gives `true` but any other combination gives `false`
+impl PartialEq for PackageImplementation {
+    fn eq(&self, other: &Self) -> bool {
+        match self {
+            Native => match other {
+                Native => true,
+                PackageImplementation::Wasm(_) => false,
+            },
+            PackageImplementation::Wasm(_) => false,
+        }
+    }
+}
+
 impl Package {
     /// Read the binary data from a `.wasm` file and create a Package
     /// containing info about the package as well as the compiled wasm source module.
