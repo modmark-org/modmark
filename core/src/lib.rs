@@ -1,16 +1,22 @@
+use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
-mod context;
-mod element;
-mod error;
-mod package;
+use serde::Deserialize;
 
 pub use context::Context;
 pub use element::Element;
 pub use error::CoreError;
 pub use package::{ArgInfo, Package, PackageInfo, Transform};
-use serde::Deserialize;
-use std::hash::{Hash, Hasher};
+
+use crate::context::Either;
+
+mod context;
+mod element;
+mod error;
+mod package;
+mod std_packages;
+#[macro_use]
+mod std_packages_macros;
 
 #[cfg(all(feature = "web", feature = "native"))]
 compile_error!("feature \"native\" and feature \"web\" cannot be enabled at the same time");
@@ -69,8 +75,13 @@ pub fn eval_elem(
             args: _,
             children: _,
         } => {
-            let compound = ctx.transform(&root, format)?;
-            eval_elem(compound, ctx, format)
+            /*let compound = ctx.transform(&root, format)?;
+            eval_elem(compound, ctx, format)*/
+            let either = ctx.transform(&root, format)?;
+            match either {
+                Either::Left(elem) => eval_elem(elem, ctx, format),
+                Either::Right(res) => Ok(res),
+            }
         }
         Compound(children) => {
             let mut raw_content = String::new();
@@ -87,7 +98,7 @@ pub fn eval_elem(
             inline: _,
         } => {
             // Base case, if its just raw content, stop.
-            if name == "raw" {
+            /*if name == "raw" {
                 return Ok(body.clone());
             }
 
@@ -107,10 +118,17 @@ pub fn eval_elem(
                     .collect::<Result<Vec<Element>, _>>()?;
 
                 return Ok(eval_elem(Element::Compound(elements), ctx, format)?);
-            }
+            }*/
 
+            /*
             let compound = ctx.transform(&root, format)?;
             eval_elem(compound, ctx, format)
+             */
+            let either = ctx.transform(&root, format)?;
+            match either {
+                Either::Left(elem) => eval_elem(elem, ctx, format),
+                Either::Right(res) => Ok(res),
+            }
         }
     }
 }
