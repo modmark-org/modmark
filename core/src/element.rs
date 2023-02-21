@@ -37,7 +37,7 @@ impl TryFrom<Ast> for Element {
                 children: doc
                     .elements
                     .into_iter()
-                    .map(|e| e.try_into())
+                    .map(TryInto::try_into)
                     .collect::<Result<Vec<Element>, ParseError>>()?,
             }),
             Ast::Paragraph(paragraph) => Ok(Element::Parent {
@@ -46,7 +46,7 @@ impl TryFrom<Ast> for Element {
                 children: paragraph
                     .elements
                     .into_iter()
-                    .map(|e| e.try_into())
+                    .map(TryInto::try_into)
                     .collect::<Result<Vec<Element>, ParseError>>()?,
             }),
             Ast::Tag(tag) => Ok(Element::Parent {
@@ -55,7 +55,7 @@ impl TryFrom<Ast> for Element {
                 children: tag
                     .elements
                     .into_iter()
-                    .map(|e| e.try_into())
+                    .map(TryInto::try_into)
                     .collect::<Result<Vec<Element>, ParseError>>()?,
             }),
             Ast::Module(module) => match module.args {
@@ -77,7 +77,7 @@ impl TryFrom<Ast> for Element {
                 children: heading
                     .elements
                     .into_iter()
-                    .map(|e| e.try_into())
+                    .map(TryInto::try_into)
                     .collect::<Result<Vec<Element>, ParseError>>()?,
             }),
         }

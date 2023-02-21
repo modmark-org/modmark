@@ -24,15 +24,15 @@ macro_rules! define_native_packages {
 
             pub fn handle_native(
                 ctx: &mut Context,
-                package_name: &String,
-                node_name: &String, // name of module or parent
+                package_name: &str,
+                node_name: &str, // name of module or parent
                 element: &Element,
                 args: HashMap<String, String>,
                 output_format: &OutputFormat
             ) -> Result<Either<Element, String>, CoreError> {
-                match package_name.as_str() {
+                match package_name {
                     $(
-                        $name => match node_name.as_str() {
+                        $name => match node_name {
                             $(
                                 $transform => match element {
                                     Element::Module {

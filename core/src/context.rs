@@ -93,13 +93,13 @@ impl Context {
     }
 
     /// Transform an Element by using the loaded packages. The function will return a
-    /// Element::Compound.
+    /// `Element::Compound`.
     pub fn transform(
         &mut self,
         from: &Element,
         output_format: &OutputFormat,
     ) -> Result<Either<Element, String>, CoreError> {
-        use Element::*;
+        use Element::{Compound, Module, Parent};
 
         match from {
             Compound(_) => unreachable!("Should not transform compound element"),
@@ -138,8 +138,8 @@ impl Context {
 
     fn transform_from_native(
         &mut self,
-        package_name: &String,
-        node_name: &String, // name of module or parent
+        package_name: &str,
+        node_name: &str, // name of module or parent
         element: &Element,
         output_format: &OutputFormat,
     ) -> Result<Either<Element, String>, CoreError> {
@@ -147,13 +147,13 @@ impl Context {
             Element::Parent {
                 name,
                 args,
-                children,
+                children: _,
             } => self.collect_parent_arguments(args, name, output_format),
             Element::Module {
                 name,
                 args,
-                body,
-                inline,
+                body: _,
+                inline: _,
             } => self.collect_module_arguments(args, name, output_format),
             Element::Compound(_) => unreachable!("Cannot transform compound"),
         }?;
@@ -164,7 +164,7 @@ impl Context {
     fn transform_from_wasm(
         &mut self,
         module: &Module,
-        name: &String,
+        name: &str,
         from: &Element,
         output_format: &OutputFormat,
     ) -> Result<Either<Element, String>, CoreError> {
@@ -220,7 +220,7 @@ impl Context {
         serde_json::to_string_pretty(&entry).map_err(|e| e.into())
     }
 
-    /// Deserialize a compound (i.e a list of JsonEntries) that are recived from a package
+    /// Deserialize a compound (i.e a list of `JsonEntries`) that are recived from a package
     pub fn deserialize_compound(input: &str) -> Result<Element, CoreError> {
         let entries: Vec<JsonEntry> = serde_json::from_str(input)?;
 
@@ -229,7 +229,7 @@ impl Context {
         Ok(Element::Compound(elements))
     }
 
-    /// Convert an JsonEntry to a Element
+    /// Convert a `JsonEntry` to an `Element`
     fn entry_to_element(entry: JsonEntry) -> Element {
         match entry {
             JsonEntry::ParentNode {
@@ -258,7 +258,7 @@ impl Context {
         }
     }
 
-    /// Convert a Element into a JsonEntry.
+    /// Convert an `Element` into a `JsonEntry`.
     fn element_to_entry(
         &self,
         element: &Element,
@@ -274,7 +274,7 @@ impl Context {
                 children,
             } => {
                 let converted_children: Result<Vec<JsonEntry>, CoreError> = children
-                    .into_iter()
+                    .iter()
                     .map(|child| self.element_to_entry(child, output_format))
                     .collect();
 
@@ -308,7 +308,7 @@ impl Context {
     fn collect_parent_arguments(
         &self,
         args: &HashMap<String, String>,
-        parent_name: &String,
+        parent_name: &str,
         output_format: &OutputFormat,
     ) -> Result<HashMap<String, String>, CoreError> {
         // Collect the arguments and add default values for unspecifed arguments
@@ -319,8 +319,7 @@ impl Context {
         let empty_vec = vec![];
         let args_info: &Vec<ArgInfo> = self
             .get_transform_info(parent_name, output_format)
-            .map(|info| info.arguments.as_ref())
-            .unwrap_or(&empty_vec);
+            .map_or(&empty_vec, |info| info.arguments.as_ref());
 
         for arg_info in args_info {
             let ArgInfo {
@@ -340,13 +339,13 @@ impl Context {
 
             return Err(CoreError::MissingArgument(
                 name.clone(),
-                parent_name.clone(),
+                parent_name.to_owned(),
             ));
         }
 
         // Check if there are any stray arguments left that should not be there
         if let Some((key, _)) = given_args.into_iter().next() {
-            return Err(CoreError::InvalidArgument(key, parent_name.clone()));
+            return Err(CoreError::InvalidArgument(key, parent_name.to_owned()));
         }
 
         Ok(collected_args)
@@ -355,7 +354,7 @@ impl Context {
     fn collect_module_arguments(
         &self,
         args: &ModuleArguments,
-        module_name: &String,
+        module_name: &str,
         output_format: &OutputFormat,
     ) -> Result<HashMap<String, String>, CoreError> {
         let empty_vec = vec![];
@@ -367,8 +366,7 @@ impl Context {
         let empty_vec = vec![];
         let args_info = self
             .get_transform_info(module_name, output_format)
-            .map(|info| info.arguments.as_ref())
-            .unwrap_or(&empty_vec);
+            .map_or(&empty_vec, |info| info.arguments.as_ref());
 
         for arg_info in args_info {
             let ArgInfo {
