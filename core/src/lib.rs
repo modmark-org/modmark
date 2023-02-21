@@ -68,21 +68,8 @@ pub fn eval_elem(
     ctx: &mut Context,
     format: &OutputFormat,
 ) -> Result<String, CoreError> {
-    use Element::*;
+    use Element::{Compound, Module, Parent};
     match root {
-        Parent {
-            name: _,
-            args: _,
-            children: _,
-        } => {
-            /*let compound = ctx.transform(&root, format)?;
-            eval_elem(compound, ctx, format)*/
-            let either = ctx.transform(&root, format)?;
-            match either {
-                Either::Left(elem) => eval_elem(elem, ctx, format),
-                Either::Right(res) => Ok(res),
-            }
-        }
         Compound(children) => {
             let mut raw_content = String::new();
 
@@ -92,38 +79,16 @@ pub fn eval_elem(
             Ok(raw_content)
         }
         Module {
-            ref name,
+            name: _,
             args: _,
-            ref body,
+            body: _,
             inline: _,
+        }
+        | Parent {
+            name: _,
+            args: _,
+            children: _,
         } => {
-            // Base case, if its just raw content, stop.
-            /*if name == "raw" {
-                return Ok(body.clone());
-            }
-
-            if name == "inline_content" {
-                let elements = parser::parse_inline(body)?
-                    .into_iter()
-                    .map(|ast| ast.try_into())
-                    .collect::<Result<Vec<Element>, _>>()?;
-
-                return Ok(eval_elem(Element::Compound(elements), ctx, format)?);
-            }
-
-            if name == "block_content" {
-                let elements = parser::parse_blocks(body)?
-                    .into_iter()
-                    .map(|ast| ast.try_into())
-                    .collect::<Result<Vec<Element>, _>>()?;
-
-                return Ok(eval_elem(Element::Compound(elements), ctx, format)?);
-            }*/
-
-            /*
-            let compound = ctx.transform(&root, format)?;
-            eval_elem(compound, ctx, format)
-             */
             let either = ctx.transform(&root, format)?;
             match either {
                 Either::Left(elem) => eval_elem(elem, ctx, format),

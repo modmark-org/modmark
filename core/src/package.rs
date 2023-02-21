@@ -1,5 +1,5 @@
 use crate::package::PackageImplementation::Native;
-use crate::{error::CoreError, Context, Element, OutputFormat};
+use crate::{error::CoreError, OutputFormat};
 use serde::Deserialize;
 use std::{io::Read, sync::Arc};
 use wasmer::{Instance, Module, Store};

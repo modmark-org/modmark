@@ -58,44 +58,44 @@ define_standard_package_loader! {
 }*/
 
 pub fn native_raw(
-    ctx: &mut Context,
-    body: &String,
-    args: HashMap<String, String>,
-    inline: bool,
-    output_format: &OutputFormat,
+    _ctx: &mut Context,
+    body: &str,
+    _args: HashMap<String, String>,
+    _inline: bool,
+    _output_format: &OutputFormat,
 ) -> Result<Either<Element, String>, CoreError> {
-    Ok(Right(body.clone()))
+    Ok(Right(body.to_owned()))
 }
 
 pub fn native_inline_content(
     ctx: &mut Context,
-    body: &String,
-    args: HashMap<String, String>,
-    inline: bool,
+    body: &str,
+    _args: HashMap<String, String>,
+    _inline: bool,
     output_format: &OutputFormat,
 ) -> Result<Either<Element, String>, CoreError> {
     let elements = parser::parse_inline(body)?
         .into_iter()
-        .map(|ast| ast.try_into())
+        .map(TryInto::try_into)
         .collect::<Result<Vec<Element>, _>>()?;
 
-    return Ok(Right(crate::eval_elem(
+    Ok(Right(crate::eval_elem(
         Element::Compound(elements),
         ctx,
         output_format,
-    )?));
+    )?))
 }
 
 pub fn native_block_content(
     ctx: &mut Context,
-    body: &String,
-    args: HashMap<String, String>,
-    inline: bool,
+    body: &str,
+    _args: HashMap<String, String>,
+    _inline: bool,
     output_format: &OutputFormat,
 ) -> Result<Either<Element, String>, CoreError> {
     let elements = parser::parse_blocks(body)?
         .into_iter()
-        .map(|ast| ast.try_into())
+        .map(TryInto::try_into)
         .collect::<Result<Vec<Element>, _>>()?;
 
     Ok(Right(crate::eval_elem(
@@ -106,11 +106,11 @@ pub fn native_block_content(
 }
 
 pub fn native_set_env(
-    ctx: &mut Context,
-    body: &String,
-    args: HashMap<String, String>,
-    inline: bool,
-    output_format: &OutputFormat,
+    _ctx: &mut Context,
+    _body: &str,
+    _args: HashMap<String, String>,
+    _inline: bool,
+    _output_format: &OutputFormat,
 ) -> Result<Either<Element, String>, CoreError> {
     unimplemented!("native_set_env")
 }
