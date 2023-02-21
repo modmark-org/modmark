@@ -1,15 +1,19 @@
-use crate::Element;
-use parser::ModuleArguments;
-use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     io::{Read, Write},
 };
+
+use serde::{Deserialize, Serialize};
 #[cfg(feature = "native")]
 use wasmer::Cranelift;
-use wasmer::{Instance, Store};
+use wasmer::{Instance, Module, Store};
 use wasmer_wasi::{Pipe, WasiState};
 
+use parser::ModuleArguments;
+
+use crate::package::PackageImplementation;
+use crate::std_packages::StandardPackages;
+use crate::Element;
 use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
 
 #[derive(Debug)]
@@ -28,22 +32,15 @@ impl Context {
         }
     }
 
-    pub fn load_default_packages(&mut self) {
-        self.load_package(include_bytes!(concat!(
-            env!("OUT_DIR"),
-            "/table/wasm32-wasi/release/table.wasm"
-        )))
-        .expect("Failed to load standard table module");
-        self.load_package(include_bytes!(concat!(
-            env!("OUT_DIR"),
-            "/html/wasm32-wasi/release/html.wasm"
-        )))
-        .expect("Failed to load standard html module");
+    pub fn load_default_packages(&mut self) -> Result<(), CoreError> {
+        for pkg in StandardPackages::native_package_list() {
+            self.load_package(Package::new_native(pkg)?)?
+        }
+        StandardPackages::load_standard_packages(self)?;
+        Ok(())
     }
 
-    pub fn load_package(&mut self, wasm_source: &[u8]) -> Result<(), CoreError> {
-        let pkg = Package::new(wasm_source, &mut self.store)?;
-
+    pub fn load_package(&mut self, pkg: Package) -> Result<(), CoreError> {
         self.packages
             .insert(pkg.info.as_ref().name.to_string(), pkg.clone());
 
@@ -79,6 +76,11 @@ impl Context {
         Ok(())
     }
 
+    pub fn load_package_from_wasm(&mut self, wasm_source: &[u8]) -> Result<(), CoreError> {
+        let pkg = Package::new(wasm_source, &mut self.store)?;
+        self.load_package(pkg)
+    }
+
     pub fn get_transform_info(
         &self,
         element_name: &str,
@@ -96,7 +98,7 @@ impl Context {
         &mut self,
         from: &Element,
         output_format: &OutputFormat,
-    ) -> Result<Element, CoreError> {
+    ) -> Result<Either<Element, String>, CoreError> {
         use Element::*;
 
         match from {
@@ -112,50 +114,95 @@ impl Context {
                 body: _,
                 inline: _,
             } => {
-                // We find the package responsible for this transform
-                let Some((_, package)) = self.transforms.get(&(name.clone(), output_format.clone())) else {
+                // First, search for a package with transform to output format NATIVE
+                // If not found,
+                let Some((_, package)) =
+                    self.transforms.get(&(name.clone(), OutputFormat("NATIVE".to_string())))
+                        .or_else(||self.transforms.get(&(name.clone(), output_format.clone()))) else {
                     return Err(CoreError::MissingTransform(name.clone(), output_format.to_string()));
                 };
 
-                let mut input = Pipe::new();
-                let mut output = Pipe::new();
-                write!(
-                    &mut input,
-                    "{}",
-                    self.serialize_element(from, output_format)?
-                )?;
-
-                let wasi_env = WasiState::new("")
-                    .stdin(Box::new(input))
-                    .stdout(Box::new(output.clone()))
-                    .args(["transform", name, &output_format.to_string()])
-                    .finalize(&mut self.store)?;
-
-                let import_object =
-                    wasi_env.import_object(&mut self.store, &package.wasm_module)?;
-                let instance =
-                    Instance::new(&mut self.store, &package.wasm_module, &import_object)?;
-
-                // Attach the memory export
-                let memory = instance.exports.get_memory("memory")?;
-                wasi_env
-                    .data_mut(&mut self.store)
-                    .set_memory(memory.clone());
-
-                // Call the main entry point of the program
-                let main_fn = instance.exports.get_function("_start")?;
-                main_fn.call(&mut self.store, &[])?;
-
-                // Read the output of the package from stdout
-                let result = {
-                    let mut buffer = String::new();
-                    output.read_to_string(&mut buffer)?;
-                    Self::deserialize_compound(&buffer)
-                };
-
-                result
+                match &package.implementation {
+                    PackageImplementation::Wasm(wasm_module) => {
+                        // note: cloning modules is cheap
+                        self.transform_from_wasm(&wasm_module.clone(), name, from, output_format)
+                    }
+                    PackageImplementation::Native => {
+                        let aaa = package.info.name.clone();
+                        self.transform_from_native(&aaa, name, from, output_format)
+                    }
+                }
             }
         }
+    }
+
+    fn transform_from_native(
+        &mut self,
+        package_name: &String,
+        node_name: &String, // name of module or parent
+        element: &Element,
+        output_format: &OutputFormat,
+    ) -> Result<Either<Element, String>, CoreError> {
+        let args = match element {
+            Element::Parent {
+                name,
+                args,
+                children,
+            } => self.collect_parent_arguments(args, name, output_format),
+            Element::Module {
+                name,
+                args,
+                body,
+                inline,
+            } => self.collect_module_arguments(args, name, output_format),
+            Element::Compound(_) => unreachable!("Cannot transform compound"),
+        }?;
+
+        StandardPackages::handle_native(self, package_name, node_name, element, args, output_format)
+    }
+
+    fn transform_from_wasm(
+        &mut self,
+        module: &Module,
+        name: &String,
+        from: &Element,
+        output_format: &OutputFormat,
+    ) -> Result<Either<Element, String>, CoreError> {
+        let mut input = Pipe::new();
+        let mut output = Pipe::new();
+        write!(
+            &mut input,
+            "{}",
+            self.serialize_element(from, output_format)?
+        )?;
+
+        let wasi_env = WasiState::new("")
+            .stdin(Box::new(input))
+            .stdout(Box::new(output.clone()))
+            .args(["transform", name, &output_format.to_string()])
+            .finalize(&mut self.store)?;
+
+        let import_object = wasi_env.import_object(&mut self.store, module)?;
+        let instance = Instance::new(&mut self.store, module, &import_object)?;
+
+        // Attach the memory export
+        let memory = instance.exports.get_memory("memory")?;
+        wasi_env
+            .data_mut(&mut self.store)
+            .set_memory(memory.clone());
+
+        // Call the main entry point of the program
+        let main_fn = instance.exports.get_function("_start")?;
+        main_fn.call(&mut self.store, &[])?;
+
+        // Read the output of the package from stdout
+        let result = {
+            let mut buffer = String::new();
+            output.read_to_string(&mut buffer)?;
+            Self::deserialize_compound(&buffer)
+        };
+
+        Ok(Either::Left(result?))
     }
 
     /// Borrow information about a package with a given name
@@ -222,7 +269,7 @@ impl Context {
             // nodes should never be present here. This may however change in the future.
             Element::Compound(_) => unreachable!(),
             Element::Parent {
-                name: parent_name,
+                name,
                 args,
                 children,
             } => {
@@ -231,47 +278,11 @@ impl Context {
                     .map(|child| self.element_to_entry(child, output_format))
                     .collect();
 
-                // Collect the arguments and add default values for unspecifed arguments
-                let mut collected_args = HashMap::new();
-                let mut given_args = args.clone();
-
-                // Get info about what args this parent node
-                let empty_vec = vec![];
-                let args_info: &Vec<ArgInfo> = self
-                    .get_transform_info(parent_name, output_format)
-                    .map(|info| info.arguments.as_ref())
-                    .unwrap_or(&empty_vec);
-
-                for arg_info in args_info {
-                    let ArgInfo {
-                        name,
-                        default,
-                        description: _,
-                    } = arg_info;
-
-                    if let Some(value) = given_args.remove(name) {
-                        collected_args.insert(name.clone(), value);
-                        continue;
-                    }
-
-                    if let Some(value) = default {
-                        collected_args.insert(name.clone(), value.clone());
-                    }
-
-                    return Err(CoreError::MissingArgument(
-                        name.clone(),
-                        parent_name.clone(),
-                    ));
-                }
-
-                // Check if there are any stray arguments left that should not be there
-                if let Some((key, _)) = given_args.into_iter().next() {
-                    return Err(CoreError::InvalidArgument(key, parent_name.clone()));
-                }
+                let collected_args = self.collect_parent_arguments(args, name, output_format)?;
 
                 Ok(JsonEntry::ParentNode {
-                    name: parent_name.clone(),
-                    arguments: args.clone(),
+                    name: name.clone(),
+                    arguments: collected_args,
                     children: converted_children?,
                 })
             }
@@ -281,70 +292,8 @@ impl Context {
                 body,
                 inline: one_line,
             } => {
-                let empty_vec = vec![];
-                let mut pos_args = args.positioned.as_ref().unwrap_or(&empty_vec).iter();
-                let mut named_args = args.named.clone().unwrap_or_default();
-                let mut collected_args = HashMap::new();
-
-                // Get info about what args this parent node supports
-                let empty_vec = vec![];
-                let args_info = self
-                    .get_transform_info(module_name, output_format)
-                    .map(|info| info.arguments.as_ref())
-                    .unwrap_or(&empty_vec);
-
-                for arg_info in args_info {
-                    let ArgInfo {
-                        name,
-                        default,
-                        description: _,
-                    } = arg_info;
-
-                    // First empty the positional arguments
-                    if let Some(value) = pos_args.next() {
-                        // Check that this key is not repeated later too
-                        if named_args.contains_key(name) {
-                            return Err(CoreError::RepeatedArgument(
-                                name.to_string(),
-                                module_name.to_string(),
-                            ));
-                        }
-                        collected_args.insert(name.to_string(), value.clone());
-                        continue;
-                    }
-
-                    // Check if it was specified as a named key=value pair
-                    if let Some(value) = named_args.remove(name) {
-                        collected_args.insert(name.to_string(), value.clone());
-                        continue;
-                    }
-
-                    // Use the default value as a fallback
-                    if let Some(value) = default {
-                        collected_args.insert(name.to_string(), value.clone());
-                        continue;
-                    }
-
-                    // Oops, the user seem to be missing a required argument
-                    return Err(CoreError::MissingArgument(
-                        name.to_string(),
-                        module_name.to_string(),
-                    ));
-                }
-
-                if let Some(value) = pos_args.next() {
-                    return Err(CoreError::InvalidArgument(
-                        value.to_string(),
-                        module_name.to_string(),
-                    ));
-                }
-
-                if let Some((key, _)) = named_args.iter().next() {
-                    return Err(CoreError::InvalidArgument(
-                        key.clone(),
-                        module_name.to_string(),
-                    ));
-                }
+                let collected_args =
+                    self.collect_module_arguments(args, module_name, output_format)?;
 
                 Ok(JsonEntry::Module {
                     name: module_name.clone(),
@@ -355,13 +304,139 @@ impl Context {
             }
         }
     }
+
+    fn collect_parent_arguments(
+        &self,
+        args: &HashMap<String, String>,
+        parent_name: &String,
+        output_format: &OutputFormat,
+    ) -> Result<HashMap<String, String>, CoreError> {
+        // Collect the arguments and add default values for unspecifed arguments
+        let mut collected_args = HashMap::new();
+        let mut given_args = args.clone();
+
+        // Get info about what args this parent node
+        let empty_vec = vec![];
+        let args_info: &Vec<ArgInfo> = self
+            .get_transform_info(parent_name, output_format)
+            .map(|info| info.arguments.as_ref())
+            .unwrap_or(&empty_vec);
+
+        for arg_info in args_info {
+            let ArgInfo {
+                name,
+                default,
+                description: _,
+            } = arg_info;
+
+            if let Some(value) = given_args.remove(name) {
+                collected_args.insert(name.clone(), value);
+                continue;
+            }
+
+            if let Some(value) = default {
+                collected_args.insert(name.clone(), value.clone());
+            }
+
+            return Err(CoreError::MissingArgument(
+                name.clone(),
+                parent_name.clone(),
+            ));
+        }
+
+        // Check if there are any stray arguments left that should not be there
+        if let Some((key, _)) = given_args.into_iter().next() {
+            return Err(CoreError::InvalidArgument(key, parent_name.clone()));
+        }
+
+        Ok(collected_args)
+    }
+
+    fn collect_module_arguments(
+        &self,
+        args: &ModuleArguments,
+        module_name: &String,
+        output_format: &OutputFormat,
+    ) -> Result<HashMap<String, String>, CoreError> {
+        let empty_vec = vec![];
+        let mut pos_args = args.positioned.as_ref().unwrap_or(&empty_vec).iter();
+        let mut named_args = args.named.clone().unwrap_or_default();
+        let mut collected_args = HashMap::new();
+
+        // Get info about what args this parent node supports
+        let empty_vec = vec![];
+        let args_info = self
+            .get_transform_info(module_name, output_format)
+            .map(|info| info.arguments.as_ref())
+            .unwrap_or(&empty_vec);
+
+        for arg_info in args_info {
+            let ArgInfo {
+                name,
+                default,
+                description: _,
+            } = arg_info;
+
+            // First empty the positional arguments
+            if let Some(value) = pos_args.next() {
+                // Check that this key is not repeated later too
+                if named_args.contains_key(name) {
+                    return Err(CoreError::RepeatedArgument(
+                        name.to_string(),
+                        module_name.to_string(),
+                    ));
+                }
+                collected_args.insert(name.to_string(), value.clone());
+                continue;
+            }
+
+            // Check if it was specified as a named key=value pair
+            if let Some(value) = named_args.remove(name) {
+                collected_args.insert(name.to_string(), value.clone());
+                continue;
+            }
+
+            // Use the default value as a fallback
+            if let Some(value) = default {
+                collected_args.insert(name.to_string(), value.clone());
+                continue;
+            }
+
+            // Oops, the user seem to be missing a required argument
+            return Err(CoreError::MissingArgument(
+                name.to_string(),
+                module_name.to_string(),
+            ));
+        }
+
+        if let Some(value) = pos_args.next() {
+            return Err(CoreError::InvalidArgument(
+                value.to_string(),
+                module_name.to_string(),
+            ));
+        }
+
+        if let Some((key, _)) = named_args.iter().next() {
+            return Err(CoreError::InvalidArgument(
+                key.clone(),
+                module_name.to_string(),
+            ));
+        }
+        Ok(collected_args)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum Either<L, R> {
+    Left(L),
+    Right(R),
 }
 
 impl Default for Context {
     /// A Context with all default packages lodaded
     fn default() -> Self {
         let mut ctx = Self::new();
-        ctx.load_default_packages();
+        ctx.load_default_packages().unwrap();
         ctx
     }
 }

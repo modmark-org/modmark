@@ -1,4 +1,5 @@
-use crate::{error::CoreError, OutputFormat};
+use crate::package::PackageImplementation::Native;
+use crate::{error::CoreError, Context, Element, OutputFormat};
 use serde::Deserialize;
 use std::{io::Read, sync::Arc};
 use wasmer::{Instance, Module, Store};
@@ -30,7 +31,13 @@ pub struct PackageInfo {
 #[derive(Debug, Clone)]
 pub struct Package {
     pub info: Arc<PackageInfo>,
-    pub wasm_module: Module,
+    pub implementation: PackageImplementation,
+}
+
+#[derive(Debug, Clone)]
+pub enum PackageImplementation {
+    Wasm(Module),
+    Native,
 }
 
 impl Package {
@@ -60,8 +67,7 @@ impl Package {
         let memory = instance.exports.get_memory("memory")?;
         wasi_env.data_mut(store).set_memory(memory.clone());
 
-        // Retrieve name of the package
-        // Call the `name` function
+        // Retrieve manifest of package
         let manifest = instance.exports.get_function("_start")?;
         manifest.call(store, &[])?;
 
@@ -74,7 +80,14 @@ impl Package {
 
         Ok(Package {
             info: Arc::new(manifest),
-            wasm_module: module,
+            implementation: PackageImplementation::Wasm(module),
+        })
+    }
+
+    pub fn new_native(info: PackageInfo) -> Result<Self, CoreError> {
+        Ok(Package {
+            info: Arc::new(info),
+            implementation: Native,
         })
     }
 }
