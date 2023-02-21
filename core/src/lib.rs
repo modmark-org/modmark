@@ -15,7 +15,6 @@ mod element;
 mod error;
 mod package;
 mod std_packages;
-#[macro_use]
 mod std_packages_macros;
 
 #[cfg(all(feature = "web", feature = "native"))]

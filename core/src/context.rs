@@ -12,15 +12,28 @@ use wasmer_wasi::{Pipe, WasiState};
 use parser::ModuleArguments;
 
 use crate::package::PackageImplementation;
-use crate::std_packages::StandardPackages;
-use crate::Element;
+use crate::{std_packages, Element};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
 
 #[derive(Debug)]
 pub struct Context {
     packages: HashMap<String, Package>,
-    transforms: HashMap<(String, OutputFormat), (Transform, Package)>,
+    transforms: HashMap<String, TargetTransform>,
     store: Store,
+}
+
+#[derive(Default, Debug)]
+struct TargetTransform {
+    native_transform: Option<(Transform, Package)>,
+    external_transforms: HashMap<OutputFormat, (Transform, Package)>,
+}
+
+impl TargetTransform {
+    fn find_transform_to(&self, format: &OutputFormat) -> Option<&(Transform, Package)> {
+        self.native_transform
+            .as_ref()
+            .or_else(|| self.external_transforms.get(&format))
+    }
 }
 
 impl Context {
@@ -33,10 +46,10 @@ impl Context {
     }
 
     pub fn load_default_packages(&mut self) -> Result<(), CoreError> {
-        for pkg in StandardPackages::native_package_list() {
+        for pkg in std_packages::native_package_list() {
             self.load_package(Package::new_native(pkg)?)?
         }
-        StandardPackages::load_standard_packages(self)?;
+        std_packages::load_standard_packages(self)?;
         Ok(())
     }
 
@@ -53,23 +66,42 @@ impl Context {
                 arguments: _,
             } = transform;
 
-            for output_format in to {
-                // Ensure that there are no other packages responsible for transforming to the same output format.
+            if pkg.implementation == PackageImplementation::Native {
                 if self
                     .transforms
-                    .contains_key(&(from.clone(), output_format.clone()))
+                    .get(from)
+                    .map_or(false, |t| t.native_transform.is_some())
                 {
-                    return Err(CoreError::OccupiedTransform(
+                    return Err(CoreError::OccupiedNativeTransform(
                         from.clone(),
-                        output_format.to_string(),
                         pkg.info.name.clone(),
                     ));
                 }
 
-                self.transforms.insert(
-                    (from.to_string(), output_format.clone()),
-                    (transform.clone(), pkg.clone()),
-                );
+                let mut target = self.transforms.remove(from).unwrap_or_default();
+                target.native_transform = Some((transform.clone(), pkg.clone()));
+                self.transforms.insert(from.clone(), target);
+            } else {
+                for output_format in to {
+                    // Ensure that there are no other packages responsible for transforming to the same output format.
+                    if self
+                        .transforms
+                        .get(from)
+                        .map_or(false, |t| t.external_transforms.contains_key(output_format))
+                    {
+                        return Err(CoreError::OccupiedTransform(
+                            from.clone(),
+                            output_format.to_string(),
+                            pkg.info.name.clone(),
+                        ));
+                    }
+
+                    let mut target = self.transforms.remove(from).unwrap_or_default();
+                    target
+                        .external_transforms
+                        .insert(output_format.clone(), (transform.clone(), pkg.clone()));
+                    self.transforms.insert(from.clone(), target);
+                }
             }
         }
 
@@ -86,9 +118,9 @@ impl Context {
         element_name: &str,
         output_format: &OutputFormat,
     ) -> Option<&Transform> {
-        // FIXME: would be a lot cleaner if we could do this without cloning the strings
         self.transforms
-            .get(&(element_name.to_string(), output_format.clone()))
+            .get(element_name)
+            .and_then(|t| t.find_transform_to(output_format))
             .map(|(transform, _)| transform)
     }
 
@@ -117,8 +149,8 @@ impl Context {
                 // First, search for a package with transform to output format NATIVE
                 // If not found,
                 let Some((_, package)) =
-                    self.transforms.get(&(name.clone(), OutputFormat("NATIVE".to_string())))
-                        .or_else(||self.transforms.get(&(name.clone(), output_format.clone()))) else {
+                    self.transforms.get(name).and_then(|t|t.find_transform_to(output_format))
+                     else {
                     return Err(CoreError::MissingTransform(name.clone(), output_format.to_string()));
                 };
 
@@ -158,7 +190,7 @@ impl Context {
             Element::Compound(_) => unreachable!("Cannot transform compound"),
         }?;
 
-        StandardPackages::handle_native(self, package_name, node_name, element, args, output_format)
+        std_packages::handle_native(self, package_name, node_name, element, args, output_format)
     }
 
     fn transform_from_wasm(

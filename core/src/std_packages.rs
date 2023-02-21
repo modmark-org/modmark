@@ -5,10 +5,10 @@ use crate::context::Either::Right;
 use crate::std_packages_macros::{define_native_packages, define_standard_package_loader};
 use crate::{ArgInfo, Context, CoreError, Element, OutputFormat, PackageInfo, Transform};
 
-pub struct StandardPackages {}
-
+// Here, all native packages are declared. The macro expands to two functions,
+// one being a function returning the manifests for those packages, and the other
+// being the entry point to run these packages
 define_native_packages! {
-    StandardPackages;
     "core" => {
         "raw", vec![] => native_raw,
     };
@@ -23,12 +23,15 @@ define_native_packages! {
                 default: None,
                 description: "The key to set".to_string()
             }
-        ] => native_inline_content,
+        ] => native_set_env,
     };
 }
 
+// Here, all standard packages are declared. The macro expands to one function
+// which takes a &mut Context and loads it with the given standard package. It is important that the
+// package with a given name both is in a folder with that name, containing a cargo package with
+// that name. Otherwise, the module won't be found
 define_standard_package_loader! {
-    StandardPackages;
     "table", "html",
 }
 
@@ -39,22 +42,6 @@ define_standard_package_loader! {
     element: &Element,
     args: HashMap<String, String>,
 ) -> Result<Element, CoreError> {
-    match package_name.into() {
-        "parser" => match node_name.into() {
-            "parse_inline" => match element {
-                Element::Module {
-                    name,
-                    args: _,
-                    body,
-                    inline,
-                } => native_inline_content(ctx, body, args, *inline),
-                _ => unimplemented!(),
-            },
-            _ => unimplemented!(),
-        },
-        _ => unimplemented!(),
-    }
-    unimplemented!()
 }*/
 
 pub fn native_raw(

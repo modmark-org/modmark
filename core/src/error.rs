@@ -13,6 +13,8 @@ pub enum CoreError {
         "Could not load package '{2}'. There is another package that transforms '{0}' to '{1}'."
     )]
     OccupiedTransform(String, String, String),
+    #[error("Could not load package '{1}'. There is another native transform from '{0}'.")]
+    OccupiedNativeTransform(String, String),
     #[cfg(feature = "native")]
     #[error("Compiler error")]
     WasmerCompiler(Box<CompileError>),
