@@ -22,6 +22,9 @@ pub struct Context {
     store: Store,
 }
 
+/// This enum represents the different variants a transform can occur. Either a module/parent may be
+/// transformed natively (in one way), or externally (possibly in different ways, depending on the
+/// output format)
 #[derive(Debug)]
 enum TransformVariant {
     Native((Transform, Package)),
@@ -29,6 +32,9 @@ enum TransformVariant {
 }
 
 impl TransformVariant {
+    /// This function finds the transform to an output format. If the transform is a native
+    /// transform, that is returned regardless of the output format, but if it is external, the
+    /// map is searched to find the appropriate transform
     fn find_transform_to(&self, format: &OutputFormat) -> Option<&(Transform, Package)> {
         match self {
             TransformVariant::Native(t) => Some(t),
@@ -36,6 +42,8 @@ impl TransformVariant {
         }
     }
 
+    /// This function `.insert`s an entry to the map if this is of the `External` variant. If it
+    /// is of the `Native` variant, this call does nothing.
     fn insert_into_external(&mut self, format: OutputFormat, entry: (Transform, Package)) {
         match self {
             TransformVariant::Native(_) => {}
@@ -55,6 +63,9 @@ impl Context {
         }
     }
 
+    /// This function loads the default packages to the Context. First, it loads all native
+    /// packages, retrieved from `std_packages::native_package_list()`, and then it loads all
+    /// standard packages by passing this Context to `std_packages::load_standard_packages()`
     pub fn load_default_packages(&mut self) -> Result<(), CoreError> {
         for pkg in std_packages::native_package_list() {
             self.load_package(Package::new_native(pkg)?)?
@@ -63,6 +74,8 @@ impl Context {
         Ok(())
     }
 
+    /// This function loads the given package to this `Context`. It supports both native
+    /// and external packages.
     pub fn load_package(&mut self, pkg: Package) -> Result<(), CoreError> {
         use crate::context::TransformVariant::{External, Native};
 
@@ -78,8 +91,12 @@ impl Context {
                 arguments: _,
             } = transform;
 
+            // Check if the package is implemented natively or if it is an external package
             if pkg.implementation == PackageImplementation::Native {
-                //if TransformVariant exist, at least one transform is defined
+                // If native => we don't have an output format, so map the key (mod/parent name) to
+                // a `TransformVariant::Native`
+
+                // First, assert that no transformations are registered for that key
                 if self.transforms.contains_key(from) {
                     return Err(CoreError::OccupiedNativeTransform(
                         from.clone(),
@@ -87,15 +104,21 @@ impl Context {
                     ));
                 }
 
+                // Insert the new `TransformVariant::Native` into the map
                 self.transforms
                     .insert(from.clone(), Native((transform.clone(), pkg.clone())));
             } else {
+                // We have an external package, loop though all output formats and register
                 for output_format in to {
-                    // Ensure that there are no other packages responsible for transforming to the same output format.
+                    // Ensure that there are no other packages responsible for transforming to the
+                    // same output format. Note that `find_transform_to` returns a native module
+                    // if present, so this will fail if a native module is registered for that key
                     if self
                         .transforms
                         .get(from)
-                        .map_or(false, |t| t.find_transform_to(output_format).is_some())
+                        .map(|t| t.find_transform_to(output_format))
+                        .flatten()
+                        .is_some()
                     {
                         return Err(CoreError::OccupiedTransform(
                             from.clone(),
@@ -104,6 +127,8 @@ impl Context {
                         ));
                     }
 
+                    // Remove the target key from the map (which is either `External` or `None`)
+                    // and then insert the new entry into the `external`
                     let mut target = self
                         .transforms
                         .remove(from)
@@ -112,6 +137,7 @@ impl Context {
                         output_format.clone(),
                         (transform.clone(), pkg.clone()),
                     );
+                    // Add the modified entry back to the map
                     self.transforms.insert(from.clone(), target);
                 }
             }
@@ -120,11 +146,15 @@ impl Context {
         Ok(())
     }
 
+    /// This is a helper function to load a package directly from its wasm source. It will be
+    /// compiled using `Package::new` to become a `Package` and then loaded using `load_package`
     pub fn load_package_from_wasm(&mut self, wasm_source: &[u8]) -> Result<(), CoreError> {
         let pkg = Package::new(wasm_source, &mut self.store)?;
         self.load_package(pkg)
     }
 
+    /// This gets the transform info for a given element and output format. If a native package
+    /// supplies a transform for that element, that will be returned and the output format returned
     pub fn get_transform_info(
         &self,
         element_name: &str,
@@ -205,6 +235,7 @@ impl Context {
         std_packages::handle_native(self, package_name, node_name, element, args, output_format)
     }
 
+    /// This function transforms an Element to another Element by invoking the Wasm module.
     fn transform_from_wasm(
         &mut self,
         module: &Module,
@@ -468,10 +499,48 @@ impl Context {
     }
 }
 
+/// An enum containing one of two data types. Note that this is similar to `Result`, minus the
+/// convention that the right value is an error type.
 #[derive(Debug, Clone)]
 pub enum Either<L, R> {
     Left(L),
     Right(R),
+}
+
+impl<L, R> Either<L, R> {
+    /// Extracts the left value of this `Either` as an `Option`
+    pub fn get_left(self) -> Option<L> {
+        match self {
+            Either::Left(l) => Some(l),
+            Either::Right(_) => None,
+        }
+    }
+
+    /// Extracts the right value of this `Either` as an `Option`
+    pub fn get_right(self) -> Option<R> {
+        match self {
+            Either::Left(_) => None,
+            Either::Right(r) => Some(r),
+        }
+    }
+
+    /// Extracts the values of this `Either` as a tuple of `Option`s
+    pub fn get_tuple(self) -> (Option<L>, Option<R>) {
+        match self {
+            Either::Left(l) => (Some(l), None),
+            Either::Right(r) => (None, Some(r)),
+        }
+    }
+
+    /// Turns a reference to this `Either` to an `Either` of references to the value contained.
+    /// This is similar to `Option::as_ref`. Chaining this with `get_left` will get a reference to
+    /// the left value.
+    pub fn as_ref(&self) -> Either<&L, &R> {
+        match self {
+            Either::Left(l) => Either::Left(l),
+            Either::Right(r) => Either::Right(r),
+        }
+    }
 }
 
 impl Default for Context {
