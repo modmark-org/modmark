@@ -18,21 +18,31 @@ use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
 #[derive(Debug)]
 pub struct Context {
     packages: HashMap<String, Package>,
-    transforms: HashMap<String, TargetTransform>,
+    transforms: HashMap<String, TransformVariant>,
     store: Store,
 }
 
-#[derive(Default, Debug)]
-struct TargetTransform {
-    native_transform: Option<(Transform, Package)>,
-    external_transforms: HashMap<OutputFormat, (Transform, Package)>,
+#[derive(Debug)]
+enum TransformVariant {
+    Native((Transform, Package)),
+    External(HashMap<OutputFormat, (Transform, Package)>),
 }
 
-impl TargetTransform {
+impl TransformVariant {
     fn find_transform_to(&self, format: &OutputFormat) -> Option<&(Transform, Package)> {
-        self.native_transform
-            .as_ref()
-            .or_else(|| self.external_transforms.get(&format))
+        match self {
+            TransformVariant::Native(t) => Some(t),
+            TransformVariant::External(map) => map.get(format),
+        }
+    }
+
+    fn insert_into_external(&mut self, format: OutputFormat, entry: (Transform, Package)) {
+        match self {
+            TransformVariant::Native(_) => {}
+            TransformVariant::External(map) => {
+                map.insert(format, entry);
+            }
+        }
     }
 }
 
@@ -54,6 +64,8 @@ impl Context {
     }
 
     pub fn load_package(&mut self, pkg: Package) -> Result<(), CoreError> {
+        use crate::context::TransformVariant::{External, Native};
+
         self.packages
             .insert(pkg.info.as_ref().name.to_string(), pkg.clone());
 
@@ -67,27 +79,23 @@ impl Context {
             } = transform;
 
             if pkg.implementation == PackageImplementation::Native {
-                if self
-                    .transforms
-                    .get(from)
-                    .map_or(false, |t| t.native_transform.is_some())
-                {
+                //if TransformVariant exist, at least one transform is defined
+                if self.transforms.contains_key(from) {
                     return Err(CoreError::OccupiedNativeTransform(
                         from.clone(),
                         pkg.info.name.clone(),
                     ));
                 }
 
-                let mut target = self.transforms.remove(from).unwrap_or_default();
-                target.native_transform = Some((transform.clone(), pkg.clone()));
-                self.transforms.insert(from.clone(), target);
+                self.transforms
+                    .insert(from.clone(), Native((transform.clone(), pkg.clone())));
             } else {
                 for output_format in to {
                     // Ensure that there are no other packages responsible for transforming to the same output format.
                     if self
                         .transforms
                         .get(from)
-                        .map_or(false, |t| t.external_transforms.contains_key(output_format))
+                        .map_or(false, |t| t.find_transform_to(output_format).is_some())
                     {
                         return Err(CoreError::OccupiedTransform(
                             from.clone(),
@@ -96,10 +104,14 @@ impl Context {
                         ));
                     }
 
-                    let mut target = self.transforms.remove(from).unwrap_or_default();
-                    target
-                        .external_transforms
-                        .insert(output_format.clone(), (transform.clone(), pkg.clone()));
+                    let mut target = self
+                        .transforms
+                        .remove(from)
+                        .unwrap_or_else(|| External(HashMap::new()));
+                    target.insert_into_external(
+                        output_format.clone(),
+                        (transform.clone(), pkg.clone()),
+                    );
                     self.transforms.insert(from.clone(), target);
                 }
             }
