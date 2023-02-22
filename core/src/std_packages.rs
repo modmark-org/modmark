@@ -145,9 +145,13 @@ pub fn native_err(
         .push((source.to_string(), body.to_string()));
 
     // Check if we have an __error transform
-    if !ctx.transforms.get("__error")
+    if !ctx
+        .transforms
+        .get("__error")
         .and_then(|t| t.find_transform_to(output_format))
-        .is_some() || source == "__error" {
+        .is_some()
+        || source == "__error"
+    {
         // If we don't have, don't add an __error parent since that would yield an CoreError
         // Also if the error did originate from an error module itself, don't generate more and
         // crash
