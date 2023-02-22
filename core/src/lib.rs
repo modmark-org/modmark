@@ -66,7 +66,7 @@ pub fn eval(source: &str, ctx: &mut Context, format: &OutputFormat) -> Result<St
         println!("{}: {}", source, text);
     }
 
-    println!("ERRORS:");
+    println!("\nERRORS:");
     for (source, text) in &ctx.state.errors {
         println!("{}: {}", source, text);
     }
