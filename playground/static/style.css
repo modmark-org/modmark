@@ -116,6 +116,7 @@ select:hover {
 
 #preview {
     background: rgb(242, 242, 242);
+    position: relative;
 }
 
 #error-prompt {
@@ -129,6 +130,34 @@ select:hover {
 #error-log pre {
     overflow: scroll;
     opacity: 0.4;
+}
+
+#problem-box {
+    position: absolute;
+    bottom: 2rem;
+}
+
+.problem-inner-box {
+    width:48%;
+    display: inline-block;
+    border-radius: 0.3rem;
+}
+
+#warnings {
+    background: #e6e600;
+}
+
+#errors {
+    background: #dc0000;
+}
+
+#warnings-text {
+    margin: 1rem;
+    font-size: 12px;
+}
+
+#errors-text {
+    margin: 1rem;
 }
 
 #error-prompt strong {

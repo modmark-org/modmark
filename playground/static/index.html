@@ -121,58 +121,72 @@
 </head>
 
 <body>
-    <div class="menu">
-        <div class="menu-items">
-            <div class="left-menu" id="left-menu">
-                <h1>Modmark playground</h1>
-                <select name="selector" id="selector">
-                    <option value="ast">Abstract syntax tree</option>
-                    <option value="ast-debug">Debug AST</option>
-                    <option value="json-output">JSON output</option>
-                    <option value="transpile">HTML output</option>
-                    <option value="render">Rendered HTML</option>
-                </select>
-                <button id="view-toggle">
+<div class="menu">
+    <div class="menu-items">
+        <div class="left-menu" id="left-menu">
+            <h1>Modmark playground</h1>
+            <select name="selector" id="selector">
+                <option value="ast">Abstract syntax tree</option>
+                <option value="ast-debug">Debug AST</option>
+                <option value="json-output">JSON output</option>
+                <option value="transpile">HTML output</option>
+                <option value="render">Rendered HTML</option>
+            </select>
+            <button id="view-toggle">
                     <span class="material-symbols-outlined">
                         widgets
                     </span>
-                    View packages
-                </button>
-            </div>
-            <a href="https://github.com/modmark-org/modmark">
+                View packages
+            </button>
+        </div>
+        <a href="https://github.com/modmark-org/modmark">
                 <span class="material-symbols-outlined">
                     info
                 </span>
-                GitHub
-            </a>
-        </div>
+            GitHub
+        </a>
     </div>
-    <main id="wrapper">
-        <div id="editor-view">
-            <textarea id="editor"></textarea>
-            <div id="preview">
-                <div id="output"></div>
-                <div id="error-prompt">
+</div>
+<main id="wrapper">
+    <div id="editor-view">
+        <textarea id="editor"></textarea>
+        <div id="preview">
+            <div id="output"></div>
+            <div id="error-prompt">
                     <span class="material-symbols-outlined">
                         report
                     </span>
-                    <strong>Error</strong>
-                    <div id="error-log"></div>
+                <strong>Error</strong>
+                <div id="error-log"></div>
+            </div>
+            <div id="problem-box">
+                <div id="warnings" class="problem-inner-box">
+                    <div id="warnings-text">
+                        <span>Here is a warning</span>
+                        <br>
+                        <span>Here is another warning</span>
+                    </div>
                 </div>
-
+                <div id="errors" class="problem-inner-box">
+                    <div id="errors-text">
+                        HERE IS AN ERROR<br>
+                        HERE IS ANOTHER ERROR
+                    </div>
+                </div>
             </div>
         </div>
-        <div id="package-view">
-            <div id="packages">
-                <h2>Packages</h2>
-                <div class="note">Note: this will be made a lot easier to use once we
-                    have a more stable package API.
-                </div>
-                <pre id="package-content">
+    </div>
+    <div id="package-view">
+        <div id="packages">
+            <h2>Packages</h2>
+            <div class="note">Note: this will be made a lot easier to use once we
+                have a more stable package API.
+            </div>
+            <pre id="package-content">
                 </pre>
-            </div>
         </div>
-    </main>
+    </div>
+</main>
 </body>
 
 </html>
