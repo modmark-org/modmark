@@ -1,0 +1,101 @@
+This tests quotes and some corner cases for smart punctuation
+
+```mdm
+"smart quotes"
+"smart quotes with **bold** between"
+"smart quotes with **bold** and //italic// between"
+
+'single quotes'
+'single quotes with can't won't don't'
+
+\"not smart quotes"
+"smart \" quotes"
+
+"not
+smart quotes"
+
+'not
+smart quotes'
+
+"not **smart quotes"**
+"smart **bold"** quotes"
+```
+
+```json
+{
+  "name": "Document",
+  "children": [
+    {
+      "name": "Paragraph",
+      "children": [
+        "“smart quotes”\n“smart quotes with ",
+        {
+          "name": "Bold",
+          "children": [
+            "bold"
+          ]
+        },
+        " between”\n“smart quotes with ",
+        {
+          "name": "Bold",
+          "children": [
+            "bold"
+          ]
+        },
+        " and ",
+        {
+          "name": "Italic",
+          "children": [
+            "italic"
+          ]
+        },
+        " between”"
+      ]
+    },
+    {
+      "name": "Paragraph",
+      "children": [
+        "‘single quotes’\n‘single quotes with can't won't don't’"
+      ]
+    },
+    {
+      "name": "Paragraph",
+      "children": [
+        "\"not smart quotes\"\n“smart \" quotes”"
+      ]
+    },
+    {
+      "name": "Paragraph",
+      "children": [
+        "\"not\nsmart quotes\""
+      ]
+    },
+    {
+      "name": "Paragraph",
+      "children": [
+        "'not\nsmart quotes'"
+      ]
+    },
+    {
+      "name": "Paragraph",
+      "children": [
+        "\"not ",
+        {
+          "name": "Bold",
+          "children": [
+            "smart quotes\""
+          ]
+        },
+        "\n“smart ",
+        {
+          "name": "Bold",
+          "children": [
+            "bold\""
+          ]
+        },
+        " quotes”"
+      ]
+    }
+  ]
+}
+```
