@@ -1,10 +1,11 @@
+use std::iter::once;
 use std::{
     collections::HashMap,
     fmt::Debug,
     io::{Read, Write},
 };
 
-use either::Either;
+use either::{Either, Left};
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "native")]
 use wasmer::{Cranelift, Engine, EngineBuilder};
@@ -22,13 +23,13 @@ pub struct Context {
     pub(crate) transforms: HashMap<String, TransformVariant>,
     #[cfg(feature = "native")]
     engine: Engine,
-    pub(crate) state: CompilationState
+    pub(crate) state: CompilationState,
 }
 
 #[derive(Default, Clone, Debug)]
 pub struct CompilationState {
     pub(crate) warnings: Vec<(String, String)>,
-    pub(crate) errors: Vec<(String, String)>
+    pub(crate) errors: Vec<(String, String)>,
 }
 
 impl Debug for Context {
@@ -62,7 +63,11 @@ impl TransformVariant {
 
     /// This function `.insert`s an entry to the map if this is of the `External` variant. If it
     /// is of the `Native` variant, this call does nothing.
-    pub(crate) fn insert_into_external(&mut self, format: OutputFormat, entry: (Transform, Package)) {
+    pub(crate) fn insert_into_external(
+        &mut self,
+        format: OutputFormat,
+        entry: (Transform, Package),
+    ) {
         match self {
             TransformVariant::Native(_) => {}
             TransformVariant::External(map) => {
@@ -79,7 +84,7 @@ impl Context {
             transforms: HashMap::new(),
             #[cfg(feature = "native")]
             engine: EngineBuilder::new(Cranelift::new()).engine(),
-            state: CompilationState::default()
+            state: CompilationState::default(),
         }
     }
 
@@ -277,6 +282,7 @@ impl Context {
 
         let mut input = Pipe::new();
         let mut output = Pipe::new();
+        let mut err_out = Pipe::new();
         write!(
             &mut input,
             "{}",
@@ -286,6 +292,7 @@ impl Context {
         let wasi_env = WasiState::new("")
             .stdin(Box::new(input))
             .stdout(Box::new(output.clone()))
+            .stderr(Box::new(err_out.clone()))
             .args(["transform", name, &output_format.to_string()])
             .finalize(&mut store)?;
 
@@ -298,7 +305,21 @@ impl Context {
 
         // Call the main entry point of the program
         let main_fn = instance.exports.get_function("_start")?;
-        main_fn.call(&mut store, &[])?;
+        let fn_res = main_fn.call(&mut store, &[]);
+
+        if let Err(e) = fn_res {
+            // An error occurred when executing Wasm module =>
+            // it probably crashed, so just insert an error node
+            Ok(Left(Element::Module {
+                name: "error".to_string(),
+                args: ModuleArguments {
+                    positioned: Some(vec![name.to_string(), output_format.0.to_string()]),
+                    named: None,
+                },
+                body: format!("Runtime error: {e}"),
+                inline: false,
+            }))
+        }
 
         // Read the output of the package from stdout
         let result = {
@@ -307,7 +328,62 @@ impl Context {
             Self::deserialize_compound(&buffer)
         };
 
-        Ok(Either::Left(result?))
+        // Read (possible) warnings and errors
+        let err_str = {
+            let mut buffer = String::new();
+            err_out.read_to_string(&mut buffer)?;
+            buffer
+        };
+
+        // If we have no stderr, just return the result early
+        if err_str.is_empty() {
+            return match result {
+                Ok(res) => Ok(Left(res)),
+                Err(e) => Ok(Left(Element::Module {
+                    name: "error".to_string(),
+                    args: ModuleArguments {
+                        positioned: Some(vec![name.to_string(), output_format.0.to_string()]),
+                        named: None,
+                    },
+                    body: format!("Runtime error: {e}"),
+                    inline: false,
+                })),
+            };
+        }
+
+        // If we have stderr, check if result is successful or not
+        // If successful, we assume those were warnings
+        // If not, we say they are errors
+        if let Ok(elem) = result {
+            let elems = err_str
+                .lines()
+                .map(|line| Element::Module {
+                    name: "warning".to_string(),
+                    args: ModuleArguments {
+                        positioned: Some(vec![name.to_string(), output_format.0.to_string()]),
+                        named: None,
+                    },
+                    body: format!("Emitted warning: {line}"),
+                    inline: false,
+                })
+                .chain(once(elem))
+                .collect();
+            Ok(Left(Element::Compound(elems)))
+        } else {
+            let errors = err_str
+                .lines()
+                .map(|line| Element::Module {
+                    name: "error".to_string(),
+                    args: ModuleArguments {
+                        positioned: Some(vec![name.to_string(), output_format.0.to_string()]),
+                        named: None,
+                    },
+                    body: format!("Emitted error: {line}"),
+                    inline: false,
+                })
+                .collect();
+            Ok(Left(Element::Compound(errors)))
+        }
     }
 
     /// Borrow information about a package with a given name
