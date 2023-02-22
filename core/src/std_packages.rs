@@ -1,8 +1,11 @@
 use std::collections::HashMap;
 
+use either::Either::{self, Left, Right};
+
+use parser::ModuleArguments;
+
 use crate::std_packages_macros::{define_native_packages, define_standard_package_loader};
 use crate::{ArgInfo, Context, CoreError, Element, OutputFormat, PackageInfo, Transform};
-use either::Either::{self, Left, Right};
 
 // Here, all standard packages are declared. The macro expands to one function
 // which takes a &mut Context and loads it with the given standard package. It is important that the
@@ -18,6 +21,20 @@ define_standard_package_loader! {
 define_native_packages! {
     "core" => {
         "raw", vec![] => native_raw,
+        "warning", vec![
+            ArgInfo {
+                name: "source".to_string(),
+                default: Some("<unknown>".to_string()),
+                description: "The source module/parent responsible for the warning".to_string()
+            }
+        ] => native_warn,
+        "error", vec![
+            ArgInfo {
+                name: "source".to_string(),
+                default: Some("<unknown>".to_string()),
+                description: "The source module/parent responsible for the error".to_string()
+            }
+        ] => native_err
     };
     "reparse" => {
         "inline_content", vec![] => native_inline_content,
@@ -89,4 +106,48 @@ pub fn native_set_env(
     _output_format: &OutputFormat,
 ) -> Result<Either<Element, String>, CoreError> {
     unimplemented!("native_set_env")
+}
+
+pub fn native_warn(
+    ctx: &mut Context,
+    body: &str,
+    args: HashMap<String, String>,
+    _inline: bool,
+    _output_format: &OutputFormat,
+) -> Result<Either<Element, String>, CoreError> {
+    ctx.state
+        .warnings
+        .push((args.get("source").unwrap().to_string(), body.to_string()));
+    Ok(Left(Element::Compound(vec![])))
+}
+
+pub fn native_err(
+    ctx: &mut Context,
+    body: &str,
+    args: HashMap<String, String>,
+    inline: bool,
+    output_format: &OutputFormat,
+) -> Result<Either<Element, String>, CoreError> {
+    ctx.state
+        .errors
+        .push((args.get("source").unwrap().to_string(), body.to_string()));
+
+    // Check if we have an __error transform
+    if !ctx.transforms.get("__error")
+        .and_then(|t| t.find_transform_to(output_format))
+        .is_some() {
+        // If we don't have, don't add an __error parent since that would yield an CoreError
+        Ok(Left(Element::Compound(vec![])))
+    } else {
+        // If we do, add an __error parent since our output format should
+        Ok(Left(Element::Module {
+            name: "__error".to_string(),
+            body: body.to_string(),
+            args: ModuleArguments {
+                positioned: None,
+                named: Some(args),
+            },
+            inline,
+        }))
+    }
 }
