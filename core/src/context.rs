@@ -22,6 +22,13 @@ pub struct Context {
     transforms: HashMap<String, TransformVariant>,
     #[cfg(feature = "native")]
     engine: Engine,
+    state: CompilationState
+}
+
+#[derive(Default, Clone, Debug)]
+pub struct CompilationState {
+    warnings: Vec<(String, String)>,
+    errors: Vec<(String, String)>
 }
 
 impl Debug for Context {
@@ -72,6 +79,7 @@ impl Context {
             transforms: HashMap::new(),
             #[cfg(feature = "native")]
             engine: EngineBuilder::new(Cranelift::new()).engine(),
+            state: CompilationState::default()
         }
     }
 
