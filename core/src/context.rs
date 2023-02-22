@@ -1,12 +1,13 @@
 use std::{
     collections::HashMap,
+    fmt::Debug,
     io::{Read, Write},
 };
 
-use either::Either::{self, Left, Right};
+use either::Either;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "native")]
-use wasmer::Cranelift;
+use wasmer::{Cranelift, Engine, EngineBuilder};
 use wasmer::{Instance, Module, Store};
 use wasmer_wasi::{Pipe, WasiState};
 
@@ -16,11 +17,20 @@ use crate::package::PackageImplementation;
 use crate::{std_packages, Element};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
 
-#[derive(Debug)]
 pub struct Context {
     packages: HashMap<String, Package>,
     transforms: HashMap<String, TransformVariant>,
-    store: Store,
+    #[cfg(feature = "native")]
+    engine: Engine,
+}
+
+impl Debug for Context {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Context")
+            .field("packages", &self.packages)
+            .field("transforms", &self.transforms)
+            .finish()
+    }
 }
 
 /// This enum represents the different variants a transform can occur. Either a module/parent may be
@@ -60,7 +70,8 @@ impl Context {
         Context {
             packages: HashMap::new(),
             transforms: HashMap::new(),
-            store: get_new_store(),
+            #[cfg(feature = "native")]
+            engine: EngineBuilder::new(Cranelift::new()).engine(),
         }
     }
 
@@ -150,7 +161,12 @@ impl Context {
     /// This is a helper function to load a package directly from its wasm source. It will be
     /// compiled using `Package::new` to become a `Package` and then loaded using `load_package`
     pub fn load_package_from_wasm(&mut self, wasm_source: &[u8]) -> Result<(), CoreError> {
-        let pkg = Package::new(wasm_source, &mut self.store)?;
+        #[cfg(feature = "native")]
+        let pkg = Package::new(wasm_source, &self.engine)?;
+
+        #[cfg(feature = "web")]
+        let pkg = Package::new(wasm_source)?;
+
         self.load_package(pkg)
     }
 
@@ -191,6 +207,7 @@ impl Context {
             } => {
                 // First, search for a package with transform to output format NATIVE
                 // If not found,
+
                 let Some((_, package)) =
                     self.transforms.get(name).and_then(|t|t.find_transform_to(output_format))
                      else {
@@ -238,12 +255,19 @@ impl Context {
 
     /// This function transforms an Element to another Element by invoking the Wasm module.
     fn transform_from_wasm(
-        &mut self,
+        &self,
         module: &Module,
         name: &str,
         from: &Element,
         output_format: &OutputFormat,
     ) -> Result<Either<Element, String>, CoreError> {
+        // Create a new store
+        #[cfg(feature = "native")]
+        let mut store = Store::new(&self.engine);
+
+        #[cfg(feature = "web")]
+        let mut store = Store::new();
+
         let mut input = Pipe::new();
         let mut output = Pipe::new();
         write!(
@@ -256,20 +280,18 @@ impl Context {
             .stdin(Box::new(input))
             .stdout(Box::new(output.clone()))
             .args(["transform", name, &output_format.to_string()])
-            .finalize(&mut self.store)?;
+            .finalize(&mut store)?;
 
-        let import_object = wasi_env.import_object(&mut self.store, module)?;
-        let instance = Instance::new(&mut self.store, module, &import_object)?;
+        let import_object = wasi_env.import_object(&mut store, module)?;
+        let instance = Instance::new(&mut store, module, &import_object)?;
 
         // Attach the memory export
         let memory = instance.exports.get_memory("memory")?;
-        wasi_env
-            .data_mut(&mut self.store)
-            .set_memory(memory.clone());
+        wasi_env.data_mut(&mut store).set_memory(memory.clone());
 
         // Call the main entry point of the program
         let main_fn = instance.exports.get_function("_start")?;
-        main_fn.call(&mut self.store, &[])?;
+        main_fn.call(&mut store, &[])?;
 
         // Read the output of the package from stdout
         let result = {
@@ -507,16 +529,6 @@ impl Default for Context {
         ctx.load_default_packages().unwrap();
         ctx
     }
-}
-
-/// Get a new using different compilers depending
-/// if we are using the "web" or "native" feature
-fn get_new_store() -> Store {
-    #[cfg(feature = "web")]
-    return Store::new();
-
-    #[cfg(feature = "native")]
-    return Store::new(Cranelift::new());
 }
 
 /// This enum is in the same shape as the json objects that

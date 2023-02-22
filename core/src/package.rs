@@ -2,6 +2,8 @@ use crate::package::PackageImplementation::Native;
 use crate::{error::CoreError, OutputFormat};
 use serde::Deserialize;
 use std::{io::Read, sync::Arc};
+#[cfg(feature = "native")]
+use wasmer::Engine;
 use wasmer::{Instance, Module, Store};
 use wasmer_wasi::{Pipe, WasiState};
 
@@ -57,14 +59,37 @@ impl PartialEq for PackageImplementation {
 impl Package {
     /// Read the binary data from a `.wasm` file and create a Package
     /// containing info about the package as well as the compiled wasm source module.
-    pub fn new(wasm_source: &[u8], store: &mut Store) -> Result<Self, CoreError> {
-        // Compile the module and store it
-        #[cfg(feature = "native")]
-        let module = Module::from_binary(store, wasm_source)?;
+    #[cfg(feature = "native")]
+    pub fn new(wasm_source: &[u8], engine: &Engine) -> Result<Self, CoreError> {
+        let module = Module::from_binary(engine, wasm_source)?;
+        let mut store = Store::new(engine);
+        let package_info = Self::read_manifest(&module, &mut store)?;
+        Ok(Package {
+            info: Arc::new(package_info),
+            implementation: PackageImplementation::Wasm(module),
+        })
+    }
 
-        #[cfg(feature = "web")]
-        let module = Module::from_binary(store, wasm_source).expect("Web wasm compiler error");
+    /// Read the binary data from a `.wasm` file and create a Package
+    /// containing info about the package as well as the compiled wasm source module.
+    #[cfg(feature = "web")]
+    pub fn new(wasm_source: &[u8]) -> Result<Self, CoreError> {
+        // Looking at the code found in the wasmer::js::module it looks like
+        // this store never actually will be tied to the Module so it should be fine
+        // to create a "dummy" store like this and then later create a new store each
+        // time we create a new instance.
+        let mut store = Store::new();
+        let module =
+            Module::from_binary(&store, wasm_source).expect("Failed to create wasm module");
 
+        let package_info = Self::read_manifest(&module, &mut store)?;
+        Ok(Package {
+            info: Arc::new(package_info),
+            implementation: PackageImplementation::Wasm(module),
+        })
+    }
+
+    fn read_manifest(module: &Module, store: &mut Store) -> Result<PackageInfo, CoreError> {
         let input = Pipe::new();
         let mut output = Pipe::new();
 
@@ -89,13 +114,10 @@ impl Package {
         let manifest = {
             let mut buffer = String::new();
             output.read_to_string(&mut buffer)?;
-            serde_json::from_str(&buffer)?
+            serde_json::from_str(&buffer).map_err(|e| e.into())
         };
 
-        Ok(Package {
-            info: Arc::new(manifest),
-            implementation: PackageImplementation::Wasm(module),
-        })
+        manifest
     }
 
     pub fn new_native(info: PackageInfo) -> Result<Self, CoreError> {
