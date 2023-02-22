@@ -26,14 +26,24 @@ define_native_packages! {
                 name: "source".to_string(),
                 default: Some("<unknown>".to_string()),
                 description: "The source module/parent responsible for the warning".to_string()
-            }
+            },
+            ArgInfo {
+                name: "target".to_string(),
+                default: Some("<unknown>".to_string()),
+                description: "The target output format when the warning was generated".to_string()
+            },
         ] => native_warn,
         "error", vec![
             ArgInfo {
                 name: "source".to_string(),
                 default: Some("<unknown>".to_string()),
                 description: "The source module/parent responsible for the error".to_string()
-            }
+            },
+            ArgInfo {
+                name: "target".to_string(),
+                default: Some("<unknown>".to_string()),
+                description: "The target output format when the error was generated".to_string()
+            },
         ] => native_err
     };
     "reparse" => {
