@@ -118,18 +118,10 @@ fn transform_error(error: Value) -> String {
     )
     .unwrap();
 
-    write!(
-        result,
-        r#"{{"name": "raw", "data": "ERROR! Originating from {source}<br />Error: {err}"}},"#,
-    )
-    .unwrap();
+    let data = escape(format!("Error originating from {source}: {err}").as_str());
+    write!(result, r#"{{"name": "raw", "data": "{data}"}},"#,).unwrap();
 
-    write!(
-        result,
-        r#"{{"name": "raw", "data": "</span>"}}"#,
-    )
-        .unwrap();
-
+    write!(result, r#"{{"name": "raw", "data": "</span>"}}"#,).unwrap();
 
     result.push(']');
 
@@ -138,18 +130,21 @@ fn transform_error(error: Value) -> String {
 
 fn escape_text(module: Value) -> String {
     if let Value::String(s) = &module["data"] {
-        let s = s
-            .replace('&', "&amp;")
-            .replace('<', "&lt;")
-            .replace('>', "&gt;")
-            .replace('"', "&quot;")
-            .replace('\'', "&#39;")
-            .replace("\r\n", "\\n")
-            .replace('\n', "\\n");
+        let s = escape(s);
         format!(r#"[{{"name": "raw", "data": "{s}"}}]"#)
     } else {
         panic!("Malformed text module");
     }
+}
+
+fn escape(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#39;")
+        .replace("\r\n", "\\n")
+        .replace('\n', "\\n")
 }
 
 fn transform_tag(node: Value, html_tag: &str) -> String {
