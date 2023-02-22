@@ -1,9 +1,10 @@
-use serde_json::{from_str, json, Value};
 use std::{
     env,
     fmt::Write,
     io::{self, Read},
 };
+
+use serde_json::{from_str, json, Value};
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -48,6 +49,7 @@ fn transform(from: &str) -> String {
         "__document" => transform_document(input),
         "__text" => escape_text(input),
         "__heading" => transform_heading(input),
+        "__error" => transform_error(input),
         _ => panic!("element not supported"),
     }
 }
@@ -94,6 +96,41 @@ fn transform_heading(heading: Value) -> String {
     }
 
     write!(result, r#"{{"name": "raw", "data": "</h{level}>"}}"#,).unwrap();
+    result.push(']');
+
+    result
+}
+
+fn transform_error(error: Value) -> String {
+    let mut result = String::new();
+    result.push('[');
+
+    let Value::String(source) = &error["arguments"]["source"] else {
+        panic!();
+    };
+    let Value::String(err) = &error["data"] else {
+        panic!();
+    };
+
+    write!(
+        result,
+        r#"{{"name": "raw", "data": "<span style=\"background:#FF0000\">"}},"#,
+    )
+    .unwrap();
+
+    write!(
+        result,
+        r#"{{"name": "raw", "data": "ERROR! Originating from {source}<br />Error: {err}"}},"#,
+    )
+    .unwrap();
+
+    write!(
+        result,
+        r#"{{"name": "raw", "data": "</span>"}}"#,
+    )
+        .unwrap();
+
+
     result.push(']');
 
     result
@@ -184,6 +221,22 @@ fn manifest() -> String {
                     "from": "__paragraph",
                     "to": ["html"],
                     "arguments": [],
+                },
+                {
+                    "from": "__error",
+                    "to": ["html"],
+                    "arguments": [
+                    {
+                        "name":"source",
+                        "description":"Source for the error",
+                        "default":"<unknown>"
+                    },
+                    {
+                        "name":"target",
+                        "description":"Target for the error",
+                        "default":"<unknown>"
+                    },
+                ],
                 },
                 {
                   "from": "__heading",
