@@ -8,7 +8,7 @@ pub use element::Element;
 pub use error::CoreError;
 pub use package::{ArgInfo, Package, PackageInfo, Transform};
 
-use crate::context::Either;
+use either::Either::{self, Left, Right};
 
 mod context;
 mod element;
@@ -90,8 +90,8 @@ pub fn eval_elem(
         } => {
             let either = ctx.transform(&root, format)?;
             match either {
-                Either::Left(elem) => eval_elem(elem, ctx, format),
-                Either::Right(res) => Ok(res),
+                Left(elem) => eval_elem(elem, ctx, format),
+                Right(res) => Ok(res),
             }
         }
     }

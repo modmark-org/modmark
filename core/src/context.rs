@@ -3,6 +3,7 @@ use std::{
     io::{Read, Write},
 };
 
+use either::Either::{self, Left, Right};
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "native")]
 use wasmer::Cranelift;
@@ -496,50 +497,6 @@ impl Context {
             ));
         }
         Ok(collected_args)
-    }
-}
-
-/// An enum containing one of two data types. Note that this is similar to `Result`, minus the
-/// convention that the right value is an error type.
-#[derive(Debug, Clone)]
-pub enum Either<L, R> {
-    Left(L),
-    Right(R),
-}
-
-impl<L, R> Either<L, R> {
-    /// Extracts the left value of this `Either` as an `Option`
-    pub fn get_left(self) -> Option<L> {
-        match self {
-            Either::Left(l) => Some(l),
-            Either::Right(_) => None,
-        }
-    }
-
-    /// Extracts the right value of this `Either` as an `Option`
-    pub fn get_right(self) -> Option<R> {
-        match self {
-            Either::Left(_) => None,
-            Either::Right(r) => Some(r),
-        }
-    }
-
-    /// Extracts the values of this `Either` as a tuple of `Option`s
-    pub fn get_tuple(self) -> (Option<L>, Option<R>) {
-        match self {
-            Either::Left(l) => (Some(l), None),
-            Either::Right(r) => (None, Some(r)),
-        }
-    }
-
-    /// Turns a reference to this `Either` to an `Either` of references to the value contained.
-    /// This is similar to `Option::as_ref`. Chaining this with `get_left` will get a reference to
-    /// the left value.
-    pub fn as_ref(&self) -> Either<&L, &R> {
-        match self {
-            Either::Left(l) => Either::Left(l),
-            Either::Right(r) => Either::Right(r),
-        }
     }
 }
 

@@ -33,11 +33,11 @@ macro_rules! define_native_packages {
                         description: "A native package supporting native modules".to_string(),
                         transforms: vec![
                             $(
-                            (Transform {
-                                from: $transform.to_string(),
-                                to: vec![],
-                                arguments: $arg_info
-                            }),
+                                (Transform {
+                                    from: $transform.to_string(),
+                                    to: vec![],
+                                    arguments: $arg_info
+                                }),
                             )*
                         ]
                     }),

@@ -1,9 +1,16 @@
 use std::collections::HashMap;
 
-use crate::context::Either;
-use crate::context::Either::{Left, Right};
 use crate::std_packages_macros::{define_native_packages, define_standard_package_loader};
 use crate::{ArgInfo, Context, CoreError, Element, OutputFormat, PackageInfo, Transform};
+use either::Either::{self, Left, Right};
+
+// Here, all standard packages are declared. The macro expands to one function
+// which takes a &mut Context and loads it with the given standard package. It is important that the
+// package with a given name both is in a folder with that name, containing a cargo package with
+// that name. Otherwise, the module won't be found
+define_standard_package_loader! {
+    "table", "html",
+}
 
 // Here, all native packages are declared. The macro expands to two functions,
 // one being a function returning the manifests for those packages, and the other
@@ -25,14 +32,6 @@ define_native_packages! {
             }
         ] => native_set_env,
     };
-}
-
-// Here, all standard packages are declared. The macro expands to one function
-// which takes a &mut Context and loads it with the given standard package. It is important that the
-// package with a given name both is in a folder with that name, containing a cargo package with
-// that name. Otherwise, the module won't be found
-define_standard_package_loader! {
-    "table", "html",
 }
 
 /// Returns a string containing the body of this invocation. This is the "leaf" call; no tree will
