@@ -1,6 +1,7 @@
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
+use either::Either::{Left, Right};
 use serde::Deserialize;
 
 pub use context::Context;
@@ -8,7 +9,7 @@ pub use element::Element;
 pub use error::CoreError;
 pub use package::{ArgInfo, Package, PackageInfo, Transform};
 
-use either::Either::{Left, Right};
+use crate::context::CompilationState;
 
 mod context;
 mod element;
@@ -57,7 +58,11 @@ impl FromStr for OutputFormat {
 }
 
 /// Evaluates a document using the given context
-pub fn eval(source: &str, ctx: &mut Context, format: &OutputFormat) -> Result<String, CoreError> {
+pub fn eval(
+    source: &str,
+    ctx: &mut Context,
+    format: &OutputFormat,
+) -> Result<(String, CompilationState), CoreError> {
     ctx.clear_state();
     let document = parser::parse(source)?.try_into()?;
     let res = eval_elem(document, ctx, format);
@@ -72,7 +77,7 @@ pub fn eval(source: &str, ctx: &mut Context, format: &OutputFormat) -> Result<St
         println!("{}: {}", source, text);
     }
 
-    res
+    res.map(|s| (s, ctx.take_state()))
 }
 
 pub fn eval_elem(

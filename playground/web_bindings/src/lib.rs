@@ -48,8 +48,7 @@ pub fn transpile(source: &str) -> Result<String, PlaygroundError> {
         let mut ctx = ctx.borrow_mut();
         eval(source, &mut ctx, &OutputFormat::new("html"))
     })?;
-
-    Ok(result)
+    result.0
 }
 
 #[wasm_bindgen]
