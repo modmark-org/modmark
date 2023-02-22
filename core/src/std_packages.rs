@@ -138,15 +138,19 @@ pub fn native_err(
     inline: bool,
     output_format: &OutputFormat,
 ) -> Result<Either<Element, String>, CoreError> {
+    let source = args.get("source").unwrap();
+
     ctx.state
         .errors
-        .push((args.get("source").unwrap().to_string(), body.to_string()));
+        .push((source.to_string(), body.to_string()));
 
     // Check if we have an __error transform
     if !ctx.transforms.get("__error")
         .and_then(|t| t.find_transform_to(output_format))
-        .is_some() {
+        .is_some() || source == "__error" {
         // If we don't have, don't add an __error parent since that would yield an CoreError
+        // Also if the error did originate from an error module itself, don't generate more and
+        // crash
         Ok(Left(Element::Compound(vec![])))
     } else {
         // If we do, add an __error parent since our output format should
