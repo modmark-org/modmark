@@ -96,6 +96,7 @@ impl Ast {
 pub struct Tag {
     pub tag_name: String,
     pub elements: Vec<Ast>,
+    pub recurse: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -434,7 +435,7 @@ fn pretty_ast(ast: &Ast) -> Vec<String> {
             }
         }
 
-        Ast::Tag(Tag { tag_name, elements }) => {
+        Ast::Tag(Tag { tag_name, elements, recurse: _ }) => {
             strs.push(format!("{tag_name}:"));
             if elements.is_empty() {
                 strs.push(format!("{indent}[no elements]"));

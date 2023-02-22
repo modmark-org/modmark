@@ -198,6 +198,7 @@ where
         let tag_element = Tag {
             tag_name: tag.name.to_string(),
             elements: content,
+            recurse: tag.recurse,
         };
 
         ast.elements_mut().push(Ast::Tag(tag_element));
@@ -270,6 +271,7 @@ where
     let tag = Tag {
         tag_name: tag.name.clone(),
         elements: removed_elems,
+        recurse: tag.recurse,
     };
 
     if !end_suffix.is_empty() {
