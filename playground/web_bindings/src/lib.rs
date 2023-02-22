@@ -1,6 +1,8 @@
 use core::{eval, Context, CoreError, OutputFormat};
-use parser::ParseError;
 use std::cell::RefCell;
+
+use parser::ParseError;
+use serde::Serialize;
 use thiserror::Error;
 use wasm_bindgen::prelude::*;
 
@@ -42,13 +44,38 @@ pub fn ast_debug(source: &str) -> Result<String, PlaygroundError> {
     Ok(format!("{document:#?}"))
 }
 
+#[derive(Serialize)]
+struct Transpile {
+    content: String,
+    warnings: Vec<String>,
+    errors: Vec<String>,
+}
+
 #[wasm_bindgen]
 pub fn transpile(source: &str) -> Result<String, PlaygroundError> {
     let result = CONTEXT.with(|ctx| {
         let mut ctx = ctx.borrow_mut();
         eval(source, &mut ctx, &OutputFormat::new("html"))
     })?;
-    result.0
+
+    let warnings = result
+        .1
+        .warnings
+        .iter()
+        .map(|(source, text)| format!("{source}: {text}"))
+        .collect();
+    let errors = result
+        .1
+        .errors
+        .iter()
+        .map(|(source, text)| format!("{source}: {text}"))
+        .collect();
+    let transpile = Transpile {
+        content: result.0,
+        warnings,
+        errors,
+    };
+    Ok(serde_json::to_string(&transpile).unwrap())
 }
 
 #[wasm_bindgen]
