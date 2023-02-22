@@ -7,13 +7,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"/>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&display=swap" rel="stylesheet">
     <title>Modmark Playground</title>
     <link rel="stylesheet" href="style.css">
     <script type="module">
-        import init, { ast, ast_debug, inspect_context, transpile, json_output } from "./pkg/web_bindings.js";
+        import init, {ast, ast_debug, inspect_context, json_output, transpile} from "./pkg/web_bindings.js";
 
         let view = "editor";
 
@@ -27,6 +27,9 @@
         const editorView = document.getElementById("editor-view");
         const viewToggle = document.getElementById("view-toggle");
         const leftMenu = document.getElementById("left-menu");
+        const problemBox = document.getElementById("problem-box");
+        const warningsBox = document.getElementById("warnings-text");
+        const errorsBox = document.getElementById("errors-text");
 
 
         function buttonContent(text, icon) {
@@ -70,6 +73,7 @@
             // Clear the errors
             errorLog.innerText = "";
             errorPrompt.style.display = "none";
+            problemBox.style.display = "none";
 
             let pre = document.createElement("pre")
             try {
@@ -80,14 +84,45 @@
                     case "ast-debug":
                         pre.innerText = ast_debug(input);
                         break;
+                    case "render":
                     case "transpile":
-                        pre.innerHTML = transpile(input);
+                        let res = JSON.parse(transpile(input));
+
+                        let hasProblems = false;
+                        const warnings = res.warnings.length;
+                        if (warnings !== 0) {
+                            let warningsText = `<strong>${warnings} warning${warnings === 1 ? "" : "s"}</strong>`;
+                            for (const warning of res.warnings) {
+                                warningsText += `<br>${warning}`
+                            }
+                            warningsBox.innerHTML = warningsText;
+                            hasProblems = true
+                        } else {
+                            warningsBox.innerHTML = "<strong>No warnings</strong>";
+                        }
+
+                        const errors = res.errors.length;
+                        if (errors !== 0) {
+                            let errorsText = `<strong>${errors} error${errors === 1 ? "" : "s"}</strong>`;
+                            for (const error of res.errors) {
+                                errorsText += `<br>${error}`
+                            }
+                            errorsBox.innerHTML = errorsText;
+                            hasProblems = true
+                        } else {
+                            errorsBox.innerHTML = "<strong>No errors</strong>";
+                        }
+
+                        if (hasProblems) problemBox.style.display = "block";
+
+                        if (selector.value === "render") {
+                            output.innerHTML = res.content;
+                        } else {
+                            pre.innerHTML = res.content;
+                        }
                         break;
                     case "json-output":
                         pre.innerHTML = json_output(input);
-                        break;
-                    case "render":
-                        output.innerHTML = transpile(input);
                         break;
                 }
             } catch (error) {
@@ -99,7 +134,6 @@
                 output.innerHTML = pre.outerHTML;
             }
         }
-
 
 
         init().then(() => {
@@ -161,17 +195,10 @@
             </div>
             <div id="problem-box">
                 <div id="warnings" class="problem-inner-box">
-                    <div id="warnings-text">
-                        <span>Here is a warning</span>
-                        <br>
-                        <span>Here is another warning</span>
-                    </div>
+                    <div id="warnings-text"></div>
                 </div>
                 <div id="errors" class="problem-inner-box">
-                    <div id="errors-text">
-                        HERE IS AN ERROR<br>
-                        HERE IS ANOTHER ERROR
-                    </div>
+                    <div id="errors-text"></div>
                 </div>
             </div>
         </div>
