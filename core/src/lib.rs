@@ -59,7 +59,19 @@ impl FromStr for OutputFormat {
 /// Evaluates a document using the given context
 pub fn eval(source: &str, ctx: &mut Context, format: &OutputFormat) -> Result<String, CoreError> {
     let document = parser::parse(source)?.try_into()?;
-    eval_elem(document, ctx, format)
+    let res = eval_elem(document, ctx, format);
+
+    println!("WARNINGS:");
+    for (source, text) in &ctx.state.warnings {
+        println!("{}: {}", source, text);
+    }
+
+    println!("ERRORS:");
+    for (source, text) in &ctx.state.errors {
+        println!("{}: {}", source, text);
+    }
+
+    res
 }
 
 pub fn eval_elem(
