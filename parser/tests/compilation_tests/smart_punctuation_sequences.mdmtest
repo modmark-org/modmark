@@ -1,0 +1,51 @@
+This tests sequences and some corner cases for smart punctuation
+
+```mdm
+...
+....
+......
+
+\...
+\....
+\.....
+
+--
+---
+-----
+
+\--
+\---
+\-----
+```
+
+```json
+{
+  "name": "Document",
+  "children": [
+    {
+      "name": "Paragraph",
+      "children": [
+        "…\n....\n......"
+      ]
+    },
+    {
+      "name": "Paragraph",
+      "children": [
+        "...\n.…\n....."
+      ]
+    },
+    {
+      "name": "Paragraph",
+      "children": [
+        "–\n—\n-----"
+      ]
+    },
+    {
+      "name": "Paragraph",
+      "children": [
+        "--\n-–\n-----"
+      ]
+    }
+  ]
+}
+```

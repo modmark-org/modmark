@@ -1,0 +1,29 @@
+This tests jagged and nested quotes for smart punctuation.
+
+```mdm
+'one "two three' four"
+"one 'two three" four'
+
+'one "two three" four'
+"one 'two three' four"
+```
+
+```json
+{
+  "name": "Document",
+  "children": [
+    {
+      "name": "Paragraph",
+      "children": [
+        "'one “two three' four”\n“one 'two three” four'"
+      ]
+    },
+    {
+      "name": "Paragraph",
+      "children": [
+        "‘one “two three” four’\n“one ‘two three’ four”"
+      ]
+    }
+  ]
+}
+```
