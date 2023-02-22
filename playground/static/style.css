@@ -6,11 +6,10 @@ body {
 
 .material-symbols-outlined {
     position: relative;
-    font-variation-settings:
-        'FILL' 0,
-        'wght' 400,
-        'GRAD' 0,
-        'opsz' 48;
+    font-variation-settings: 'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 48;
     font-size: 1rem;
     top: 1px;
 }
@@ -117,6 +116,8 @@ select:hover {
 #preview {
     background: rgb(242, 242, 242);
     position: relative;
+    display: flex;
+    flex-direction: column;
 }
 
 #error-prompt {
@@ -134,12 +135,14 @@ select:hover {
 
 #problem-box {
     display: none;
-    position: absolute;
-    bottom: 2rem;
+    margin-top: auto;
+    font-size: 12px;
 }
 
 .problem-inner-box {
-    width:48%;
+    width: 50%;
+    margin-right: 0.4rem;
+    margin-left: 0.4rem;
     display: inline-block;
     border-radius: 0.3rem;
 }
@@ -154,7 +157,6 @@ select:hover {
 
 #warnings-text {
     margin: 1rem;
-    font-size: 12px;
 }
 
 #errors-text {
@@ -203,7 +205,7 @@ select:hover {
     #editor,
     #output {
         height: auto;
-        height: calc((100vh - 4rem)/2);
+        height: calc((100vh - 4rem) / 2);
         width: 100%;
     }
 
