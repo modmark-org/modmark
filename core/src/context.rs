@@ -44,7 +44,7 @@ impl Debug for Context {
 /// transformed natively (in one way), or externally (possibly in different ways, depending on the
 /// output format)
 #[derive(Debug)]
-enum TransformVariant {
+pub enum TransformVariant {
     Native((Transform, Package)),
     External(HashMap<OutputFormat, (Transform, Package)>),
 }
@@ -53,7 +53,7 @@ impl TransformVariant {
     /// This function finds the transform to an output format. If the transform is a native
     /// transform, that is returned regardless of the output format, but if it is external, the
     /// map is searched to find the appropriate transform
-    fn find_transform_to(&self, format: &OutputFormat) -> Option<&(Transform, Package)> {
+    pub(crate) fn find_transform_to(&self, format: &OutputFormat) -> Option<&(Transform, Package)> {
         match self {
             TransformVariant::Native(t) => Some(t),
             TransformVariant::External(map) => map.get(format),
@@ -62,7 +62,7 @@ impl TransformVariant {
 
     /// This function `.insert`s an entry to the map if this is of the `External` variant. If it
     /// is of the `Native` variant, this call does nothing.
-    fn insert_into_external(&mut self, format: OutputFormat, entry: (Transform, Package)) {
+    pub(crate) fn insert_into_external(&mut self, format: OutputFormat, entry: (Transform, Package)) {
         match self {
             TransformVariant::Native(_) => {}
             TransformVariant::External(map) => {
