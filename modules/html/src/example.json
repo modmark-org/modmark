@@ -1,12 +1,5 @@
 {
-    "name": "__bold",
-    "arguments": {},
-    "children": [
-        {
-            "name": "__text",
-            "data": "Hello, world",
-            "arguments": {},
-            "inline": true
-        }
-    ]
+    "name": "__error",
+    "arguments": {"source": "blabla"},
+    "data": "SOME ERROR OCCURED haha"
 }
