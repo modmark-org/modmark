@@ -18,17 +18,17 @@ use crate::{std_packages, Element};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
 
 pub struct Context {
-    packages: HashMap<String, Package>,
-    transforms: HashMap<String, TransformVariant>,
+    pub packages: HashMap<String, Package>,
+    pub transforms: HashMap<String, TransformVariant>,
     #[cfg(feature = "native")]
     engine: Engine,
-    state: CompilationState
+    pub state: CompilationState
 }
 
 #[derive(Default, Clone, Debug)]
 pub struct CompilationState {
-    warnings: Vec<(String, String)>,
-    errors: Vec<(String, String)>
+    pub warnings: Vec<(String, String)>,
+    pub errors: Vec<(String, String)>
 }
 
 impl Debug for Context {
