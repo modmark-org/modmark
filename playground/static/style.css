@@ -133,6 +133,7 @@ select:hover {
 }
 
 #problem-box {
+    display: none;
     position: absolute;
     bottom: 2rem;
 }
