@@ -62,13 +62,13 @@ pub fn transpile(source: &str) -> Result<String, PlaygroundError> {
         .1
         .warnings
         .iter()
-        .map(|(source, text)| format!("{source}: {text}"))
+        .map(|(source, text)| escape(format!("{source}: {text}")))
         .collect();
     let errors = result
         .1
         .errors
         .iter()
-        .map(|(source, text)| format!("{source}: {text}"))
+        .map(|(source, text)| escape(format!("{source}: {text}")))
         .collect();
     let transpile = Transpile {
         content: result.0,
@@ -76,6 +76,17 @@ pub fn transpile(source: &str) -> Result<String, PlaygroundError> {
         errors,
     };
     Ok(serde_json::to_string(&transpile).unwrap())
+}
+
+fn escape(text: String) -> String {
+    text
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#39;")
+        .replace("\r\n", "\\n")
+        .replace('\n', "\\n")
 }
 
 #[wasm_bindgen]
