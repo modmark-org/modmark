@@ -32,6 +32,13 @@ pub struct CompilationState {
     pub(crate) errors: Vec<(String, String)>,
 }
 
+impl CompilationState {
+    fn clear(&mut self) {
+        self.warnings.clear();
+        self.errors.clear();
+    }
+}
+
 impl Debug for Context {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Context")
@@ -90,7 +97,13 @@ impl Context {
 
     /// Clears the internal `CompilationState` of this Context.
     pub fn clear_state(&mut self) {
-        self.state = CompilationState::default()
+        self.state.clear();
+    }
+
+    /// Takes the internal `CompilationState` of this Context, and replacing it with
+    /// a cleared out `CompilationState`
+    pub fn take_state(&mut self) -> CompilationState {
+        std::mem::take(&mut self.state)
     }
 
     /// This function loads the default packages to the Context. First, it loads all native
