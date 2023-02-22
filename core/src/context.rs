@@ -88,6 +88,11 @@ impl Context {
         }
     }
 
+    /// Clears the internal `CompilationState` of this Context.
+    pub fn clear_state(&mut self) {
+        self.state = CompilationState::default()
+    }
+
     /// This function loads the default packages to the Context. First, it loads all native
     /// packages, retrieved from `std_packages::native_package_list()`, and then it loads all
     /// standard packages by passing this Context to `std_packages::load_standard_packages()`
