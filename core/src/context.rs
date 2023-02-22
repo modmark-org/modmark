@@ -310,7 +310,7 @@ impl Context {
         if let Err(e) = fn_res {
             // An error occurred when executing Wasm module =>
             // it probably crashed, so just insert an error node
-            Ok(Left(Element::Module {
+            return Ok(Left(Element::Module {
                 name: "error".to_string(),
                 args: ModuleArguments {
                     positioned: Some(vec![name.to_string(), output_format.0.to_string()]),
@@ -318,7 +318,7 @@ impl Context {
                 },
                 body: format!("Runtime error: {e}"),
                 inline: false,
-            }))
+            }));
         }
 
         // Read the output of the package from stdout
