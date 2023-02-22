@@ -8,7 +8,7 @@ pub use element::Element;
 pub use error::CoreError;
 pub use package::{ArgInfo, Package, PackageInfo, Transform};
 
-use either::Either::{self, Left, Right};
+use either::Either::{Left, Right};
 
 mod context;
 mod element;

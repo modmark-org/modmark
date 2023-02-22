@@ -205,9 +205,6 @@ impl Context {
                 body: _,
                 inline: _,
             } => {
-                // First, search for a package with transform to output format NATIVE
-                // If not found,
-
                 let Some((_, package)) =
                     self.transforms.get(name).and_then(|t|t.find_transform_to(output_format))
                      else {
@@ -217,12 +214,14 @@ impl Context {
                 match &package.implementation {
                     PackageImplementation::Wasm(wasm_module) => {
                         // note: cloning modules is cheap
-                        self.transform_from_wasm(&wasm_module.clone(), name, from, output_format)
+                        self.transform_from_wasm(&wasm_module, name, from, output_format)
                     }
-                    PackageImplementation::Native => {
-                        let aaa = package.info.name.clone();
-                        self.transform_from_native(&aaa, name, from, output_format)
-                    }
+                    PackageImplementation::Native => self.transform_from_native(
+                        &package.info.name.clone(),
+                        name,
+                        from,
+                        output_format,
+                    ),
                 }
             }
         }
