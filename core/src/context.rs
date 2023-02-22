@@ -28,8 +28,8 @@ pub struct Context {
 
 #[derive(Default, Clone, Debug)]
 pub struct CompilationState {
-    pub(crate) warnings: Vec<(String, String)>,
-    pub(crate) errors: Vec<(String, String)>,
+    pub warnings: Vec<(String, String)>,
+    pub errors: Vec<(String, String)>,
 }
 
 impl CompilationState {
