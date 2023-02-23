@@ -4,6 +4,7 @@ use either::Either::{self, Left, Right};
 
 use parser::ModuleArguments;
 
+use crate::context::Issue;
 use crate::std_packages_macros::{define_native_packages, define_standard_package_loader};
 use crate::{ArgInfo, Context, CoreError, Element, OutputFormat, PackageInfo, Transform};
 
@@ -125,9 +126,17 @@ pub fn native_warn(
     _inline: bool,
     _output_format: &OutputFormat,
 ) -> Result<Either<Element, String>, CoreError> {
-    ctx.state
-        .warnings
-        .push((args.get("source").unwrap().to_string(), body.to_string()));
+    let source = args.get("source").unwrap();
+    let target = args.get("target").unwrap();
+
+    // Push the issue to warnings
+    ctx.state.warnings.push(Issue {
+        source: source.to_string(),
+        target: target.to_string(),
+        description: body.to_string(),
+    });
+
+    // Return no new nodes
     Ok(Left(Element::Compound(vec![])))
 }
 
@@ -139,10 +148,14 @@ pub fn native_err(
     output_format: &OutputFormat,
 ) -> Result<Either<Element, String>, CoreError> {
     let source = args.get("source").unwrap();
+    let target = args.get("target").unwrap();
 
-    ctx.state
-        .errors
-        .push((source.to_string(), body.to_string()));
+    // Push the issue to errors
+    ctx.state.errors.push(Issue {
+        source: source.to_string(),
+        target: target.to_string(),
+        description: body.to_string(),
+    });
 
     // Check if we have an __error transform
     if !ctx
