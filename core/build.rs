@@ -35,16 +35,19 @@ fn main() {
                 &out_path,
             )
         })
-        .for_each(|mut f| {
-            f.wait().expect("failed to launch wasm build");
+        .for_each(|(mut f, name)| {
+            let exit = f.wait().expect("failed to launch wasm build");
+            if !exit.success() {
+                println!("cargo:warning=failed to build module: {name}")
+            }
         });
 }
 
-fn build_wasm_module(name: &str, modules_path: &Path, output_path: &Path) -> Child {
+fn build_wasm_module(name: &str, modules_path: &Path, output_path: &Path) -> (Child, String) {
     let manifest_path = modules_path.join(name).join("Cargo.toml");
     let output_sub_dir = output_path.join(name);
 
-    Command::new(env!("CARGO"))
+    let child = Command::new(env!("CARGO"))
         .arg("build")
         .arg("--release")
         .arg(format!(
@@ -55,5 +58,7 @@ fn build_wasm_module(name: &str, modules_path: &Path, output_path: &Path) -> Chi
         .arg("wasm32-wasi")
         .arg(format!("--target-dir={}", output_sub_dir.to_string_lossy()))
         .spawn()
-        .expect("failed to start wasm build")
+        .expect("failed to start wasm build");
+
+    (child, name.to_string())
 }
