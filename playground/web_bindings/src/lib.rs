@@ -1,4 +1,4 @@
-use core::{eval, Context, CoreError, OutputFormat};
+use core::{context::Issue, eval, Context, CoreError, OutputFormat};
 use std::cell::RefCell;
 
 use parser::ParseError;
@@ -62,13 +62,13 @@ pub fn transpile(source: &str) -> Result<String, PlaygroundError> {
         .1
         .warnings
         .iter()
-        .map(|(source, text)| escape(format!("{source}: {text}")))
+        .map(|issue| escape(issue.to_string()))
         .collect();
     let errors = result
         .1
         .errors
         .iter()
-        .map(|(source, text)| escape(format!("{source}: {text}")))
+        .map(|issue| escape(issue.to_string()))
         .collect();
     let transpile = Transpile {
         content: result.0,
@@ -79,8 +79,7 @@ pub fn transpile(source: &str) -> Result<String, PlaygroundError> {
 }
 
 fn escape(text: String) -> String {
-    text
-        .replace('&', "&amp;")
+    text.replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
         .replace('"', "&quot;")
