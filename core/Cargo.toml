@@ -19,6 +19,7 @@ either = "1.8.1"
 # Use the "web" feature to support web builds with:
 [features]
 # `wasm-pack build --target web`
-default = ["native"]
+default = ["native", "bundle_std_packages"]
 native = ["wasmer/sys-default", "wasmer-wasi/sys-default"]
 web = ["wasmer/js-default", "wasmer-wasi/js"]
+bundle_std_packages = []
