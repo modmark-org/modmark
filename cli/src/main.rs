@@ -11,8 +11,8 @@ use crossterm::{
 use error::CliError;
 use notify::{Config, Event, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher, WatcherKind};
 use parser::{parse, Ast};
-use std::env;
 use std::io::{stdout, Write};
+use std::{env, path::PathBuf};
 use std::{fs, path::Path};
 use std::{fs::File, time::Duration};
 
@@ -20,18 +20,13 @@ use std::{fs::File, time::Duration};
 #[command(author, version, about)]
 struct Args {
     #[arg(index = 1, help = "Path to input file")]
-    input: String,
+    input: PathBuf,
 
     #[arg(index = 2, help = "Path to output file")]
-    output: String,
+    output: PathBuf,
 
-    #[arg(
-        short = 'f',
-        long = "format",
-        help = "The output format of the file",
-        default_value = "html"
-    )]
-    format: String,
+    #[arg(short = 'f', long = "format", help = "The output format of the file")]
+    format: Option<String>,
 
     #[arg(
         short = 'w',
@@ -44,10 +39,30 @@ struct Args {
     dev: bool,
 }
 
+// Infer the output format based on the file extension of the output format
+fn infer_output_format(output: &Path) -> Option<OutputFormat> {
+    output
+        .extension()
+        .map(|ext| match ext.to_str() {
+            Some("tex") => Some(OutputFormat::new("latex")),
+            Some("html") => Some(OutputFormat::new("html")),
+            _ => None,
+        })
+        .flatten()
+}
+
 fn compile_file(args: &Args) -> Result<Ast, CliError> {
     let source = fs::read_to_string(&args.input)?;
     let mut ctx = Context::default();
-    let output = eval(&source, &mut ctx, &OutputFormat::new(&args.format))?;
+
+    let Some(format) = args.format
+        .as_ref()
+        .map(|s| OutputFormat::new(&s))
+        .or_else(|| infer_output_format(&args.output)) else {
+        return Err(CliError::UnknownOutputFormat);
+    };
+
+    let output = eval(&source, &mut ctx, &format)?;
 
     let mut output_file = File::create(&args.output)?;
     output_file.write_all(output.as_bytes())?;

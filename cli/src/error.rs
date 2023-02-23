@@ -16,4 +16,7 @@ pub enum CliError {
 
     #[error("Core error: {0}")]
     Core(#[from] CoreError),
+
+    #[error("Cannot infer output format, please specifiy --format")]
+    UnknownOutputFormat,
 }
