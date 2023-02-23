@@ -114,7 +114,10 @@ impl Package {
         let manifest = {
             let mut buffer = String::new();
             output.read_to_string(&mut buffer)?;
-            serde_json::from_str(&buffer).map_err(|e| e.into())
+            serde_json::from_str(&buffer).map_err(|error| CoreError::DeserializationError {
+                string: buffer.clone(),
+                error,
+            })
         };
 
         manifest

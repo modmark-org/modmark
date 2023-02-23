@@ -40,8 +40,13 @@ pub enum CoreError {
     MissingArgument(String, String),
     #[error("Argument '{0}' is not supported by the element '{1}'.")]
     InvalidArgument(String, String),
-    #[error("Failed to serialize json")]
+    #[error("Json error")]
     JsonError(#[from] serde_json::Error),
+    #[error("Failed to deserialize '{string}', got error '{error}'.")]
+    DeserializationError {
+        string: String,
+        error: serde_json::Error,
+    },
     #[error("Transform does not terminate")]
     NonTerminatingTransform,
     #[error("Parsing error: {0:#?}.")]
