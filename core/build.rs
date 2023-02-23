@@ -5,10 +5,16 @@ use std::{
     process::Command,
 };
 
+fn main() {
+    // build packages if we want to bundle them
+    #[cfg(feature = "bundle_std_packages")]
+    build_packages()
+}
+
 // This build script will build all of the crates found in the top level "modules" directory
 // into wasm binary files which allows core to load them from the path
 // env!("OUT_DIR")/out/<name_of_module>/wasm32_wasi/release/<name_of_module>.wasm
-fn main() {
+fn build_packages() {
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
 
     let workspace_path = {

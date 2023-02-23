@@ -86,7 +86,8 @@ macro_rules! define_native_packages {
 /// that the standard package cargo name is the same as the containing folder name.
 macro_rules! define_standard_package_loader {
     ($($name:expr),* $(,)?) => {
-        pub fn load_standard_packages(ctx: &mut Context) -> Result<(), CoreError>{
+        #[cfg(feature = "bundle_std_packages")]
+        pub fn load_standard_packages(ctx: &mut Context) -> Result<(), CoreError> {
             $(
                 ctx.load_package_from_wasm(
                     include_bytes!(
@@ -103,7 +104,11 @@ macro_rules! define_standard_package_loader {
             )*
             Ok(())
         }
-    }
+        #[cfg(not(feature = "bundle_std_packages"))]
+        pub fn load_standard_packages(_: &mut Context) -> Result<(), CoreError> {
+            Ok(())
+        }
+    };
 }
 
 pub(crate) use define_native_packages;
