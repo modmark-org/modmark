@@ -10,11 +10,10 @@ use crossterm::{
 };
 use error::CliError;
 use notify::{Config, Event, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher, WatcherKind};
+use once_cell::sync::Lazy;
 use parser::{parse, Ast};
 use std::io::{stdout, Write};
-use std::{env, path::PathBuf};
-use std::{fs, path::Path};
-use std::{fs::File, time::Duration};
+use std::{env, fs, fs::File, path::Path, path::PathBuf, sync::Mutex, time::Duration};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
@@ -39,6 +38,8 @@ struct Args {
     dev: bool,
 }
 
+static CTX: Lazy<Mutex<Context>> = Lazy::new(|| Mutex::new(Context::default()));
+
 // Infer the output format based on the file extension of the output format
 fn infer_output_format(output: &Path) -> Option<OutputFormat> {
     output.extension().and_then(|ext| match ext.to_str() {
@@ -51,7 +52,6 @@ fn infer_output_format(output: &Path) -> Option<OutputFormat> {
 
 fn compile_file(args: &Args) -> Result<Ast, CliError> {
     let source = fs::read_to_string(&args.input)?;
-    let mut ctx = Context::default();
 
     let Some(format) = args.format
         .as_ref()
@@ -60,7 +60,7 @@ fn compile_file(args: &Args) -> Result<Ast, CliError> {
         return Err(CliError::UnknownOutputFormat);
     };
 
-    let output = eval(&source, &mut ctx, &format)?;
+    let output = eval(&source, &mut CTX.lock().unwrap(), &format)?;
 
     let mut output_file = File::create(&args.output)?;
     output_file.write_all(output.as_bytes())?;
