@@ -1,6 +1,8 @@
+use std::fmt::Formatter;
 use std::iter::once;
 use std::{
     collections::HashMap,
+    fmt,
     fmt::Debug,
     io::{Read, Write},
 };
@@ -37,6 +39,16 @@ pub struct Issue {
     pub source: String,
     pub target: String,
     pub description: String,
+}
+
+impl fmt::Display for Issue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} -> {}: {}",
+            self.source, self.target, self.description
+        )
+    }
 }
 
 impl CompilationState {

@@ -69,18 +69,12 @@ pub fn eval(
 
     println!("\nWARNINGS:");
     for warning in &ctx.state.warnings {
-        println!(
-            "{} -> {}: {}",
-            warning.source, warning.target, warning.description
-        );
+        println!("{warning}");
     }
 
     println!("\nERRORS:");
     for error in &ctx.state.errors {
-        println!(
-            "{} -> {}: {}",
-            error.source, error.target, error.description
-        );
+        println!("{error}");
     }
 
     res.map(|s| (s, ctx.take_state()))
