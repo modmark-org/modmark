@@ -41,14 +41,12 @@ struct Args {
 
 // Infer the output format based on the file extension of the output format
 fn infer_output_format(output: &Path) -> Option<OutputFormat> {
-    output
-        .extension()
-        .map(|ext| match ext.to_str() {
-            Some("tex") => Some(OutputFormat::new("latex")),
-            Some("html") => Some(OutputFormat::new("html")),
-            _ => None,
-        })
-        .flatten()
+    output.extension().and_then(|ext| match ext.to_str() {
+        Some("tex") => Some(OutputFormat::new("latex")),
+        Some("html") => Some(OutputFormat::new("html")),
+        Some("htm") => Some(OutputFormat::new("html")),
+        _ => None,
+    })
 }
 
 fn compile_file(args: &Args) -> Result<Ast, CliError> {
@@ -57,7 +55,7 @@ fn compile_file(args: &Args) -> Result<Ast, CliError> {
 
     let Some(format) = args.format
         .as_ref()
-        .map(|s| OutputFormat::new(&s))
+        .map(|s| OutputFormat::new(s))
         .or_else(|| infer_output_format(&args.output)) else {
         return Err(CliError::UnknownOutputFormat);
     };
