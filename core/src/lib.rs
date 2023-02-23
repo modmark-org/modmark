@@ -11,7 +11,7 @@ pub use package::{ArgInfo, Package, PackageInfo, Transform};
 
 use crate::context::CompilationState;
 
-pub mod context;
+mod context;
 mod element;
 mod error;
 mod package;
