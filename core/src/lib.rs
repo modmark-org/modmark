@@ -63,7 +63,8 @@ pub fn eval(
     ctx: &mut Context,
     format: &OutputFormat,
 ) -> Result<(String, CompilationState), CoreError> {
-    ctx.clear_state();
+    ctx.clear_state(); // Note: this isn't actually needed, since take_state clears state
+    ctx.state.verbose_errors = true;
     let document = parser::parse(source)?.try_into()?;
     let res = eval_elem(document, ctx, format);
 

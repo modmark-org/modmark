@@ -655,7 +655,6 @@ impl Default for Context {
     fn default() -> Self {
         let mut ctx = Self::new();
         ctx.load_default_packages().unwrap();
-        ctx.state.verbose_errors = true;
         ctx
     }
 }
