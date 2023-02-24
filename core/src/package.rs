@@ -1,11 +1,13 @@
-use crate::package::PackageImplementation::Native;
-use crate::{error::CoreError, OutputFormat};
-use serde::Deserialize;
 use std::{io::Read, sync::Arc};
+
+use serde::Deserialize;
 #[cfg(feature = "native")]
 use wasmer::Engine;
 use wasmer::{Instance, Module, Store};
 use wasmer_wasi::{Pipe, WasiState};
+
+use crate::package::PackageImplementation::Native;
+use crate::{error::CoreError, OutputFormat};
 
 /// Transform from a node into another node
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
@@ -99,8 +101,8 @@ impl Package {
             .arg("manifest")
             .finalize(store)?;
 
-        let import_object = wasi_env.import_object(store, &module)?;
-        let instance = Instance::new(store, &module, &import_object)?;
+        let import_object = wasi_env.import_object(store, module)?;
+        let instance = Instance::new(store, module, &import_object)?;
 
         // Attach the memory export
         let memory = instance.exports.get_memory("memory")?;
