@@ -188,8 +188,7 @@ impl Context {
                     if self
                         .transforms
                         .get(from)
-                        .map(|t| t.find_transform_to(output_format))
-                        .flatten()
+                        .and_then(|t| t.find_transform_to(output_format))
                         .is_some()
                     {
                         return Err(CoreError::OccupiedTransform(
@@ -274,7 +273,7 @@ impl Context {
                 match &package.implementation {
                     PackageImplementation::Wasm(wasm_module) => {
                         // note: cloning modules is cheap
-                        self.transform_from_wasm(&wasm_module, name, from, output_format)
+                        self.transform_from_wasm(wasm_module, name, from, output_format)
                     }
                     PackageImplementation::Native => self.transform_from_native(
                         &package.info.name.clone(),

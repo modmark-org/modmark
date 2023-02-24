@@ -143,7 +143,7 @@ pub fn native_warn(
         description: body.to_string(),
         input: args
             .remove("input")
-            .and_then(|s| (s != "<unknown>").then(|| s)),
+            .and_then(|s| (s != "<unknown>").then_some(s)),
     });
 
     // Return no new nodes
@@ -161,7 +161,7 @@ pub fn native_err(
     let target = args.get("target").unwrap();
     let input: Option<&String> = args
         .get("input")
-        .and_then(|s| (s != "<unknown>").then(|| s));
+        .and_then(|s| (s != "<unknown>").then_some(s));
 
     // Push the issue to errors
     ctx.state.errors.push(Issue {
@@ -172,11 +172,11 @@ pub fn native_err(
     });
 
     // Check if we have an __error transform
-    if !ctx
+    if ctx
         .transforms
         .get("__error")
         .and_then(|t| t.find_transform_to(output_format))
-        .is_some()
+        .is_none()
         || source == "__error"
     {
         // If we don't have, don't add an __error parent since that would yield an CoreError
