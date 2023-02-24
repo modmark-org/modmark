@@ -27,6 +27,7 @@
                     <option value="json-output">JSON output</option>
                     <option value="transpile">HTML output</option>
                     <option value="render">Rendered HTML</option>
+                    <option value="render-iframe">Rendered HTML (iframe)</option>
                 </select>
                 <button id="view-toggle">
                     <span class="material-symbols-outlined">
@@ -64,6 +65,9 @@
                         <iframe id="render"></iframe>
                     </div>
                 </div>
+                <pre id="debug"></pre>
+                <div id="render"></div>
+                <iframe id="render-iframe"></iframe>
             </div>
             <div id="package-view">
                 <div id="packages">
