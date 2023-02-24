@@ -1,5 +1,4 @@
 use std::env;
-use std::fmt::Write;
 use std::io::{self, Read};
 
 use serde_json::{json, Value};
@@ -64,14 +63,17 @@ fn transform_link(to: &String) {
                 .unwrap_or_else(|| "");
 
             let link = input["data"].as_str().unwrap();
+            let escaped_link = link.replace('"', "%22");
 
-            let output = if label == "" {
-                format!(r#"{{"name": "raw", "data": "<a href='{link}'>{link}</a>"}}"#)
-            } else {
-                format!(r#"{{"name": "raw", "data": "<a href='{link}'>{label}</a>"}}"#)
-            };
+            let link_tag = format!(r#"<a href="{escaped_link}">"#);
+            let text = if label == "" { link } else { label };
 
-            print!("[{output}]");
+            let output = json!([
+                {"name": "raw", "data": link_tag},
+                {"name": "inline_content", "data": text},
+                {"name": "raw", "data": "</a>"}
+            ]);
+            print!("{}", output.to_string());
         }
         other => {
             eprintln!("Cannot convert table to {other}");
