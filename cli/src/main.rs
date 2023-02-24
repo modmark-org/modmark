@@ -60,7 +60,7 @@ fn compile_file(args: &Args) -> Result<Ast, CliError> {
         return Err(CliError::UnknownOutputFormat);
     };
 
-    let output = eval(&source, &mut CTX.lock().unwrap(), &format)?;
+    let output = eval(&source, &mut CTX.lock().unwrap(), &format)?.0;
 
     let mut output_file = File::create(&args.output)?;
     output_file.write_all(output.as_bytes())?;
