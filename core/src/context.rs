@@ -124,7 +124,8 @@ impl Context {
         }
     }
 
-    /// Clears the internal `CompilationState` of this Context.
+    /// Clears the internal `CompilationState` of this Context. This ensures that any information
+    /// specific to previous compilations, such as errors and warnings, gets cleared.
     pub fn clear_state(&mut self) {
         self.state.clear();
     }
@@ -335,7 +336,9 @@ impl Context {
         let input_data = self.serialize_element(from, output_format)?;
         write!(&mut input, "{}", input_data)?;
 
-        // Function to create an issue given
+        // Function to create an issue given a body text and if it is an error or not. This closure
+        // captures references to the appropriate variables from this scope to generate correct
+        // issues.
         let create_issue = |error: bool, body: String| -> Element {
             Element::Module {
                 name: if error {
@@ -382,7 +385,7 @@ impl Context {
         if let Err(e) = fn_res {
             // An error occurred when executing Wasm module =>
             // it probably crashed, so just insert an error node
-            return Ok(Left(create_issue(true, format!("Crash: {e}"))));
+            return Ok(Left(create_issue(true, format!("Wasm module crash: {e}"))));
         }
 
         // Read the output of the package from stdout
@@ -402,25 +405,34 @@ impl Context {
         // If we have no stderr, just return the result early
         if err_str.is_empty() {
             return match result {
+                // This is the only fully successful exit point, where we have a result and no
+                // stderr => no errors/warnings logged
                 Ok(res) => Ok(Left(res)),
-                Err(e) => Ok(Left(create_issue(true, format!("De-serialize error: {e}")))),
+                // If there is an issue in "result", the result was deserialized incorrectly.
+                // The CoreError error message is misleading so we skip printing it and only print
+                // our custom message
+                Err(_) => Ok(Left(create_issue(
+                    true,
+                    "Error deserializing result from module".to_string(),
+                ))),
             };
         }
 
         // If we have stderr, check if result is successful or not
-        // If successful, we assume those were warnings
-        // If not, we say they are errors
+        // If successful, we treat the messages in stderr as warnings
+        // If not, we treat them as if they are errors
         if let Ok(elem) = result {
             let elems = err_str
                 .lines()
-                .map(|line| create_issue(false, format!("Emitted warning: {line}")))
+                .map(|line| create_issue(false, format!("Logged warning: {line}")))
+                // Here, in the warnings case, chain the result and emit it as well
                 .chain(once(elem))
                 .collect();
             Ok(Left(Element::Compound(elems)))
         } else {
             let errors = err_str
                 .lines()
-                .map(|line| create_issue(true, format!("Emitted error: {line}")))
+                .map(|line| create_issue(true, format!("Logged error: {line}")))
                 .collect();
             Ok(Left(Element::Compound(errors)))
         }
