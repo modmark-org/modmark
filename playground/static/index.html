@@ -11,6 +11,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&display=swap&family=Inter:wght@400;700"
         rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.15.2/ace.min.js"
+        integrity="sha512-9wsrxhzNVuW9XQgRmpSG9i23hheWGRZt0+M+T4vA/CXPLNEPCGsTXHaQi8/U5/gpuboqT0tFW+1hhUPzA4UHQA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <title>Modmark Playground</title>
     <link rel="stylesheet" href="style.css">
     <script type="module" defer src="main.js"></script>
@@ -43,27 +46,17 @@
                 GitHub
             </a>
         </div>
-        <main id="wrapper">
-            <div id="editor-view">
-                <textarea id="editor"></textarea>
-                <div id="preview">
-                    <div id="error-prompt">
-                        <span class="material-symbols-outlined">
-                            report
-                        </span>
-                        <strong>Error</strong>
-                        <div id="error-log"></div>
-                    </div>
-                    <div id="problem-box">
-                        <div id="warnings" class="problem-inner-box">
-                            <div id="warnings-text"></div>
-                        </div>
-                        <div id="errors" class="problem-inner-box">
-                            <div id="errors-text"></div>
-                        </div>
-                        <pre id="debug"></pre>
-                        <iframe id="render"></iframe>
-                    </div>
+    </div>
+    <main id="wrapper">
+        <div id="editor-view">
+            <div id="editor"></div>
+            <div id="preview">
+                <div id="error-prompt">
+                    <span class="material-symbols-outlined">
+                        report
+                    </span>
+                    <strong>Error</strong>
+                    <div id="error-log"></div>
                 </div>
                 <pre id="debug"></pre>
                 <div id="render"></div>
@@ -79,7 +72,7 @@
                 </pre>
                 </div>
             </div>
-        </main>
+    </main>
 </body>
 
 </html>
