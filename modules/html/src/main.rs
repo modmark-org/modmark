@@ -69,7 +69,8 @@ fn transform_document(doc: Value) -> String {
 
     write!(
         result,
-        r#"{{"name": "raw", "data": "<html><head><title>Document</title></head><body>"}},"#
+        "{},",
+        raw!("<html><head><title>Document</title></head><body>")
     )
     .unwrap();
 
@@ -80,7 +81,7 @@ fn transform_document(doc: Value) -> String {
         }
     }
 
-    write!(result, r#"{{"name": "raw", "data": "</body></html>"}}"#).unwrap();
+    write!(result, "{}", raw!("</body></html>")).unwrap();
     result.push(']');
 
     result
@@ -95,7 +96,7 @@ fn transform_heading(heading: Value) -> String {
     };
     let level = s.parse::<u8>().unwrap().clamp(1, 6);
 
-    write!(result, r#"{{"name": "raw", "data": "<h{level}>"}},"#,).unwrap();
+    write!(result, "{},", raw!(format!("<h{level}>"))).unwrap();
 
     if let Value::Array(children) = &heading["children"] {
         for child in children {
@@ -104,7 +105,7 @@ fn transform_heading(heading: Value) -> String {
         }
     }
 
-    write!(result, r#"{{"name": "raw", "data": "</h{level}>"}}"#,).unwrap();
+    write!(result, "{},", raw!(format!("</h{level}>"))).unwrap();
     result.push(']');
 
     result
@@ -139,7 +140,7 @@ fn transform_error(error: Value) -> String {
 fn escape_text(module: Value) -> String {
     if let Value::String(s) = &module["data"] {
         let s = escape(s);
-        format!(r#"[{{"name": "raw", "data": "{s}"}}]"#)
+        format!("[{}]", raw!(s).to_string())
     } else {
         panic!("Malformed text module");
     }
@@ -151,8 +152,6 @@ fn escape(text: &str) -> String {
         .replace('>', "&gt;")
         .replace('"', "&quot;")
         .replace('\'', "&#39;")
-        .replace("\r\n", "\\n")
-        .replace('\n', "\\n")
 }
 
 fn transform_tag(node: Value, html_tag: &str) -> String {
