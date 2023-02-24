@@ -121,6 +121,12 @@ select:hover {
     flex-direction: column;
 }
 
+#render {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
 #error-prompt {
     display: none;
     padding: 1rem;
@@ -204,7 +210,7 @@ select:hover {
     }
 
     #editor,
-    #output {
+    #preview {
         height: auto;
         height: calc((100vh - 4rem) / 2);
         width: 100%;
