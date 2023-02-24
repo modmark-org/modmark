@@ -33,6 +33,11 @@ define_native_packages! {
                 default: Some("<unknown>".to_string()),
                 description: "The target output format when the warning was generated".to_string()
             },
+            ArgInfo {
+                name: "input".to_string(),
+                default: Some("<unknown>".to_string()),
+                description: "The input given to the module when it failed".to_string()
+            },
         ] => native_warn,
         "error", vec![
             ArgInfo {
@@ -44,6 +49,11 @@ define_native_packages! {
                 name: "target".to_string(),
                 default: Some("<unknown>".to_string()),
                 description: "The target output format when the error was generated".to_string()
+            },
+            ArgInfo {
+                name: "input".to_string(),
+                default: Some("<unknown>".to_string()),
+                description: "The input given to the module when it failed".to_string()
             },
         ] => native_err
     };
@@ -122,18 +132,18 @@ pub fn native_set_env(
 pub fn native_warn(
     ctx: &mut Context,
     body: &str,
-    args: HashMap<String, String>,
+    mut args: HashMap<String, String>,
     _inline: bool,
     _output_format: &OutputFormat,
 ) -> Result<Either<Element, String>, CoreError> {
-    let source = args.get("source").unwrap();
-    let target = args.get("target").unwrap();
-
     // Push the issue to warnings
     ctx.state.warnings.push(Issue {
-        source: source.to_string(),
-        target: target.to_string(),
+        source: args.remove("source").unwrap(),
+        target: args.remove("target").unwrap(),
         description: body.to_string(),
+        input: args
+            .remove("input")
+            .and_then(|s| (s != "<unknown>").then(|| s)),
     });
 
     // Return no new nodes
@@ -149,12 +159,16 @@ pub fn native_err(
 ) -> Result<Either<Element, String>, CoreError> {
     let source = args.get("source").unwrap();
     let target = args.get("target").unwrap();
+    let input: Option<&String> = args
+        .get("input")
+        .and_then(|s| (s != "<unknown>").then(|| s));
 
     // Push the issue to errors
     ctx.state.errors.push(Issue {
         source: source.to_string(),
         target: target.to_string(),
         description: body.to_string(),
+        input: input.map(|s| s.to_string()),
     });
 
     // Check if we have an __error transform

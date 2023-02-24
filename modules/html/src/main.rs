@@ -108,6 +108,9 @@ fn transform_error(error: Value) -> String {
     let Value::String(source) = &error["arguments"]["source"] else {
         panic!();
     };
+    let Value::String(input) = &error["arguments"]["input"] else {
+        panic!();
+    };
     let Value::String(err) = &error["data"] else {
         panic!();
     };
@@ -118,10 +121,18 @@ fn transform_error(error: Value) -> String {
     )
     .unwrap();
 
-    let data = escape(format!("Error originating from {source}: {err}").as_str());
-    write!(result, r#"{{"name": "raw", "data": "{data}"}},"#,).unwrap();
+    let data = escape(format!("Error originating from {source}: {err} on input {input}").as_str());
+    write!(
+        result,
+        "{}",
+        json!({
+            "name":"raw", "data":data
+        })
+        .to_string()
+    )
+    .unwrap();
 
-    write!(result, r#"{{"name": "raw", "data": "</span>"}}"#,).unwrap();
+    write!(result, r#",{{"name": "raw", "data": "</span>"}}"#,).unwrap();
 
     result.push(']');
 
@@ -229,6 +240,11 @@ fn manifest() -> String {
                     {
                         "name":"target",
                         "description":"Target for the error",
+                        "default":"<unknown>"
+                    },
+                    {
+                        "name":"input",
+                        "description":"Input for the error",
                         "default":"<unknown>"
                     },
                 ],

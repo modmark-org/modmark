@@ -32,6 +32,7 @@ pub struct Context {
 pub struct CompilationState {
     pub warnings: Vec<Issue>,
     pub errors: Vec<Issue>,
+    pub verbose_errors: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -39,15 +40,24 @@ pub struct Issue {
     pub source: String,
     pub target: String,
     pub description: String,
+    pub input: Option<String>,
 }
 
 impl fmt::Display for Issue {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{} -> {}: {}",
-            self.source, self.target, self.description
-        )
+        if let Some(input) = &self.input {
+            write!(
+                f,
+                "{} -> {}: {}, input: {}",
+                self.source, self.target, self.description, input
+            )
+        } else {
+            write!(
+                f,
+                "{} -> {}: {}",
+                self.source, self.target, self.description
+            )
+        }
     }
 }
 
@@ -317,14 +327,40 @@ impl Context {
         #[cfg(feature = "web")]
         let mut store = Store::new();
 
+        // Create pipes for stdin, stdout, stderr
         let mut input = Pipe::new();
         let mut output = Pipe::new();
         let mut err_out = Pipe::new();
-        write!(
-            &mut input,
-            "{}",
-            self.serialize_element(from, output_format)?
-        )?;
+
+        // Generate the input data (by serializing elements)
+        let input_data = self.serialize_element(from, output_format)?;
+        write!(&mut input, "{}", input_data)?;
+
+        // Function to create an issue given
+        let create_issue = |error: bool, body: String| -> Element {
+            Element::Module {
+                name: if error {
+                    "error".to_string()
+                } else {
+                    "warning".to_string()
+                },
+                args: ModuleArguments {
+                    positioned: None,
+                    named: Some({
+                        let mut map = HashMap::new();
+                        map.insert("source".to_string(), name.to_string());
+                        map.insert("target".to_string(), output_format.0.to_string());
+                        // these two ifs can't be joined, unfortunately, or it won't run on stable
+                        if self.state.verbose_errors {
+                            map.insert("input".to_string(), input_data.to_string());
+                        }
+                        map
+                    }),
+                },
+                body,
+                inline: false,
+            }
+        };
 
         let wasi_env = WasiState::new("")
             .stdin(Box::new(input))
@@ -347,15 +383,7 @@ impl Context {
         if let Err(e) = fn_res {
             // An error occurred when executing Wasm module =>
             // it probably crashed, so just insert an error node
-            return Ok(Left(Element::Module {
-                name: "error".to_string(),
-                args: ModuleArguments {
-                    positioned: Some(vec![name.to_string(), output_format.0.to_string()]),
-                    named: None,
-                },
-                body: format!("Runtime error: {e}"),
-                inline: false,
-            }));
+            return Ok(Left(create_issue(true, format!("Crash: {e}"))));
         }
 
         // Read the output of the package from stdout
@@ -376,15 +404,7 @@ impl Context {
         if err_str.is_empty() {
             return match result {
                 Ok(res) => Ok(Left(res)),
-                Err(e) => Ok(Left(Element::Module {
-                    name: "error".to_string(),
-                    args: ModuleArguments {
-                        positioned: Some(vec![name.to_string(), output_format.0.to_string()]),
-                        named: None,
-                    },
-                    body: format!("Runtime error: {e}"),
-                    inline: false,
-                })),
+                Err(e) => Ok(Left(create_issue(true, format!("De-serialize error: {e}")))),
             };
         }
 
@@ -394,30 +414,14 @@ impl Context {
         if let Ok(elem) = result {
             let elems = err_str
                 .lines()
-                .map(|line| Element::Module {
-                    name: "warning".to_string(),
-                    args: ModuleArguments {
-                        positioned: Some(vec![name.to_string(), output_format.0.to_string()]),
-                        named: None,
-                    },
-                    body: format!("Emitted warning: {line}"),
-                    inline: false,
-                })
+                .map(|line| create_issue(false, format!("Emitted warning: {line}")))
                 .chain(once(elem))
                 .collect();
             Ok(Left(Element::Compound(elems)))
         } else {
             let errors = err_str
                 .lines()
-                .map(|line| Element::Module {
-                    name: "error".to_string(),
-                    args: ModuleArguments {
-                        positioned: Some(vec![name.to_string(), output_format.0.to_string()]),
-                        named: None,
-                    },
-                    body: format!("Emitted error: {line}"),
-                    inline: false,
-                })
+                .map(|line| create_issue(true, format!("Emitted error: {line}")))
                 .collect();
             Ok(Left(Element::Compound(errors)))
         }
@@ -651,6 +655,7 @@ impl Default for Context {
     fn default() -> Self {
         let mut ctx = Self::new();
         ctx.load_default_packages().unwrap();
+        ctx.state.verbose_errors = true;
         ctx
     }
 }
