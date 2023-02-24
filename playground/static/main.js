@@ -1,18 +1,30 @@
 import init, { ast, ast_debug, inspect_context, transpile, json_output } from "./pkg/web_bindings.js";
 
 let view = "editor";
+const editorView = document.getElementById("editor-view");
 
-const editor = document.getElementById("editor");
+// Setup the editor
+let editor = ace.edit("editor");
+editor.setOptions({
+    fontFamily: "IBM Plex Mono",
+    fontSize: "14pt"
+});
+
+editor.session.setUseWrapMode(true);
+
+//  Editor/preview view
 const errorLog = document.getElementById("error-log");
 const debug = document.getElementById("debug");
 const render = document.getElementById("render");
 const renderIframe = document.getElementById("render-iframe");
 const errorPrompt = document.getElementById("error-prompt");
 
-const selector = document.getElementById("selector");
+// Package view
 const packageView = document.getElementById("package-view");
 const packageContent = document.getElementById("package-content");
-const editorView = document.getElementById("editor-view");
+
+// Menu options
+const selector = document.getElementById("selector");
 const viewToggle = document.getElementById("view-toggle");
 const leftMenu = document.getElementById("left-menu");
 
@@ -21,8 +33,8 @@ viewToggle.onclick = toggleView;
 
 
 init().then(() => {
-    editor.oninput = (event) => updateOutput(event.target.value);
-    selector.onchange = () => updateOutput(editor.value);
+    editor.session.on("change", event => updateOutput(editor.getValue()));
+    selector.onchange = () => updateOutput(editor.getValue());
     const regex = /pr-preview\/pr-(\d+)/;
     const match = document.location.href.match(regex);
     if (match !== null) {
@@ -126,10 +138,5 @@ function updateOutput(input) {
         debug.style.display = "none";
         render.style.display = "none";
 
-    }
-
-    // Use the pre element to display the output unless we are rendering
-    if (selector.value !== "render") {
-        output.innerHTML = pre.outerHTML;
     }
 }
