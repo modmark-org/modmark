@@ -6,6 +6,15 @@ use std::{
 
 use serde_json::{from_str, json, Value};
 
+macro_rules! raw {
+    ($expr:expr) => {
+        json!({
+            "name": "raw",
+            "data": $expr
+        })
+    }
+}
+
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
 
@@ -115,24 +124,12 @@ fn transform_error(error: Value) -> String {
         panic!();
     };
 
-    write!(
-        result,
-        r#"{{"name": "raw", "data": "<span style=\"background:#FF0000\">"}},"#,
-    )
-    .unwrap();
+    write!(result, "{},", raw!(r#"<span style="background:#FF0000">"#)).unwrap();
 
     let data = escape(format!("Error originating from {source}: {err} on input {input}").as_str());
-    write!(
-        result,
-        "{}",
-        json!({
-            "name":"raw", "data":data
-        })
-        .to_string()
-    )
-    .unwrap();
+    write!(result, "{},", raw!(data)).unwrap();
 
-    write!(result, r#",{{"name": "raw", "data": "</span>"}}"#,).unwrap();
+    write!(result, "{}", raw!("</span>")).unwrap();
 
     result.push(']');
 
