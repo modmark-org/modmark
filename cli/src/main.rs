@@ -1,19 +1,22 @@
-mod error;
-mod package;
+use std::io::{stdout, Write};
+use std::{env, fs, fs::File, path::Path, path::PathBuf, sync::Mutex, time::Duration};
 
 use clap::Parser;
-use core::{eval, Context, OutputFormat};
 use crossterm::{
     cursor,
     style::{self, Stylize},
     terminal, ExecutableCommand,
 };
-use error::CliError;
 use notify::{Config, Event, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher, WatcherKind};
 use once_cell::sync::Lazy;
+
+use core::context::CompilationState;
+use core::{eval, Context, OutputFormat};
+use error::CliError;
 use parser::{parse, Ast};
-use std::io::{stdout, Write};
-use std::{env, fs, fs::File, path::Path, path::PathBuf, sync::Mutex, time::Duration};
+
+mod error;
+mod package;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
@@ -50,7 +53,7 @@ fn infer_output_format(output: &Path) -> Option<OutputFormat> {
     })
 }
 
-fn compile_file(args: &Args) -> Result<Ast, CliError> {
+fn compile_file(args: &Args) -> Result<(Ast, CompilationState), CliError> {
     let source = fs::read_to_string(&args.input)?;
 
     let Some(format) = args.format
@@ -60,13 +63,13 @@ fn compile_file(args: &Args) -> Result<Ast, CliError> {
         return Err(CliError::UnknownOutputFormat);
     };
 
-    let output = eval(&source, &mut CTX.lock().unwrap(), &format)?.0;
+    let (output, state) = eval(&source, &mut CTX.lock().unwrap(), &format)?;
 
     let mut output_file = File::create(&args.output)?;
     output_file.write_all(output.as_bytes())?;
 
     // Also return the Element tree for debug purposes
-    Ok(parse(&source)?)
+    Ok((parse(&source)?, state))
 }
 
 fn print_tree(tree: &Ast) {
@@ -85,16 +88,30 @@ fn watch(args: &Args, target: &String) -> Result<(), CliError> {
         stdout.execute(cursor::MoveTo(0, 0))?;
         stdout.execute(style::PrintStyledContent("Recompiling...".yellow()))?;
 
-        let tree = match event {
+        let (tree, state) = match event {
             Ok(_) => compile_file(args),
             Err(e) => return Err(CliError::Notify(e)),
-        };
+        }?;
 
         stdout.execute(terminal::Clear(terminal::ClearType::All))?;
         stdout.execute(cursor::MoveTo(0, 0))?;
         stdout.execute(style::PrintStyledContent(
             "File successfully compiled!\n\n".green(),
         ))?;
+
+        if !state.warnings.is_empty() {
+            stdout.execute(style::PrintStyledContent("Warnings:\n".yellow()))?;
+            for warning in state.warnings {
+                stdout.execute(style::PrintStyledContent(format!("{warning}\n").yellow()))?;
+            }
+        }
+
+        if !state.errors.is_empty() {
+            stdout.execute(style::PrintStyledContent("Errors:\n".red()))?;
+            for error in state.errors {
+                stdout.execute(style::PrintStyledContent(format!("{error}\n").red()))?;
+            }
+        }
 
         let mut location = Path::new(&target).to_path_buf();
         location.push(&args.output);
@@ -105,7 +122,7 @@ fn watch(args: &Args, target: &String) -> Result<(), CliError> {
         );
 
         if args.dev {
-            print_tree(&tree?);
+            print_tree(&tree);
         }
 
         stdout.flush()?;
@@ -141,7 +158,7 @@ fn main() -> Result<(), CliError> {
         watch(&args, &target)?;
     } else {
         match compile_file(&args) {
-            Ok(tree) => {
+            Ok((tree, state)) => {
                 let mut stdout = stdout();
 
                 stdout.execute(terminal::Clear(terminal::ClearType::All))?;
@@ -149,6 +166,20 @@ fn main() -> Result<(), CliError> {
                 stdout.execute(style::PrintStyledContent(
                     "File successfully compiled!\n\n".green(),
                 ))?;
+
+                if !state.warnings.is_empty() {
+                    stdout.execute(style::PrintStyledContent("Warnings:\n".yellow()))?;
+                    for warning in state.warnings {
+                        stdout.execute(style::PrintStyledContent(format!("{warning}").yellow()))?;
+                    }
+                }
+
+                if !state.errors.is_empty() {
+                    stdout.execute(style::PrintStyledContent("Errors:\n".red()))?;
+                    for error in state.errors {
+                        stdout.execute(style::PrintStyledContent(format!("{error}").red()))?;
+                    }
+                }
 
                 let mut location = Path::new(&target).to_path_buf();
                 location.push(&args.output);

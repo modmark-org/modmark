@@ -11,7 +11,7 @@ pub use package::{ArgInfo, Package, PackageInfo, Transform};
 
 use crate::context::CompilationState;
 
-mod context;
+pub mod context;
 mod element;
 mod error;
 mod package;
@@ -67,16 +67,6 @@ pub fn eval(
     ctx.state.verbose_errors = true;
     let document = parser::parse(source)?.try_into()?;
     let res = eval_elem(document, ctx, format);
-
-    println!("\nWARNINGS:");
-    for warning in &ctx.state.warnings {
-        println!("{warning}");
-    }
-
-    println!("\nERRORS:");
-    for error in &ctx.state.errors {
-        println!("{error}");
-    }
 
     res.map(|s| (s, ctx.take_state()))
 }
