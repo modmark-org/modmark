@@ -1,11 +1,14 @@
 import init, { ast, ast_debug, inspect_context, transpile, json_output } from "./pkg/web_bindings.js";
 
 let view = "editor";
+
 const editor = document.getElementById("editor");
 const errorLog = document.getElementById("error-log");
 const debug = document.getElementById("debug");
 const render = document.getElementById("render");
+const renderIframe = document.getElementById("render-iframe");
 const errorPrompt = document.getElementById("error-prompt");
+
 const selector = document.getElementById("selector");
 const packageView = document.getElementById("package-view");
 const packageContent = document.getElementById("package-content");
@@ -75,33 +78,45 @@ function updateOutput(input) {
         switch (selector.value) {
             case "ast":
                 debug.style.display = "block";
+                renderIframe.style.display = "none";
                 render.style.display = "none";
 
                 debug.innerText = ast(input);
                 break;
             case "ast-debug":
                 debug.style.display = "block";
+                renderIframe.style.display = "none";
                 render.style.display = "none";
 
                 debug.innerText = ast_debug(input);
                 break;
             case "json-output":
                 debug.style.display = "block";
+                renderIframe.style.display = "none";
                 render.style.display = "none";
 
                 debug.innerText = json_output(input);
                 break;
             case "transpile":
                 debug.style.display = "block";
+                renderIframe.style.display = "none";
                 render.style.display = "none";
 
                 debug.innerText = transpile(input);
                 break;
+            case "render-iframe":
+                debug.style.display = "none";
+                renderIframe.style.display = "block";
+                render.style.display = "none";
+
+                renderIframe.setAttribute("srcdoc", transpile(input));
+                break;
             case "render":
                 debug.style.display = "none";
+                renderIframe.style.display = "none";
                 render.style.display = "block";
 
-                render.setAttribute("srcdoc", transpile(input));
+                render.innerHTML = transpile(input);
                 break;
         }
     } catch (error) {
