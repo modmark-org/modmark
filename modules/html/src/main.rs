@@ -125,6 +125,10 @@ fn transform_error(error: Value) -> String {
         panic!();
     };
 
+    // TODO: Maybe make these errors look better. Be careful though, see notes in API, don't use
+    //   calls to other modules that may fail. I have taken care to not use __text but rather just
+    //   entered the text myself, because if I used __text and that failed, it would lead to
+    //   infinite recursion, which is bad
     write!(result, "{},", raw!(r#"<span style="background:#FF0000">"#)).unwrap();
 
     let data = escape(format!("Error originating from {source}: {err} on input {input}").as_str());
@@ -157,7 +161,8 @@ fn escape(text: &str) -> String {
 fn transform_tag(node: Value, html_tag: &str) -> String {
     let mut result = String::new();
     result.push('[');
-    write!(result, r#"{{"name": "raw", "data": "<{html_tag}>" }},"#).unwrap();
+
+    write!(result, "{},", raw!(format!("<{html_tag}>"))).unwrap();
 
     if let Value::Array(children) = &node["children"] {
         for child in children {
@@ -166,7 +171,7 @@ fn transform_tag(node: Value, html_tag: &str) -> String {
         }
     }
 
-    write!(result, r#"{{"name": "raw", "data": "</{html_tag}>" }}"#).unwrap();
+    write!(result, "{}", raw!(format!("</{html_tag}>"))).unwrap();
     result.push(']');
 
     result

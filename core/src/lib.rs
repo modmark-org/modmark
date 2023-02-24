@@ -63,7 +63,13 @@ pub fn eval(
     ctx: &mut Context,
     format: &OutputFormat,
 ) -> Result<(String, CompilationState), CoreError> {
-    ctx.clear_state(); // Note: this isn't actually needed, since take_state clears state
+    // Note: this isn't actually needed, since take_state clears state, but it
+    // is still called to ensure that it is cleared, if someone uses any context mutating functions
+    // outside of here which doesn't take state afterwards
+    ctx.clear_state();
+
+    // TODO: Move this out so that we have a flag in the CLI and a switch in the playground to
+    //   do verbose errors or "debug mode" or similar
     ctx.state.verbose_errors = true;
     let document = parser::parse(source)?.try_into()?;
     let res = eval_elem(document, ctx, format);
