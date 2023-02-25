@@ -2,7 +2,7 @@ use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
 use either::Either::{Left, Right};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 pub use context::Context;
 pub use element::Element;
@@ -21,7 +21,7 @@ mod std_packages_macros;
 #[cfg(all(feature = "web", feature = "native"))]
 compile_error!("feature \"native\" and feature \"web\" cannot be enabled at the same time");
 
-#[derive(Debug, Clone, Eq, Deserialize)]
+#[derive(Debug, Clone, Eq, Deserialize, Serialize)]
 pub struct OutputFormat(String);
 
 impl OutputFormat {

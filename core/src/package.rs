@@ -1,30 +1,29 @@
+use crate::package::PackageImplementation::Native;
+use crate::{error::CoreError, OutputFormat};
+use serde::{Deserialize, Serialize};
 use std::{io::Read, sync::Arc};
 
-use serde::Deserialize;
 #[cfg(feature = "native")]
 use wasmer::Engine;
 use wasmer::{Instance, Module, Store};
 use wasmer_wasi::{Pipe, WasiState};
 
-use crate::package::PackageImplementation::Native;
-use crate::{error::CoreError, OutputFormat};
-
 /// Transform from a node into another node
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub struct Transform {
     pub from: String,
     pub to: Vec<OutputFormat>,
     pub arguments: Vec<ArgInfo>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub struct ArgInfo {
     pub name: String,
     pub default: Option<String>,
     pub description: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct PackageInfo {
     pub name: String,
     pub version: String,

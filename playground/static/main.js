@@ -1,4 +1,4 @@
-import init, { ast, ast_debug, inspect_context, transpile, json_output } from "./pkg/web_bindings.js";
+import init, { ast, ast_debug, package_info, transpile, json_output } from "./pkg/web_bindings.js";
 
 let view = "editor";
 const editorView = document.getElementById("editor-view");
@@ -66,8 +66,9 @@ function toggleView() {
             packageView.style.width = "100%";
             editorView.style.width = "0";
             viewToggle.innerHTML = buttonContent("View editor", "edit");
-            packageContent.innerText = inspect_context();
-            selector.setAttribute("disabled", true);
+            packageContent.innerText =
+                selector.setAttribute("disabled", true);
+            loadPackageInfo();
             break;
         case "package":
             // close the package view and return to the editor
@@ -78,6 +79,43 @@ function toggleView() {
             selector.removeAttribute("disabled");
             break;
     }
+}
+
+
+function loadPackageInfo() {
+    const info = JSON.parse(package_info());
+
+    const createTransformList = (transform) => {
+        let args = transform.arguments.map((arg) => `<li><div>
+            <strong class="name">${arg.name}</strong>
+            <span class="default">default = "${arg.default}"</span>
+            <span class="description">${arg.description}</span>
+        </div></li>`).join("\n");
+
+        return `<div>
+            <code class="from">${transform.from}</code>
+            <span class="to">${transform.to.join(" ")}</span>
+            <ul class="arguments">${args}</ul>
+        </div > `
+    };
+
+    const createElem = ({ name, version, description, transforms }) => `
+            <div class="container">
+                <h3 class="name">${name}</h3>
+                <span class="version">version ${version}</span>
+                <p class="description">
+                    ${description}
+                </p> 
+                <h4>Transforms</h4>
+                <div class="transforms">
+                    ${transforms.sort((a, b) => a.name < b.name).map(createTransformList).join("\n")}
+                </div>
+            </div>
+        `;
+
+    packageContent.innerHTML = "";
+    info.map(info => createElem(info)).forEach(elem => packageContent.innerHTML += elem);
+
 }
 
 

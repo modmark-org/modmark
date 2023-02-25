@@ -100,10 +100,10 @@ pub fn json_output(source: &str) -> Result<String, PlaygroundError> {
 }
 
 #[wasm_bindgen]
-pub fn inspect_context() -> String {
+pub fn package_info() -> String {
     CONTEXT.with(|ctx| {
-        let ctx = ctx.borrow_mut();
-        format!("{ctx:#?}")
+        let ctx = ctx.borrow();
+        serde_json::to_string(&ctx.get_all_package_info()).unwrap()
     })
 }
 

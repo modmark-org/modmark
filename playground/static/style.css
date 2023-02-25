@@ -1,7 +1,7 @@
 body {
     padding: 0;
     margin: 0;
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: 'Inter', sans-serif;
 }
 
 .material-symbols-outlined {
@@ -33,8 +33,15 @@ a:hover {
 
 
 pre,
-textarea {
+textarea,
+code {
     font-family: 'IBM Plex Mono', monospace;
+}
+
+code {
+    background: #f2f1f1;
+    padding: 0.3rem;
+    border-radius: 0.3rem;
 }
 
 button,
@@ -50,13 +57,16 @@ select {
     transition: 0.2s background;
 }
 
+button {
+    cursor: pointer;
+}
+
 button:hover,
 select:hover {
     background: rgb(222, 222, 222);
 }
 
 .menu {
-    font-family: 'Inter', sans-serif;
     background: #f3f4f6;
     border-bottom: solid 1px rgba(0, 0, 0, 0.171);
     position: relative;
@@ -195,14 +205,39 @@ select:hover {
     margin-right: auto;
 }
 
-#packages h2 {
-    margin-bottom: 0.5rem;
+
+#package-content .container {
+    width: 100%;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.308);
+    box-sizing: border-box;
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    border-radius: 0.3rem;
 }
 
-.note {
-    opacity: 0.6;
-    max-width: 30rem;
+#package-content .container h4 {
+    font-size: 1.2rem;
 }
+
+#package-content .container>.version {
+    opacity: 0.6;
+}
+
+#package-content .container>.name {
+    font-size: 1.6rem;
+    display: inline;
+}
+
+#package-content .container .arguments li div {
+    display: flex;
+    gap: 1rem;
+}
+
+#package-content .container .arguments li div .default {
+    opacity: 0.6;
+}
+
+
 
 @media only screen and (max-width: 800px) {
     #editor-view {
