@@ -443,6 +443,14 @@ impl Context {
         self.packages.get(name).map(|pkg| pkg.info.as_ref())
     }
 
+    /// Borrow a vector with Packageinfo from every loaded package
+    pub fn get_all_package_info(&self) -> Vec<&PackageInfo> {
+        self.packages
+            .iter()
+            .map(|(_, pkg)| pkg.info.as_ref())
+            .collect()
+    }
+
     /// Serialize and element into a string that can be sent to a package
     pub fn serialize_element(
         &self,
