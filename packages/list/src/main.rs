@@ -1,7 +1,7 @@
 use std::env;
-use std::fmt::Write;
 use std::io::{self, Read};
 
+use list::List;
 use serde_json::{json, Value};
 
 fn main() {
@@ -28,14 +28,8 @@ fn manifest() {
                 {
                     "from": "list",
                     "to": ["html"],
-                    "arguments": [
-                        {"name": "bullet_points", "default": "", "description": "Label for link"}
-                    ],
+                    "arguments": [],
                 },
-                {
-                    "from": "enumerate"
-                    "to"
-                }
             ]
             }
         ))
@@ -45,7 +39,7 @@ fn manifest() {
 
 fn transform(from: &String, to: &String) {
     match from.as_str() {
-        "link" => transform_table(to),
+        "list" => transform_list(to),
         other => {
             eprintln!("Package does not support {other}");
             return;
@@ -53,7 +47,7 @@ fn transform(from: &String, to: &String) {
     }
 }
 
-fn transform_table(to: &String) {
+fn transform_list(to: &String) {
     match to.as_str() {
         "html" => {
             let input: Value = {
@@ -62,23 +56,16 @@ fn transform_table(to: &String) {
                 serde_json::from_str(&buffer).unwrap()
             };
 
-            let label = input["arguments"]
-                .get("label")
-                .map(|val| serde_json::to_string(val).unwrap())
-                .unwrap_or_else(|| "".to_string());
-
             let body = input["data"].as_str().unwrap();
 
-            let output = if label == "" {
-                format!(r#"{{"name": "raw", "data": "<a href=\"{body}\">{body}</a>"}}"#)
+            if let Ok(list) = body.parse::<List>() {
+                print!("{}", list.to_html())
             } else {
-                format!(r#"{{"name": "raw", "data": "<a href=\"{body}\">{label}</a>"}}"#)
-            };
-
-            print!("{output}");
+                eprintln!("Module block does not start with a list")
+            }
         }
         other => {
-            eprintln!("Cannot convert table to {other}");
+            eprintln!("Cannot convert list to {other}");
             return;
         }
     }
