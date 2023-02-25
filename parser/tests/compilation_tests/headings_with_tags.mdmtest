@@ -78,7 +78,13 @@ text //
         {
             "name": "Heading1",
             "children": [
-                "title [math]{x^2}"
+                "title ",
+                {
+                    "name": "math",
+                    "args": {},
+                    "body": "x^2",
+                    "one_line": true
+                }
             ]
         }
     ]
