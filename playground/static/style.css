@@ -132,6 +132,20 @@ select:hover {
     flex-direction: column;
 }
 
+#debug {
+    width: 100%;
+    background: red;
+    height: 500px;
+}
+
+
+#debug-editor {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+}
+
 #render-iframe {
     width: 100%;
     height: 100%;
