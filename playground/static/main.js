@@ -88,19 +88,19 @@ function loadPackageInfo() {
     const createTransformList = (transform) => {
         let args = transform.arguments.map((arg) => `<li><div>
             <strong class="name">${arg.name}</strong>
-            <span class="default">default = "${arg.default}"</span>
-            <span class="description">${arg.description}</span>
-        </div></li>`).join("\n");
+            <span class="default">${arg.default ? 'default = \"' + arg.default + "\"" : 'required'}"</span>
+        <span class="description" > ${arg.description}</span>
+        </div></li> `).join("\n");
 
         return `<div>
             <code class="from">${transform.from}</code>
             <span class="to">${transform.to.join(" ")}</span>
             <ul class="arguments">${args}</ul>
-        </div > `
+        </div> `
     };
 
     const createElem = ({ name, version, description, transforms }) => `
-            <div class="container">
+        <div class="container">
                 <h3 class="name">${name}</h3>
                 <span class="version">version ${version}</span>
                 <p class="description">
