@@ -213,6 +213,17 @@ select:hover {
     padding: 0.5rem;
     margin-bottom: 1rem;
     border-radius: 0.3rem;
+    cursor: pointer;
+}
+
+#package-content .expanded .details {
+    max-height: 600px;
+}
+
+#package-content .details {
+    overflow: hidden;
+    transition: max-height 300ms;
+    max-height: 0;
 }
 
 #package-content .container h4 {

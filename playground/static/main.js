@@ -33,7 +33,7 @@ viewToggle.onclick = toggleView;
 
 
 init().then(() => {
-    editor.session.on("change", event => updateOutput(editor.getValue()));
+    editor.session.on("change", (event) => updateOutput(editor.getValue()));
     selector.onchange = () => updateOutput(editor.getValue());
     const regex = /pr-preview\/pr-(\d+)/;
     const match = document.location.href.match(regex);
@@ -89,7 +89,7 @@ function loadPackageInfo() {
         let args = transform.arguments.map((arg) => `<li><div>
             <strong class="name">${arg.name}</strong>
             <span class="default">${arg.default ? 'default = \"' + arg.default + "\"" : 'required'}"</span>
-        <span class="description" > ${arg.description}</span>
+            <span class="description" > ${arg.description}</span>
         </div></li> `).join("\n");
 
         return `<div>
@@ -99,22 +99,41 @@ function loadPackageInfo() {
         </div> `
     };
 
-    const createElem = ({ name, version, description, transforms }) => `
-        <div class="container">
+    const createElem = ({ name, version, description, transforms }) => {
+        let expanded = false;
+
+        let container = document.createElement("div");
+        container.classList.add("container");
+
+        container.innerHTML = `
                 <h3 class="name">${name}</h3>
                 <span class="version">version ${version}</span>
                 <p class="description">
                     ${description}
                 </p> 
-                <h4>Transforms</h4>
-                <div class="transforms">
-                    ${transforms.sort((a, b) => a.name < b.name).map(createTransformList).join("\n")}
+                <div class="details">
+                    <h4>Transforms</h4>
+                    <div class="transforms">
+                        ${transforms.sort((a, b) => a.name < b.name).map(createTransformList).join("\n")}
+                    </div>
                 </div>
             </div>
         `;
 
+        container.onclick = (_event) => {
+            if (expanded) {
+                container.classList.remove("expanded");
+            } else {
+                container.classList.add("expanded");
+            }
+            expanded = !expanded;
+        }
+
+        return container;
+    }
+
     packageContent.innerHTML = "";
-    info.map(info => createElem(info)).forEach(elem => packageContent.innerHTML += elem);
+    info.map(info => createElem(info)).forEach(elem => packageContent.appendChild(elem));
 
 }
 
