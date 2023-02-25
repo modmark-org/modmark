@@ -11,9 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&display=swap&family=Inter:wght@400;700"
         rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.15.2/ace.min.js"
-        integrity="sha512-9wsrxhzNVuW9XQgRmpSG9i23hheWGRZt0+M+T4vA/CXPLNEPCGsTXHaQi8/U5/gpuboqT0tFW+1hhUPzA4UHQA=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="ace/ace.js" type="text/javascript" charset="utf-8"></script>
     <title>Modmark Playground</title>
     <link rel="stylesheet" href="style.css">
     <script type="module" defer src="main.js"></script>
@@ -58,7 +56,7 @@
                     <strong>Error</strong>
                     <div id="error-log"></div>
                 </div>
-                <pre id="debug"></pre>
+                <div id="debug-editor"></div>
                 <div id="render"></div>
                 <iframe id="render-iframe"></iframe>
             </div>

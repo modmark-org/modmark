@@ -4,17 +4,22 @@ let view = "editor";
 const editorView = document.getElementById("editor-view");
 
 // Setup the editor
-let editor = ace.edit("editor");
-editor.setOptions({
+const editorOptions = {
     fontFamily: "IBM Plex Mono",
     fontSize: "14pt"
-});
+};
 
+let editor = ace.edit("editor");
+editor.setOptions(editorOptions);
 editor.session.setUseWrapMode(true);
 
 //  Editor/preview view
 const errorLog = document.getElementById("error-log");
-const debug = document.getElementById("debug");
+const debugEditor = ace.edit("debug-editor");
+debugEditor.setOptions(editorOptions);
+debugEditor.setReadOnly(true);
+debugEditor.setHighlightActiveLine(false);
+debugEditor.container.style.background = "#f2f2f2"
 const render = document.getElementById("render");
 const renderIframe = document.getElementById("render-iframe");
 const errorPrompt = document.getElementById("error-prompt");
@@ -30,20 +35,23 @@ const leftMenu = document.getElementById("left-menu");
 
 viewToggle.onclick = toggleView;
 
+// Add the PR button
+const regex = /pr-preview\/pr-(\d+)/;
+const match = document.location.href.match(regex);
+if (match !== null) {
+    const branch = match[1]
+    const button = document.createElement("button");
+    button.innerHTML = buttonContent("Previewing #" + branch, "alt_route");
+    button.onclick = () => window.location = `https://github.com/modmark-org/modmark/pull/${branch}`;
+    leftMenu.appendChild(button);
+}
+
 
 
 init().then(() => {
     editor.session.on("change", (event) => updateOutput(editor.getValue()));
     selector.onchange = () => updateOutput(editor.getValue());
-    const regex = /pr-preview\/pr-(\d+)/;
-    const match = document.location.href.match(regex);
-    if (match !== null) {
-        const branch = match[1]
-        const button = document.createElement("button");
-        button.innerHTML = buttonContent("Previewing #" + branch, "alt_route");
-        button.onclick = () => window.location = `https://github.com/modmark-org/modmark/pull/${branch}`;
-        leftMenu.appendChild(button);
-    }
+    updateOutput(editor.getValue());
 });
 
 
@@ -88,7 +96,7 @@ function loadPackageInfo() {
     const createTransformList = (transform) => {
         let args = transform.arguments.map((arg) => `<li><div>
             <strong class="name">${arg.name}</strong>
-            <span class="default">${arg.default ? 'default = \"' + arg.default + "\"" : 'required'}"</span>
+            <span class="default">${arg.default ? 'default = \"' + arg.default + "\"" : 'required'}</span>
             <span class="description" > ${arg.description}</span>
         </div></li> `).join("\n");
 
@@ -146,42 +154,50 @@ function updateOutput(input) {
     try {
         switch (selector.value) {
             case "ast":
-                debug.style.display = "block";
+                debugEditor.container.style.display = "block";
                 renderIframe.style.display = "none";
                 render.style.display = "none";
 
-                debug.innerText = ast(input);
+                debugEditor.session.setMode("");
+                debugEditor.setValue(ast(input));
+                debugEditor.getSession().selection.clearSelection()
                 break;
             case "ast-debug":
-                debug.style.display = "block";
+                debugEditor.container.style.display = "block";
                 renderIframe.style.display = "none";
                 render.style.display = "none";
 
-                debug.innerText = ast_debug(input);
+                debugEditor.session.setMode("");
+                debugEditor.setValue(ast_debug(input));
+                debugEditor.getSession().selection.clearSelection()
                 break;
             case "json-output":
-                debug.style.display = "block";
+                debugEditor.container.style.display = "block";
                 renderIframe.style.display = "none";
                 render.style.display = "none";
 
-                debug.innerText = json_output(input);
+                debugEditor.session.setMode("ace/mode/json");
+                debugEditor.setValue(json_output(input));
+                debugEditor.getSession().selection.clearSelection()
                 break;
             case "transpile":
-                debug.style.display = "block";
+                debugEditor.container.style.display = "block";
                 renderIframe.style.display = "none";
                 render.style.display = "none";
 
-                debug.innerText = transpile(input);
+                debugEditor.session.setMode("ace/mode/html");
+                debugEditor.setValue(transpile(input));
+                debugEditor.getSession().selection.clearSelection()
                 break;
             case "render-iframe":
-                debug.style.display = "none";
+                debugEditor.container.style.display = "none";
                 renderIframe.style.display = "block";
                 render.style.display = "none";
 
                 renderIframe.setAttribute("srcdoc", transpile(input));
                 break;
             case "render":
-                debug.style.display = "none";
+                debugEditor.container.style.display = "none";
                 renderIframe.style.display = "none";
                 render.style.display = "block";
 
@@ -192,7 +208,7 @@ function updateOutput(input) {
         errorPrompt.style.display = "block";
         errorLog.innerHTML = error;
 
-        debug.style.display = "none";
+        debugEditor.container.style.display = "none";
         render.style.display = "none";
 
     }
