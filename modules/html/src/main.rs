@@ -105,7 +105,7 @@ fn transform_heading(heading: Value) -> String {
         }
     }
 
-    write!(result, "{},", raw!(format!("</h{level}>"))).unwrap();
+    write!(result, "{}", raw!(format!("</h{level}>"))).unwrap();
     result.push(']');
 
     result
