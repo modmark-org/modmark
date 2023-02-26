@@ -204,29 +204,18 @@ fn parse_document_blocks(input: &str) -> IResult<&str, Vec<Ast>> {
 ///
 /// returns: The heading node, if a successful parse occurs, otherwise the parse error
 fn parse_heading(input: &str) -> IResult<&str, Heading> {
-    let res = map(
+    map(
         pair(
             verify(take_while1(|c| c == '#'), |s: &str| {
                 s.len() <= u8::MAX as usize
             }),
-            preceded(space0, parse_heading_text),
+            preceded(space0, parse_heading_text).and_then(parse_paragraph_elements),
         ),
-        |(start, body)| (start, body),
-    )(input);
-
-    return match res {
-        Ok((str, (start, body))) => {
-            let (_, elements) = parse_paragraph_elements(body).unwrap();
-            Ok((
-                str,
-                Heading {
-                    level: start.len() as u8,
-                    elements,
-                },
-            ))
-        }
-        Err(e) => Err(e),
-    };
+        |(start, elements)| Heading {
+            level: start.len() as u8,
+            elements,
+        },
+    )(input)
 }
 
 /// Parses the text for a heading, consuming until a line ending is found.
