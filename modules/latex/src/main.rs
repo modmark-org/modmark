@@ -38,13 +38,13 @@ fn transform(from: &str) -> String {
     };
 
     match from {
-        "__bold" => transform_tag(input, "strong"),
-        "__italic" => transform_tag(input, "em"),
-        "__superscript" => transform_tag(input, "sup"),
-        "__subscript" => transform_tag(input, "sub"),
-        "__underlined" => transform_tag(input, "u"),
-        "__strikethrough" => transform_tag(input, "del"),
-        "__paragraph" => transform_tag(input, "p"),
+        "__bold" => transform_tag(input, "textbf"),
+        "__italic" => transform_tag(input, "emph"),
+        "__superscript" => transform_tag(input, "textsuperscript"),
+        "__subscript" => transform_tag(input, "textsubscript"),
+        "__underlined" => transform_tag(input, "underline"),
+        "__strikethrough" => transform_tag(input, "sout"), //fixme: needs a package to use
+        "__paragraph" => transform_paragraph(input),
         "__document" => transform_document(input),
         "__text" => escape_text(input),
         "__heading" => transform_heading(input),
@@ -52,16 +52,79 @@ fn transform(from: &str) -> String {
     }
 }
 
+fn transform_paragraph(paragraph: Value) -> String {
+    let mut result = String::new();
+    result.push('[');
+    write!(result, r#"{{"name": "raw", "data": "\\n\\n"}},"#,).unwrap();
+    if let Value::Array(children) = &paragraph["children"] {
+        for child in children {
+            result.push_str(&serde_json::to_string(child).unwrap());
+            result.push(',');
+        }
+    }
+    write!(result, r#"{{"name": "raw", "data": "\\n\\n"}}"#,).unwrap();
+    result.push(']');
+
+    result
+}
+
 fn transform_tag(node: Value, latex_function: &str) -> String {
-    unimplemented!("transform_tag is not implemented yet!");
+    let mut result = String::new();
+    result.push('[');
+    write!(result, r#"{{"name": "raw", "data": "\\{latex_function}{{"}},"#,).unwrap();
+    if let Value::Array(children) = &node["children"] {
+        for child in children {
+            result.push_str(&serde_json::to_string(child).unwrap());
+            result.push(',');
+        }
+    }
+    write!(result, r#"{{"name": "raw", "data": "}}"}}"#,).unwrap();
+    result.push(']');
+
+    result
 }
 
 fn transform_heading(heading: Value) -> String {
-    unimplemented!("transform_heading is not implemented yet!");
+    let mut result = String::new();
+    result.push('[');
+
+    let Value::String(s) = &heading["arguments"]["level"] else {
+        panic!();
+    };
+    let level = s.parse::<u8>().unwrap().clamp(1, 6);
+    let mut subs = String::new();
+    if level > 1 {
+        subs.push_str(&"sub".repeat((level - 1) as usize));
+    }
+    
+
+    write!(result, r#"{{"name": "raw", "data": "\\{subs}section{{"}},"#,).unwrap();
+    if let Value::Array(children) = &heading["children"] {
+        for child in children {
+            result.push_str(&serde_json::to_string(child).unwrap());
+            result.push(',');
+        }
+    }
+    write!(result, r#"{{"name": "raw", "data": "}}"}}"#,).unwrap();
+    result.push(']');
+
+    result
 }
 
 fn transform_document(doc: Value) -> String {
-    unimplemented!("transform_document is not implemented yet!");
+    let mut result = String::new();
+    result.push('[');
+    write!(result, r#"{{"name": "raw", "data": "\\begin{{document}}"}},"#,).unwrap();
+    if let Value::Array(children) = &doc["children"] {
+        for child in children {
+            result.push_str(&serde_json::to_string(child).unwrap());
+            result.push(',');
+        }
+    }
+    write!(result, r#"{{"name": "raw", "data": "\\end{{document}}"}}"#,).unwrap();
+    result.push(']');
+
+    result
 }
 
 fn escape_text(module: Value) -> String {
@@ -71,12 +134,12 @@ fn escape_text(module: Value) -> String {
             .replace('$', r"\$")
             .replace('%', r"\%")
             .replace('&', r"\&")
-            .replace('\\', r"\textbacklash{}")
-            .replace('^', r"\textasciicircum{}")
+            .replace('\\', r"\textbacklash{{}}")
+            .replace('^', r"\textasciicircum{{}}")
             .replace('_', r"\_")
             .replace('{', r"\{")
             .replace('}', r"\}")
-            .replace('~', r"\textasciitilde{}");
+            .replace('~', r"\textasciitilde{{}}");
         format!(r#"[{{"name": "raw", "data":"{s}"}}]"#)
     } else {
         panic!("Malformed text module");
