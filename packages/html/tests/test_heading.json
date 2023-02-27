@@ -1,0 +1,55 @@
+{
+    "name": "__heading",
+    "arguments": {
+        "level": "3"
+    },
+    "children": [
+        {
+            "name": "raw",
+            "data": "Raw stuff",
+            "arguments": {},
+            "inline": true
+        },
+        {
+            "name": "__bold",
+            "arguments": {},
+            "children": [
+                {
+                    "name": "__text",
+                    "data": "Hello, world",
+                    "arguments": {},
+                    "inline": true
+                }
+            ]
+        }
+    ],
+    "__test_transform_to": "html",
+    "__test_expected_result": [
+        {
+            "name": "raw",
+            "data": "<h3>"
+        },
+        {
+            "name": "raw",
+            "data": "Raw stuff",
+            "arguments": {},
+            "inline": true
+        },
+        {
+            "name": "__bold",
+            "arguments": {},
+            "children": [
+                {
+                    "name": "__text",
+                    "data": "Hello, world",
+                    "arguments": {},
+                    "inline": true
+                }
+            ]
+        },
+        {
+            "name": "raw",
+            "data": "</h3>"
+        }
+    ]
+}

@@ -70,6 +70,7 @@ fn test_package_input(file: &Path) -> datatest_stable::Result<()> {
         );
     }
 
+    drop(lock);
     Ok(())
 }
 
