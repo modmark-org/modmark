@@ -64,7 +64,6 @@ function handleChange() {
     status.innerHTML = buttonContent("Typing…", "keyboard");
 
     timeoutId = setTimeout(() => {
-        status.innerHTML = buttonContent("Compiling…", "build");
         updateOutput(editor.getSession().getValue());
     }, 500);
 }
