@@ -3,7 +3,7 @@ members = [
     "cli",
     "core",
     "parser",
-    "module-tests"
+    "package-tests"
 ]
 
 exclude = ["packages/table", "packages/html", "playground/web_bindings"]
