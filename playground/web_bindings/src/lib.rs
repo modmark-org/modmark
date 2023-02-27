@@ -78,6 +78,15 @@ pub fn transpile(source: &str, format: &str) -> Result<String, PlaygroundError> 
     Ok(serde_json::to_string(&transpile).unwrap())
 }
 
+#[wasm_bindgen]
+pub fn transpile_latex(source: &str) -> Result<String, PlaygroundError> {
+    let result = CONTEXT.with(|ctx| {
+        let mut ctx = ctx.borrow_mut();
+        eval(source, &mut ctx, &OutputFormat::new("latex"))
+    })?;
+    Ok(result.0)
+}
+
 fn escape(text: String) -> String {
     text.replace('&', "&amp;")
         .replace('<', "&lt;")
