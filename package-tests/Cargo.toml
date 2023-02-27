@@ -1,5 +1,5 @@
 [package]
-name = "module-tests"
+name = "package-tests"
 version = "0.1.0"
 edition = "2021"
 
@@ -12,5 +12,5 @@ serde_json = "1.0.93"
 diffy = "0.3.0"
 
 [[test]]
-name = "module_tests"
+name = "package_tests"
 harness = false

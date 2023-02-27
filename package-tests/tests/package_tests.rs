@@ -7,11 +7,11 @@ use serde_json::Value;
 
 use diffy::create_patch;
 
-fn test_module_input(file: &Path) -> datatest_stable::Result<()> {
+fn test_package_input(file: &Path) -> datatest_stable::Result<()> {
     // path is ../modules/module-name/tests/file-name.json
     // to get the path to the module, we pop last 2 components
-    let module_path = file.parent().and_then(Path::parent).unwrap();
-    let manifest_path = module_path.join("Cargo.toml");
+    let package_path = file.parent().and_then(Path::parent).unwrap();
+    let manifest_path = package_path.join("Cargo.toml");
     let input_file = read_to_string(file).unwrap();
 
     let input_json: Value = serde_json::from_str(&input_file).expect("Valid JSON example file");
@@ -61,7 +61,7 @@ fn test_module_input(file: &Path) -> datatest_stable::Result<()> {
 }
 
 datatest_stable::harness!(
-    test_module_input,
-    "../modules",
+    test_package_input,
+    "../packages",
     r"[^/\\]*[/\\]tests[/\\].*\.json$"
 );
