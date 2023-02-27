@@ -1,25 +1,25 @@
+use std::collections::HashMap;
 use std::fs::read_to_string;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use diffy::create_patch;
+use once_cell::sync::Lazy;
 use serde_json::Value;
 
 // Unfortunately, if we run multiple tests at the very same time, some of them will sometimes
-// fail without reason. This makes sure that only one test is running at a time
-static LOCK: Mutex<()> = Mutex::new(());
+// fail without reason. This makes sure that only one test is running at a time per package.
+// How this is used: When a package with path `p` is attempted at being run, we lock the map,
+// lookup `p`, insert default if absent, clone the Arc and then immediately drop the lock on
+// the map. The Arc we now got is the mutex associated with the given package. Then, we lock
+// the mutex within that arc, and when we have the lock, we know that we are the only thread
+// working on that package. Then, we can proceed with doing our actions, and then drop the
+// lock after we have done everything.
+static LOCK: Lazy<Mutex<HashMap<PathBuf, Arc<Mutex<()>>>>> = Lazy::new(Mutex::default);
 
 fn test_package_input(file: &Path) -> datatest_stable::Result<()> {
-    // We don't care about poisoned errors here (poisoned errors = previous test failed)
-    let lock = {
-        match LOCK.lock() {
-            Ok(lock) => lock,
-            Err(poison) => poison.into_inner(),
-        }
-    };
-
     // path is ../packages/package-name/tests/file-name.json
     // to get the path to the package, we pop last 2 components
 
@@ -28,6 +28,23 @@ fn test_package_input(file: &Path) -> datatest_stable::Result<()> {
         .parent()
         .and_then(Path::parent)
         .expect("Popping two components should give package path");
+
+    // We now need to synchronize so that we wait until other threads operating on the same package
+    // is done. Since we want multiple tests in parallel but only one per package, we have a map
+    // from package path to a mutex, which we need the lock for. The map lock can't be poisoned.
+    let mut map = LOCK.lock().unwrap();
+    let mutex = map.entry(package_path.to_path_buf()).or_default().clone();
+    // Drop the lock on the map now, so we let other threads test if they can proceed
+    drop(map);
+
+    // We don't care about poisoned errors here (poisoned errors = previous test failed)
+    let lock = {
+        match mutex.lock() {
+            Ok(lock) => lock,
+            Err(poison) => poison.into_inner(),
+        }
+    };
+
     let manifest_path = package_path.join("Cargo.toml");
     let input_file = read_to_string(file).expect("Input file should be readable");
 
@@ -66,6 +83,10 @@ fn test_package_input(file: &Path) -> datatest_stable::Result<()> {
         .expect("Expected result to be utf8");
     let json_out: Value = serde_json::from_str(&result).expect("Expected result to be valid json");
 
+    // Make sure to explicitly drop the lock, so that we don't drop it earlier implicitly. It is ok
+    // to drop it now since we are done with the package itself.
+    drop(lock);
+
     // Note that we don't want assert_eq! here since we want a custom error message
     if &json_out != expected_result {
         // We have a mismatch and we should fail the test
@@ -81,8 +102,6 @@ fn test_package_input(file: &Path) -> datatest_stable::Result<()> {
             create_patch(&expected, &actual)
         );
     }
-
-    drop(lock);
     Ok(())
 }
 
