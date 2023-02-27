@@ -125,10 +125,15 @@ select:hover {
 
 #preview {
     background: rgb(242, 242, 242);
-    padding-left: 1rem;
-    padding-right: 1rem;
 }
 
+#preview-content {
+    position: relative;
+    height: 100%;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 0.5rem;
+}
 
 
 #debug-editor {
@@ -152,7 +157,6 @@ select:hover {
     position: absolute;
     box-sizing: border-box;
     right: 1rem;
-    top: 1rem;
     border-radius: 1rem;
     padding: 0.5rem 1rem 0.5rem 1rem;
     color: rgb(26, 26, 26);
@@ -160,14 +164,21 @@ select:hover {
     z-index: 1000;
     transition: all 0.2s;
     cursor: none;
+    user-select: none;
+    cursor: pointer;
 }
 
 #error-prompt {
     display: none;
     padding: 1rem;
+    width: 100%;
     background: #fceced;
     box-shadow: 0 0 2px rgba(0, 0, 0, 0.501);
-    border-radius: 0.3rem;
+}
+
+#error-log .issue {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
 }
 
 #error-log pre {
@@ -175,35 +186,6 @@ select:hover {
     opacity: 0.4;
 }
 
-#problem-box {
-    display: none;
-    margin-top: auto;
-    font-size: 12px;
-}
-
-.problem-inner-box {
-    width: 50%;
-    margin-right: 0.4rem;
-    margin-left: 0.4rem;
-    display: inline-block;
-    border-radius: 0.3rem;
-}
-
-#warnings {
-    background: #e6e600;
-}
-
-#errors {
-    background: #dc0000;
-}
-
-#warnings-text {
-    margin: 1rem;
-}
-
-#errors-text {
-    margin: 1rem;
-}
 
 #error-prompt strong {
     color: #de455a;

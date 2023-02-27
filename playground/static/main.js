@@ -160,6 +160,12 @@ function loadPackageInfo() {
 }
 
 
+function addError(message) {
+    errorPrompt.style.display = "block";
+    errorLog.innerHTML += `<div class="issue">${message}</div>`;
+}
+
+
 function updateOutput(input) {
     // Clear the errors
     errorLog.innerText = "";
@@ -195,37 +201,44 @@ function updateOutput(input) {
                 debugEditor.getSession().selection.clearSelection()
                 break;
             case "transpile":
-                debugEditor.container.style.display = "block";
-                renderIframe.style.display = "none";
-                render.style.display = "none";
-
-                debugEditor.session.setMode("ace/mode/html");
-                debugEditor.setValue(transpile(input));
-                debugEditor.getSession().selection.clearSelection()
-                break;
             case "render-iframe":
-                debugEditor.container.style.display = "none";
-                renderIframe.style.display = "block";
-                render.style.display = "none";
+            case "render": {
+                let { content, warnings, errors } = JSON.parse(transpile(input));
+                errors.forEach(addError);
 
-                renderIframe.setAttribute("srcdoc", transpile(input));
-                break;
-            case "render":
-                debugEditor.container.style.display = "none";
-                renderIframe.style.display = "none";
-                render.style.display = "block";
+                if (selector.value == "transpile") {
+                    debugEditor.container.style.display = "block";
+                    renderIframe.style.display = "none";
+                    render.style.display = "none";
 
-                render.innerHTML = transpile(input);
-                break;
+                    debugEditor.session.setMode("ace/mode/html");
+                    debugEditor.setValue(content);
+                    debugEditor.getSession().selection.clearSelection()
+
+                } else if (selector.value == "render-iframe") {
+                    debugEditor.container.style.display = "none";
+                    renderIframe.style.display = "block";
+                    render.style.display = "none";
+
+                    renderIframe.setAttribute("srcdoc", content);
+
+                } else {
+                    debugEditor.container.style.display = "none";
+                    renderIframe.style.display = "none";
+                    render.style.display = "block";
+
+                    render.innerHTML = content;
+                }
+            } break;
         }
     } catch (error) {
-        errorPrompt.style.display = "block";
-        errorLog.innerHTML = error;
-
+        addError(error);
+        // If we encounter a core or a parsing error there is no point
+        // in displaying the output so we hide those views.
         debugEditor.container.style.display = "none";
         render.style.display = "none";
-
     }
-    let deltaT = Math.abs(start - (new Date()));
+    let deltaT = new Date() - start;
     status.innerHTML = buttonContent(`Compiled in ${deltaT} ms`, "magic_button");
 }
+
