@@ -2,12 +2,24 @@ use std::fs::read_to_string;
 use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};
-
-use serde_json::Value;
+use std::sync::Mutex;
 
 use diffy::create_patch;
+use serde_json::Value;
+
+// Unfortunately, if we run multiple tests at the very same time, some of them will sometimes
+// fail without reason. This makes sure that only one test is running at a time
+static LOCK: Mutex<()> = Mutex::new(());
 
 fn test_package_input(file: &Path) -> datatest_stable::Result<()> {
+    // We don't care about poisoned errors here (poisoned errors = previous test failed)
+    let lock = {
+        match LOCK.lock() {
+            Ok(lock) => lock,
+            Err(poison) => poison.into_inner(),
+        }
+    };
+
     // path is ../packages/package-name/tests/file-name.json
     // to get the path to the package, we pop last 2 components
 
