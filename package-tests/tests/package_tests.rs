@@ -8,8 +8,8 @@ use serde_json::Value;
 use diffy::create_patch;
 
 fn test_package_input(file: &Path) -> datatest_stable::Result<()> {
-    // path is ../modules/module-name/tests/file-name.json
-    // to get the path to the module, we pop last 2 components
+    // path is ../packages/package-name/tests/file-name.json
+    // to get the path to the package, we pop last 2 components
     let package_path = file.parent().and_then(Path::parent).unwrap();
     let manifest_path = package_path.join("Cargo.toml");
     let input_file = read_to_string(file).unwrap();
