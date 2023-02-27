@@ -1,0 +1,10 @@
+{
+  "name": "code",
+  "arguments": {
+    "lang": "java",
+    "fontsize": "16",
+    "bg": "06080A"
+  },
+  "data": "public static void main(String[] args){\n    String msg = \"Hello ModMark\";\n    System.out.println(msg);\n}",
+  "inline": false
+}
