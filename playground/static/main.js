@@ -23,6 +23,7 @@ debugEditor.container.style.background = "#f2f2f2"
 const render = document.getElementById("render");
 const renderIframe = document.getElementById("render-iframe");
 const errorPrompt = document.getElementById("error-prompt");
+const status = document.getElementById("status");
 
 // Package view
 const packageView = document.getElementById("package-view");
@@ -47,12 +48,26 @@ if (match !== null) {
 }
 
 
-
 init().then(() => {
-    editor.session.on("change", (event) => updateOutput(editor.getValue()));
+    editor.session.on("change", (_event) => handleChange());
     selector.onchange = () => updateOutput(editor.getValue());
     updateOutput(editor.getValue());
 });
+
+let timeoutId = null;
+
+function handleChange() {
+    if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+    }
+
+    status.innerHTML = buttonContent("Typing…", "keyboard");
+
+    timeoutId = setTimeout(() => {
+        status.innerHTML = buttonContent("Compiling…", "build");
+        updateOutput(editor.getSession().getValue());
+    }, 500);
+}
 
 
 
@@ -150,7 +165,7 @@ function updateOutput(input) {
     // Clear the errors
     errorLog.innerText = "";
     errorPrompt.style.display = "none";
-
+    let start = new Date();
     try {
         switch (selector.value) {
             case "ast":
@@ -212,4 +227,6 @@ function updateOutput(input) {
         render.style.display = "none";
 
     }
+    let deltaT = Math.abs(start - (new Date()));
+    status.innerHTML = buttonContent(`Compiled in ${deltaT} ms`, "magic_button");
 }
