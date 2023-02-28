@@ -1,7 +1,6 @@
 //! This module provides the function the Parser needs to parse modules. It exposes two functions;
 //! [parse_inline_module] and [parse_multiline_module], which parses inline modules and multiline
 //! modules respectively.
-use crate::{MaybeArgs, Module, ModuleArguments, ParseError};
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take, take_till, take_until, take_until1, take_while1};
 use nom::character::complete::{char, line_ending, multispace0, multispace1, space0, space1};
@@ -10,6 +9,8 @@ use nom::error::Error;
 use nom::multi::{separated_list0, separated_list1};
 use nom::sequence::{delimited, pair, preceded, separated_pair, terminated, tuple};
 use nom::{FindSubstring, IResult, InputTake, Parser};
+
+use crate::{MaybeArgs, Module, ModuleArguments, ParseError};
 
 /// This function parses an inline module, such as `[math latex] x^2`, `[url](https://example.com)`
 /// or `[img preview=small]"data.png"`, and returns the parsed module, if successful.
@@ -211,7 +212,10 @@ fn get_multiline_body_parser<'a>(
         } else {
             preceded(
                 line_ending,
-                take_until1("\r\n\r\n").or(take_until1("\n\n").or(rest)),
+                map(peek(line_ending), |_| "")
+                    .or(take_until("\r\n\r\n"))
+                    .or(take_until("\n\n"))
+                    .or(rest),
             )(i)
         }
     }
