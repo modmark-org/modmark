@@ -1,9 +1,10 @@
-import init, { ast, ast_debug, package_info, transpile, json_output } from "./pkg/web_bindings.js";
+// noinspection JSFileReferences
+import init, {ast, ast_debug, json_output, package_info, transpile} from "./pkg/web_bindings.js";
 
 let view = "editor";
 const editorView = document.getElementById("editor-view");
 
-// Setup the editor
+// Set up the editor
 const editorOptions = {
     fontFamily: "IBM Plex Mono",
     fontSize: "12pt"
@@ -13,7 +14,10 @@ let editor = ace.edit("editor");
 editor.setOptions(editorOptions);
 editor.session.setUseWrapMode(true);
 
-//  EWarnings and errors
+// Load the example document async, not to freeze loading the rest of the playground
+fetch("example.mdm").then(res => res.text().then(text => editor.session.setValue(text)));
+
+// Warnings and errors
 const errorLog = document.getElementById("error-log");
 const errorPrompt = document.getElementById("error-prompt");
 const warningPrompt = document.getElementById("warning-prompt");
@@ -41,7 +45,10 @@ const viewToggle = document.getElementById("view-toggle");
 const leftMenu = document.getElementById("left-menu");
 const formatInput = document.getElementById("format-input");
 
-if (selector.value == "transpile-other") {
+// Set to "render html" by default
+selector.value = "render";
+
+if (selector.value === "transpile-other") {
     formatInput.style.display = "block";
 } else {
     formatInput.style.display = "none";
@@ -69,7 +76,7 @@ init().then(() => {
 });
 
 function handleMenuUpdate(_event) {
-    if (selector.value == "transpile-other") {
+    if (selector.value === "transpile-other") {
         formatInput.style.display = "block";
     } else {
         formatInput.style.display = "none";
@@ -92,7 +99,6 @@ function handleChange() {
 }
 
 
-
 function buttonContent(text, icon) {
     return `
             <span class="material-symbols-outlined">
@@ -111,8 +117,7 @@ function toggleView() {
             packageView.style.width = "100%";
             editorView.style.width = "0";
             viewToggle.innerHTML = buttonContent("View editor", "edit");
-            packageContent.innerText =
-                selector.setAttribute("disabled", true);
+            selector.setAttribute("disabled", "true");
             loadPackageInfo();
             break;
         case "package":
@@ -144,7 +149,7 @@ function loadPackageInfo() {
         </div> `
     };
 
-    const createElem = ({ name, version, description, transforms }) => {
+    const createElem = ({name, version, description, transforms}) => {
         let expanded = false;
 
         let container = document.createElement("div");
@@ -231,7 +236,7 @@ function updateOutput(input) {
                 debugEditor.getSession().selection.clearSelection()
                 break;
             case "transpile-other": {
-                let { content, warnings, errors } = JSON.parse(transpile(input, formatInput.value));
+                let {content, warnings, errors} = JSON.parse(transpile(input, formatInput.value));
                 errors.forEach(addError);
                 warnings.forEach(addWarning);
 
@@ -241,16 +246,16 @@ function updateOutput(input) {
 
                 debugEditor.session.setMode("");
                 debugEditor.setValue(content);
-            } break;
+            }
+                break;
             case "transpile":
             case "render-iframe":
             case "render": {
-                let { content, warnings, errors } = JSON.parse(transpile(input, "html"));
-                console.log({ warnings: warnings, errors: errors });
+                let {content, warnings, errors} = JSON.parse(transpile(input, "html"));
                 errors.forEach(addError);
                 warnings.forEach(addWarning);
 
-                if (selector.value == "transpile") {
+                if (selector.value === "transpile") {
                     debugEditor.container.style.display = "block";
                     renderIframe.style.display = "none";
                     render.style.display = "none";
@@ -258,14 +263,12 @@ function updateOutput(input) {
                     debugEditor.session.setMode("ace/mode/html");
                     debugEditor.setValue(content);
                     debugEditor.getSession().selection.clearSelection()
-
-                } else if (selector.value == "render-iframe") {
+                } else if (selector.value === "render-iframe") {
                     debugEditor.container.style.display = "none";
                     renderIframe.style.display = "block";
                     render.style.display = "none";
 
                     renderIframe.setAttribute("srcdoc", content);
-
                 } else {
                     debugEditor.container.style.display = "none";
                     renderIframe.style.display = "none";
@@ -273,16 +276,16 @@ function updateOutput(input) {
 
                     render.innerHTML = content;
                 }
-            } break;
+            }
+                break;
         }
     } catch (error) {
         addError(error);
         // If we encounter a core or a parsing error there is no point
-        // in displaying the output so we hide those views.
+        // in displaying the output, so we hide those views.
         debugEditor.container.style.display = "none";
         render.style.display = "none";
     }
-    let deltaT = new Date() - start;
-    status.innerHTML = buttonContent(`Compiled in ${deltaT} ms`, "magic_button");
+    let timeElapsed = new Date() - start;
+    status.innerHTML = buttonContent(`Compiled in ${timeElapsed} ms`, "magic_button");
 }
-
