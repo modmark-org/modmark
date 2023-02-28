@@ -6,23 +6,29 @@ const editorView = document.getElementById("editor-view");
 // Setup the editor
 const editorOptions = {
     fontFamily: "IBM Plex Mono",
-    fontSize: "14pt"
+    fontSize: "12pt"
 };
 
 let editor = ace.edit("editor");
 editor.setOptions(editorOptions);
 editor.session.setUseWrapMode(true);
 
-//  Editor/preview view
+//  EWarnings and errors
 const errorLog = document.getElementById("error-log");
+const errorPrompt = document.getElementById("error-prompt");
+const warningPrompt = document.getElementById("warning-prompt");
+const warningLog = document.getElementById("warning-log");
+
+// Output editor
 const debugEditor = ace.edit("debug-editor");
 debugEditor.setOptions(editorOptions);
 debugEditor.setReadOnly(true);
 debugEditor.setHighlightActiveLine(false);
-debugEditor.container.style.background = "#f2f2f2"
+debugEditor.container.style.background = "#f5f5f5"
+
+// Output rendering
 const render = document.getElementById("render");
 const renderIframe = document.getElementById("render-iframe");
-const errorPrompt = document.getElementById("error-prompt");
 const status = document.getElementById("status");
 
 // Package view
@@ -165,11 +171,18 @@ function addError(message) {
     errorLog.innerHTML += `<div class="issue">${message}</div>`;
 }
 
+function addWarning(message) {
+    warningPrompt.style.display = "block";
+    warningLog.innerHTML += `<div class="issue">${message}</div>`;
+}
+
 
 function updateOutput(input) {
-    // Clear the errors
+    // Clear the errors and warnings
     errorLog.innerText = "";
     errorPrompt.style.display = "none";
+    warningLog.innerText = "";
+    warningPrompt.style.display = "none";
     let start = new Date();
     try {
         switch (selector.value) {
@@ -204,7 +217,9 @@ function updateOutput(input) {
             case "render-iframe":
             case "render": {
                 let { content, warnings, errors } = JSON.parse(transpile(input));
+                console.log({ warnings: warnings, errors: errors });
                 errors.forEach(addError);
+                warnings.forEach(addWarning);
 
                 if (selector.value == "transpile") {
                     debugEditor.container.style.display = "block";
