@@ -54,6 +54,7 @@ select {
     padding: 0.5rem 1rem 0.5rem 1rem;
     background: rgb(231, 231, 231);
     transition: 0.2s background;
+    color: black;
 }
 
 button {
@@ -165,35 +166,57 @@ select:hover {
     transition: all 0.2s;
     cursor: none;
     user-select: none;
-    cursor: pointer;
+    background: #f2f2f2;
 }
 
-#error-prompt {
+#error-prompt,
+#warning-prompt {
     display: none;
+    box-sizing: border-box;
     padding: 1rem;
     width: 100%;
     background: #fceced;
-    box-shadow: 0 0 2px rgba(0, 0, 0, 0.501);
+    border-bottom: solid 1px #e9cdc4;
 }
 
-#error-log .issue {
-    margin-top: 1rem;
-    margin-bottom: 1rem;
+#warning-prompt {
+    background: #fef7ea;
+    border-color: #efddb9;
 }
 
-#error-log pre {
-    overflow: scroll;
-    opacity: 0.4;
+#warning-prompt strong {
+    color: #d69c15;
 }
 
+#warning-prompt .material-symbols-outlined {
+    top: 2px;
+    color: #d69c15;
+}
 
 #error-prompt strong {
     color: #de455a;
 }
 
 #error-prompt .material-symbols-outlined {
+    top: 2px;
     color: #de455a;
 }
+
+
+#error-log .issue,
+#warning-log .issue {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+#error-log pre,
+#warning-log pre {
+    overflow: scroll;
+    opacity: 0.4;
+}
+
+
+
 
 #package-view {
     width: 0;
@@ -223,7 +246,7 @@ select:hover {
 }
 
 #package-content .expanded .details {
-    max-height: 600px;
+    max-height: 1000px;
 }
 
 #package-content .details {
@@ -272,6 +295,11 @@ select:hover {
     .menu-items {
         justify-content: space-between;
         gap: 1rem;
+    }
+
+    #preview-content {
+        padding-left: 0;
+        padding-right: 0;
     }
 
 }
