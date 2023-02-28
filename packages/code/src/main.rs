@@ -23,7 +23,7 @@ fn main() {
 fn manifest() {
     print!("{}", serde_json::to_string(&json!(
         {
-        "name": "Standard code package",
+        "name": "code",
         "version": "0.1",
         "description": "This package provides syntax highlighting in [code] modules",
         "transforms": [
@@ -31,10 +31,14 @@ fn manifest() {
                 "from": "code",
                 "to": ["html"],
                 "arguments": [
-                    {"name": "lang", "description": "The language to be highlighted"},
+                    {"name": "lang", "default": "txt", "description":
+                        "The language to be highlighted. For available languages, see \
+                        https://github.com/sublimehq/Packages"},
                     {"name": "font_size", "default": "12", "description": "The size of the font"},
                     {"name": "tab_size", "default": "4", "description": "The size tabs will be adjusted to"},
-                    {"name": "theme", "default": "mocha", "description": "Theme of the code section"},
+                    {"name": "theme", "default": "mocha", "description":
+                        "Theme of the code section. For available themes, see \
+                        https://docs.rs/syntect/latest/syntect/highlighting/struct.ThemeSet.html#method.load_defaults"},
                     {"name": "bg", "default": "default", "description": "Background of the code section"},
                 ],
             }
@@ -44,27 +48,26 @@ fn manifest() {
     .unwrap());
 }
 
-fn transform(from: &String, to: &String) {
-    match from.as_str() {
+fn transform(from: &str, to: &str) {
+    match from {
         "code" => transform_code(to),
         other => {
             eprintln!("Package does not support {other}");
-            return;
         }
     }
 }
 
-fn transform_code(to: &String) {
+fn transform_code(to: &str) {
     macro_rules! get_arg {
         ($input:expr, $arg:expr) => {
             if let Value::String(val) = &$input["arguments"][$arg] {
                 val
             } else {
-                panic!("No theme argument was provided");
+                panic!("No {} argument was provided", $arg);
             }
         }
     }
-    match to.as_str() {
+    match to {
         "html" => {
             let input: Value = {
                 let mut buffer = String::new();
@@ -79,7 +82,6 @@ fn transform_code(to: &String) {
             let theme = get_arg!(input, "theme");
             let bg = get_arg!(input, "bg");
 
-
             let (highlighted, default_bg) = get_highlighted(code, lang, theme);
             let style = get_style(font_size, tab_size, bg, default_bg);
 
@@ -90,38 +92,32 @@ fn transform_code(to: &String) {
         }
         other => {
             eprintln!("Cannot convert code to {other}");
-            return;
         }
     }
 }
 
 fn get_style(font_size: &String, tab_size: &String, bg: &String, default_bg: Option<Color>) -> String {
-    let hex;
-    if bg == "default" && default_bg.is_some() {
+    let hex = if bg == "default" && default_bg.is_some() {
         let c = default_bg.unwrap();
-        hex = format!("{:02x}{:02x}{:02x}", c.r, c.g, c.b);
+        format!("{:02x}{:02x}{:02x}", c.r, c.g, c.b)
     } else {
-        hex = bg.clone();
-    }
+        bg.clone()
+    };
 
     let mut style = String::from("style=\"");
     write!(style, "box_sizing: border_box; ").unwrap();
     write!(style, "padding: 0.5rem; ").unwrap();
-    write!(style, "tab-size: {}; ", tab_size).unwrap();
-    write!(style, "font-size: {}px; ", font_size).unwrap();
-    write!(style, "background-color: #{}; ", hex).unwrap();
+    write!(style, "tab-size: {tab_size}; ").unwrap();
+    write!(style, "font-size: {font_size}px; ").unwrap();
+    write!(style, "background-color: #{hex}; ").unwrap();
     style.push('\"');
     style
 }
 
-fn get_highlighted(code: &str, lang: &String, tm: &String) -> (String, Option<Color>) {
+fn get_highlighted(code: &str, lang: &String, tm: &str) -> (String, Option<Color>) {
     let ss = SyntaxSet::load_defaults_newlines();
     let ts = ThemeSet::load_defaults();
-    let syntax = match ss.find_syntax_by_token(lang) {
-        Some(sr) => sr,
-        _ => ss.find_syntax_by_token("py").unwrap()
-    };
-    let theme = match tm.as_str() {
+    let theme = match tm {
         "ocean_dark" => &ts.themes["base16-ocean.dark"],
         "ocean_light" => &ts.themes["base16-ocean.light"],
         "mocha" => &ts.themes["base16-mocha.dark"],
@@ -131,14 +127,24 @@ fn get_highlighted(code: &str, lang: &String, tm: &String) -> (String, Option<Co
         "solar_light" => &ts.themes["Solarized (light)"],
         _ => &ts.themes["InspiredGitHub"]
     };
-    let mut h = HighlightLines::new(syntax, theme);
-    let incl_bg = IncludeBackground::No;
-    let mut html: Vec<String> = vec![];
 
-    // avoiding lines() here because we want to include the final newline
-    for line in code.split("\n").map(|s| s.trim_end_matches("\r")) {
-        let regions = h.highlight_line(line, &ss).unwrap();
-        html.push(styled_line_to_highlighted_html(&regions[..], incl_bg).unwrap())
+    if let Some(syntax) = ss.find_syntax_by_token(lang) {
+        let mut h = HighlightLines::new(syntax, theme);
+        let incl_bg = IncludeBackground::No;
+        let mut html: Vec<String> = vec![];
+
+        // avoiding lines() here because we want to include the final newline
+        for line in code.split('\n').map(|s| s.trim_end_matches('\r')) {
+            let regions = h.highlight_line(line, &ss).unwrap();
+            html.push(styled_line_to_highlighted_html(&regions[..], incl_bg).unwrap())
+        }
+        (html.join("<br>"), theme.settings.background)
+    } else {
+        eprintln!("Invalid language: {lang}");
+        let html = code
+            .split('\n')
+            .map(|s| s.trim_end_matches('\r'))
+            .collect::<Vec<&str>>();
+        (html.join("<br>"), Some(Color{r: 200, g: 200, b: 200, a: 255}))
     }
-    return (html.join("<br>"), theme.settings.background);
 }
