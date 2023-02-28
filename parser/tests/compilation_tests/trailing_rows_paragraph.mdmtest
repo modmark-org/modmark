@@ -1,0 +1,32 @@
+Test paragraphs followed by lots of newlines
+
+```mdm
+paragraph
+body
+
+yes
+
+
+
+
+```
+
+```json
+{
+    "name": "Document",
+    "children": [
+        {
+            "name": "Paragraph",
+            "children": [
+                "paragraph\nbody"
+            ]
+        },
+        {
+            "name": "Paragraph",
+            "children": [
+                "yes"
+            ]
+        }
+    ]
+}
+```
