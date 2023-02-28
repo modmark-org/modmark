@@ -1,8 +1,0 @@
-{
-  "name": "code",
-  "arguments": {
-    "lang": "py"
-  },
-  "data": "def coolFunction():\n    print(\"Wow!\")",
-  "inline": false
-}
