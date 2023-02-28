@@ -39,6 +39,13 @@ const packageContent = document.getElementById("package-content");
 const selector = document.getElementById("selector");
 const viewToggle = document.getElementById("view-toggle");
 const leftMenu = document.getElementById("left-menu");
+const formatInput = document.getElementById("format-input");
+
+if (selector.value == "transpile-other") {
+    formatInput.style.display = "block";
+} else {
+    formatInput.style.display = "none";
+}
 
 viewToggle.onclick = toggleView;
 
@@ -56,9 +63,19 @@ if (match !== null) {
 
 init().then(() => {
     editor.session.on("change", (_event) => handleChange());
-    selector.onchange = () => updateOutput(editor.getValue());
+    selector.onchange = handleMenuUpdate;
+    formatInput.onchange = handleMenuUpdate;
     updateOutput(editor.getValue());
 });
+
+function handleMenuUpdate(_event) {
+    if (selector.value == "transpile-other") {
+        formatInput.style.display = "block";
+    } else {
+        formatInput.style.display = "none";
+    }
+    updateOutput(editor.getValue());
+}
 
 let timeoutId = null;
 
@@ -213,10 +230,22 @@ function updateOutput(input) {
                 debugEditor.setValue(json_output(input));
                 debugEditor.getSession().selection.clearSelection()
                 break;
+            case "transpile-other": {
+                let { content, warnings, errors } = JSON.parse(transpile(input, formatInput.value));
+                errors.forEach(addError);
+                warnings.forEach(addWarning);
+
+                debugEditor.container.style.display = "block";
+                renderIframe.style.display = "none";
+                render.style.display = "none";
+
+                debugEditor.session.setMode("");
+                debugEditor.setValue(content);
+            } break;
             case "transpile":
             case "render-iframe":
             case "render": {
-                let { content, warnings, errors } = JSON.parse(transpile(input));
+                let { content, warnings, errors } = JSON.parse(transpile(input, "html"));
                 console.log({ warnings: warnings, errors: errors });
                 errors.forEach(addError);
                 warnings.forEach(addWarning);

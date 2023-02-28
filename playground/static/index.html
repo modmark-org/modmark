@@ -25,11 +25,13 @@
                 <select name="selector" id="selector">
                     <option value="ast">Abstract syntax tree</option>
                     <option value="ast-debug">Debug AST</option>
-                    <option value="json-output">JSON output</option>
-                    <option value="transpile">HTML output</option>
+                    <option value="json-output">JSON tree</option>
+                    <option value="transpile">Raw HTML</option>
+                    <option value="transpile-other">Other output format</option>
                     <option value="render">Rendered HTML</option>
                     <option value="render-iframe">Rendered HTML (iframe)</option>
                 </select>
+                <input placeholder="Specify output format" id="format-input">
                 <button id="view-toggle">
                     <span class="material-symbols-outlined">
                         widgets
