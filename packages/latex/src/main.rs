@@ -55,14 +55,14 @@ fn transform(from: &str) -> String {
 fn transform_paragraph(paragraph: Value) -> String {
     let mut result = String::new();
     result.push('[');
-    write!(result, r#"{{"name": "raw", "data": "\\n\\n"}},"#,).unwrap();
+    write!(result, r#"{{"name": "raw", "data": "\n"}},"#,).unwrap();
     if let Value::Array(children) = &paragraph["children"] {
         for child in children {
             result.push_str(&serde_json::to_string(child).unwrap());
             result.push(',');
         }
     }
-    write!(result, r#"{{"name": "raw", "data": "\\n\\n"}}"#,).unwrap();
+    write!(result, r#"{{"name": "raw", "data": "\n"}}"#,).unwrap();
     result.push(']');
 
     result
@@ -98,14 +98,14 @@ fn transform_heading(heading: Value) -> String {
     }
     
 
-    write!(result, r#"{{"name": "raw", "data": "\\{subs}section{{"}},"#,).unwrap();
+    write!(result, r#"{{"name": "raw", "data": "\n\\{subs}section{{"}},"#,).unwrap();
     if let Value::Array(children) = &heading["children"] {
         for child in children {
             result.push_str(&serde_json::to_string(child).unwrap());
             result.push(',');
         }
     }
-    write!(result, r#"{{"name": "raw", "data": "}}"}}"#,).unwrap();
+    write!(result, r#"{{"name": "raw", "data": "}}\n"}}"#,).unwrap();
     result.push(']');
 
     result
@@ -127,19 +127,18 @@ fn transform_document(doc: Value) -> String {
     result
 }
 
+
 fn escape_text(module: Value) -> String {
     if let Value::String(s) = &module["data"] {
-        let s = s
-            .replace('#', r"\#")
-            .replace('$', r"\$")
-            .replace('%', r"\%")
-            .replace('&', r"\&")
-            .replace('\\', r"\textbacklash{{}}")
-            .replace('^', r"\textasciicircum{{}}")
-            .replace('_', r"\_")
-            .replace('{', r"\{")
-            .replace('}', r"\}")
-            .replace('~', r"\textasciitilde{{}}");
+        let s = s.split('\\').map(|t| t.replace('{', r"\\{").replace('}', r"\\}")).collect::<Vec<String>>().join(r"\\textbacklash{}")
+            .replace('#', r"\\#")
+            .replace('$', r"\\$")
+            .replace('%', r"\\%")
+            .replace('&', r"\\&")
+            .replace('_', r"\\_")
+            .replace('\n', " ")
+            .replace('~', r"\\textasciitilde{}")
+            .replace('^', r"\\textasciicircum{}");
         format!(r#"[{{"name": "raw", "data":"{s}"}}]"#)
     } else {
         panic!("Malformed text module");
