@@ -72,7 +72,7 @@ where
                         let (captured_str, str) = if let Some(Text(other)) = prev.get_mut(ei) {
                             (format!("{}{}", &other.as_str()[ci..], acc), other)
                         } else {
-                            ((&acc.as_str()[ci..]).to_string(), &mut acc)
+                            (acc.as_str()[ci..].to_string(), &mut acc)
                         };
 
                         let smart_double_count = captured_str.matches(RDQUO).count()
