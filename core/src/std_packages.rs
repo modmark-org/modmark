@@ -13,7 +13,7 @@ use crate::{ArgInfo, Context, CoreError, Element, OutputFormat, PackageInfo, Tra
 // package with a given name both is in a folder with that name, containing a cargo package with
 // that name. Otherwise, the module won't be found
 define_standard_package_loader! {
-    "table", "html",
+    "table", "html", "code",
 }
 
 // Here, all native packages are declared. The macro expands to two functions,
