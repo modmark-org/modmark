@@ -78,7 +78,6 @@ pub fn transpile(source: &str, format: &str) -> Result<String, PlaygroundError> 
     Ok(serde_json::to_string(&transpile).unwrap())
 }
 
-
 fn escape(text: String) -> String {
     text.replace('&', "&amp;")
         .replace('<', "&lt;")
