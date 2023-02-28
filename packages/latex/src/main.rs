@@ -44,8 +44,9 @@ fn transform(from: &str) -> String {
         "__subscript" => transform_tag(input, "textsubscript"),
         "__underlined" => transform_tag(input, "underline"),
         "__strikethrough" => transform_tag(input, "sout"), //fixme: needs a package to use
+        "__verbatim" => transform_block(input, "verbatim"),
         "__paragraph" => transform_paragraph(input),
-        "__document" => transform_document(input),
+        "__document" => transform_block(input, "document"),
         "__text" => escape_text(input),
         "__heading" => transform_heading(input),
         _ => panic!("element not supported"),
@@ -111,17 +112,17 @@ fn transform_heading(heading: Value) -> String {
     result
 }
 
-fn transform_document(doc: Value) -> String {
+fn transform_block(doc: Value, tag: &str) -> String {
     let mut result = String::new();
     result.push('[');
-    write!(result, r#"{{"name": "raw", "data": "\\begin{{document}}"}},"#,).unwrap();
+    write!(result, r#"{{"name": "raw", "data": "\\begin{{{tag}}}\n"}},"#,).unwrap();
     if let Value::Array(children) = &doc["children"] {
         for child in children {
             result.push_str(&serde_json::to_string(child).unwrap());
             result.push(',');
         }
     }
-    write!(result, r#"{{"name": "raw", "data": "\\end{{document}}"}}"#,).unwrap();
+    write!(result, r#"{{"name": "raw", "data": "\n\\end{{{tag}}}"}}"#,).unwrap();
     result.push(']');
 
     result
@@ -194,6 +195,11 @@ fn manifest() -> String {
                 },
                 {
                     "from": "__paragraph",
+                    "to": ["latex"],
+                    "arguments": [],
+                },
+                {
+                    "from": "__verbatim",
                     "to": ["latex"],
                     "arguments": [],
                 },
