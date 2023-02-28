@@ -1,18 +1,17 @@
 extern crate core;
 
-use nom::bytes::complete::{take_till, take_while1};
-use nom::character::complete::{char, line_ending, none_of, space0};
-use nom::error::Error;
-use nom::multi::{fold_many1, many0, many1, separated_list0};
-use nom::sequence::{pair, preceded, terminated};
-use nom::{combinator::*, Finish, IResult, Parser};
 use std::collections::HashMap;
 use std::fmt;
 use std::mem;
 
-use thiserror::Error;
-
+use nom::bytes::complete::{take_till, take_while1};
+use nom::character::complete::{char, line_ending, none_of, space0};
+use nom::error::Error;
+use nom::multi::{fold_many0, many0, many1, separated_list0};
+use nom::sequence::{pair, preceded, terminated};
+use nom::{combinator::*, Finish, IResult, Parser};
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use crate::punct::smart_punctuate;
 use crate::tag::CompoundAST;
@@ -190,7 +189,7 @@ fn parse_document_blocks(input: &str) -> IResult<&str, Vec<Ast>> {
             many1(line_ending),
             map(module::parse_multiline_module, Ast::Module)
                 .or(map(parse_heading, Ast::Heading))
-                .or(map(parse_paragraph, Ast::Paragraph)),
+                .or(map(parse_nonempty_paragraph, Ast::Paragraph)),
         ),
     )(input)
 }
@@ -227,6 +226,20 @@ fn parse_heading(input: &str) -> IResult<&str, Heading> {
 /// returns: The parsed text, if a successful parse occurs, otherwise the parse error
 fn parse_heading_text(input: &str) -> IResult<&str, &str> {
     take_till(|c| c == '\r' || c == '\n')(input)
+}
+
+/// Parses a paragraph which consists of multiple paragraph elements, and puts all those into a
+/// `Paragraph` node. In addition to `parse_paragraph`, this ensures that it has at least one
+/// paragraph element. This is due to a change introduced in `parse_paragraph_elements` which allows
+/// it to parse the empty string, which results in a `Paragraph` with no elements.
+///
+/// # Arguments
+///
+/// * `input`: The text to parse
+///
+/// returns: The paragraph node, if a successful parse occurs, otherwise the parse error
+fn parse_nonempty_paragraph(input: &str) -> IResult<&str, Paragraph> {
+    verify(parse_paragraph, |p| !p.elements.is_empty())(input)
 }
 
 /// Parses a paragraph which consists of multiple paragraph elements, and puts all those into a
@@ -280,7 +293,7 @@ fn parse_paragraph_elements(input: &str) -> IResult<&str, Vec<Ast>> {
     map(
         map(
             map(
-                fold_many1(
+                fold_many0(
                     or::or5(
                         module::parse_inline_module,
                         preceded(char('\\'), line_ending),
