@@ -1,87 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"/>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&display=swap&family=Inter:wght@400;700"
-        rel="stylesheet">
+          rel="stylesheet">
     <script src="ace/ace.js" type="text/javascript" charset="utf-8"></script>
-    <title>Modmark Playground</title>
+    <title>ModMark Playground</title>
     <link rel="stylesheet" href="style.css">
     <script type="module" defer src="main.js"></script>
 </head>
 
 <body>
-    <div class="menu">
-        <div class="menu-items">
-            <div class="left-menu" id="left-menu">
-                <h1>Modmark playground</h1>
-                <select name="selector" id="selector">
-                    <option value="ast">Abstract syntax tree</option>
-                    <option value="ast-debug">Debug AST</option>
-                    <option value="json-output">JSON tree</option>
-                    <option value="transpile">Raw HTML</option>
-                    <option value="transpile-other">Other output format</option>
-                    <option value="render">Rendered HTML</option>
-                    <option value="render-iframe">Rendered HTML (iframe)</option>
-                </select>
-                <input placeholder="Specify output format" id="format-input">
-                <button id="view-toggle">
+<div class="menu">
+    <div class="menu-items">
+        <div class="left-menu" id="left-menu">
+            <h1>ModMark Playground</h1>
+            <select name="selector" id="selector">
+                <option value="ast">Abstract syntax tree</option>
+                <option value="ast-debug">Debug AST</option>
+                <option value="json-output">JSON tree</option>
+                <option value="transpile">Raw HTML</option>
+                <option value="transpile-other">Other output format</option>
+                <option value="render">Rendered HTML</option>
+                <option value="render-iframe">Rendered HTML (iframe)</option>
+            </select>
+            <input placeholder="Specify output format" id="format-input">
+            <button id="view-toggle">
                     <span class="material-symbols-outlined">
                         widgets
                     </span>
-                    View packages
-                </button>
-            </div>
-            <a href="https://github.com/modmark-org/modmark">
+                View packages
+            </button>
+        </div>
+        <a href="https://github.com/modmark-org/modmark">
                 <span class="material-symbols-outlined">
                     info
                 </span>
-                GitHub
-            </a>
-        </div>
+            GitHub
+        </a>
     </div>
-    <main id="wrapper">
-        <div id="editor-view">
-            <div id="editor"></div>
-            <div id="preview">
-                <div id="error-prompt">
+</div>
+<main id="wrapper">
+    <div id="editor-view">
+        <div id="editor"></div>
+        <div id="preview">
+            <div id="error-prompt">
                     <span class="material-symbols-outlined">
                         report
                     </span>
-                    <strong>Errors</strong>
-                    <div id="error-log"></div>
-                </div>
-                <div id="warning-prompt">
+                <strong>Errors</strong>
+                <div id="error-log"></div>
+            </div>
+            <div id="warning-prompt">
                     <span class="material-symbols-outlined">
                         warning
                     </span>
-                    <strong>Warnings</strong>
-                    <div id="warning-log"></div>
-                </div>
-                <div id="preview-content">
-                    <div id="status"></div>
-                    <div id="debug-editor"></div>
-                    <div id="render"></div>
-                    <iframe id="render-iframe"></iframe>
-                </div>
-
+                <strong>Warnings</strong>
+                <div id="warning-log"></div>
+            </div>
+            <div id="preview-content">
+                <div id="status"></div>
+                <div id="debug-editor"></div>
+                <div id="render"></div>
+                <iframe id="render-iframe"></iframe>
             </div>
         </div>
-        <div id="package-view">
-            <div id="packages">
-                <h2>Loaded packages</h2>
-                <div id="package-content">
-                    </pre>
-                </div>
+    </div>
+    <div id="package-view">
+        <div id="packages">
+            <h2>Loaded packages</h2>
+            <div id="package-content">
             </div>
-    </main>
+        </div>
+    </div>
+</main>
 </body>
-
 </html>
