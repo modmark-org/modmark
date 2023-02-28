@@ -6,11 +6,9 @@ members = [
     "package-tests"
 ]
 
-<<<<<<< HEAD
+
 exclude = ["packages/table", "packages/html", "packages/latex" "packages/code", "playground/web_bindings"]
-=======
-exclude = ["packages/table", "packages/html", "playground/web_bindings", "packages/latex"]
->>>>>>> df235fc (GH-58: Add finished latex support for basic features)
+
 
 # We need to specifiy that we use the new resolver to
 # get wasmer to build correctly when using a workspace
