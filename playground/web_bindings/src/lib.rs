@@ -52,10 +52,10 @@ struct Transpile {
 }
 
 #[wasm_bindgen]
-pub fn transpile(source: &str) -> Result<String, PlaygroundError> {
+pub fn transpile(source: &str, format: &str) -> Result<String, PlaygroundError> {
     let result = CONTEXT.with(|ctx| {
         let mut ctx = ctx.borrow_mut();
-        eval(source, &mut ctx, &OutputFormat::new("html"))
+        eval(source, &mut ctx, &OutputFormat::new(format))
     })?;
 
     let warnings = result

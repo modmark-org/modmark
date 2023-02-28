@@ -44,7 +44,8 @@ code {
 }
 
 button,
-select {
+select,
+input {
     display: flex;
     align-items: center;
     gap: 0.2rem;
@@ -97,6 +98,10 @@ select:hover {
 .menu h1 {
     margin: 0;
     font-size: 1.3rem;
+}
+
+#format-input {
+    display: none;
 }
 
 #wrapper {
@@ -295,11 +300,6 @@ select:hover {
     .menu-items {
         justify-content: space-between;
         gap: 1rem;
-    }
-
-    #preview-content {
-        padding-left: 0;
-        padding-right: 0;
     }
 
 }
