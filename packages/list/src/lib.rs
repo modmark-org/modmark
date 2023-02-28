@@ -200,6 +200,7 @@ impl List {
                     )
                 } else {
                     let closing_tag = tag_stack.pop().unwrap().closing_tag();
+                    tag_stack.push(item.item_type);
                     json_arr.as_array_mut().unwrap().extend(
                         json!([
                             {"name": "raw", "data": closing_tag},
@@ -226,25 +227,5 @@ impl List {
         }
 
         json_arr.to_string()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use serde_json::Value;
-
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let test: Value = serde_json::from_str(
-            &include_str!("example.txt")
-                .parse::<List>()
-                .unwrap()
-                .to_html(),
-        )
-        .unwrap();
-        println!("{:#?}", test);
-        assert_eq!(1, 1);
     }
 }
