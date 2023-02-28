@@ -32,8 +32,8 @@ fn manifest() {
                 "to": ["html"],
                 "arguments": [
                     {"name": "lang", "description": "The language to be highlighted"},
-                    {"name": "fontsize", "default": "12", "description": "The size of the font"},
-                    {"name": "indent", "default": "4", "description": "The size indents will be adjusted to (from the default 4)"},
+                    {"name": "font_size", "default": "12", "description": "The size of the font"},
+                    {"name": "tab_size", "default": "4", "description": "The size tabs will be adjusted to"},
                     {"name": "theme", "default": "mocha", "description": "Theme of the code section"},
                     {"name": "bg", "default": "default", "description": "Background of the code section"},
                 ],
@@ -55,6 +55,15 @@ fn transform(from: &String, to: &String) {
 }
 
 fn transform_code(to: &String) {
+    macro_rules! get_arg {
+        ($input:expr, $arg:expr) => {
+            if let Value::String(val) = &$input["arguments"][$arg] {
+                val
+            } else {
+                panic!("No theme argument was provided");
+            }
+        }
+    }
     match to.as_str() {
         "html" => {
             let input: Value = {
@@ -64,25 +73,15 @@ fn transform_code(to: &String) {
             };
 
             let code = input["data"].as_str().unwrap();
-            let Value::String(lang) = &input["arguments"]["lang"] else {
-                panic!("No lang argument was provided");
-            };
-            let Value::String(indent) = &input["arguments"]["indent"] else {
-                panic!("No indent argument was provided");
-            };
+            let lang = get_arg!(input, "lang");
+            let font_size = get_arg!(input, "font_size");
+            let tab_size = get_arg!(input, "tab_size");
+            let theme = get_arg!(input, "theme");
+            let bg = get_arg!(input, "bg");
 
-            let Value::String(tm) = &input["arguments"]["theme"] else {
-                panic!("No theme argument was provided");
-            };
-            let Value::String(bg) = &input["arguments"]["bg"] else {
-                panic!("No bg argument was provided");
-            };
-            let Value::String(size) = &input["arguments"]["fontsize"] else {
-                panic!("No fontsize argument was provided");
-            };
 
-            let (highlighted, default_bg) = get_highlighted(code, indent, lang, tm);
-            let style = get_style(size, bg, default_bg);
+            let (highlighted, default_bg) = get_highlighted(code, lang, theme);
+            let style = get_style(font_size, tab_size, bg, default_bg);
 
             let html = format!(r#"<pre {style}>{highlighted}</pre>"#);
             let json = json!({"name": "raw", "data": html}).to_string();
@@ -96,10 +95,32 @@ fn transform_code(to: &String) {
     }
 }
 
-fn get_highlighted(code: &str, indent: &String, lang: &String, tm: &String) -> (String, Option<Color>) {
+fn get_style(font_size: &String, tab_size: &String, bg: &String, default_bg: Option<Color>) -> String {
+    let hex;
+    if bg == "default" && default_bg.is_some() {
+        let c = default_bg.unwrap();
+        hex = format!("{:02x}{:02x}{:02x}", c.r, c.g, c.b);
+    } else {
+        hex = bg.clone();
+    }
+
+    let mut style = String::from("style=\"");
+    write!(style, "box_sizing: border_box; ").unwrap();
+    write!(style, "padding: 0.5rem; ").unwrap();
+    write!(style, "tab-size: {}; ", tab_size).unwrap();
+    write!(style, "font-size: {}px; ", font_size).unwrap();
+    write!(style, "background-color: #{}; ", hex).unwrap();
+    style.push('\"');
+    style
+}
+
+fn get_highlighted(code: &str, lang: &String, tm: &String) -> (String, Option<Color>) {
     let ss = SyntaxSet::load_defaults_newlines();
     let ts = ThemeSet::load_defaults();
-    let syntax = ss.find_syntax_by_extension(lang).unwrap();
+    let syntax = match ss.find_syntax_by_token(lang) {
+        Some(sr) => sr,
+        _ => ss.find_syntax_by_token("py").unwrap()
+    };
     let theme = match tm.as_str() {
         "ocean_dark" => &ts.themes["base16-ocean.dark"],
         "ocean_light" => &ts.themes["base16-ocean.light"],
@@ -112,43 +133,12 @@ fn get_highlighted(code: &str, indent: &String, lang: &String, tm: &String) -> (
     };
     let mut h = HighlightLines::new(syntax, theme);
     let incl_bg = IncludeBackground::No;
-    let indent_size = indent.parse::<usize>().unwrap_or(4);
-
     let mut html: Vec<String> = vec![];
 
     // avoiding lines() here because we want to include the final newline
     for line in code.split("\n").map(|s| s.trim_end_matches("\r")) {
-        let len = line.len();
-        let line = line.trim_start_matches(" ");
-        let indents = (len - line.len()) / 4; // assuming 4 is default tab
-        let new_indent = indents * indent_size;
-        let line = format!("{}{}", " ".repeat(new_indent), line);
-        let regions = h.highlight_line(line.as_str(), &ss).unwrap();
+        let regions = h.highlight_line(line, &ss).unwrap();
         html.push(styled_line_to_highlighted_html(&regions[..], incl_bg).unwrap())
     }
     return (html.join("<br>"), theme.settings.background);
-}
-
-fn write_css_color(s: &mut String, c: Color) {
-    if c.a != 0xFF {
-        write!(s, "#{:02x}{:02x}{:02x}{:02x}", c.r, c.g, c.b, c.a).unwrap();
-    } else {
-        write!(s, "#{:02x}{:02x}{:02x}", c.r, c.g, c.b).unwrap();
-    }
-}
-
-fn get_style(size: &String, bg: &String, default_bg: Option<Color>) -> String {
-    let mut style = String::from("style=\"");
-    write!(style, "padding: 0.5rem; box-sizing: border-box; font-size: {}px; ", size);
-    write!(style, "background-color: ");
-    if bg == "default" && default_bg.is_some() {
-        write_css_color(&mut style, default_bg.unwrap());
-    } else if bg == "default" {
-        write!(style, "#000000");
-    } else {
-        write!(style, "#{}", bg);
-    }
-
-    style.push_str("\"");
-    style
 }
