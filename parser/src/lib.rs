@@ -401,34 +401,33 @@ fn pretty_ast(ast: &Ast) -> Vec<String> {
     let indent = "  ";
     let mut strs = vec![];
 
+    fn children_ast(elements: &[Ast]) -> Vec<String> {
+        let mut strs = vec![];
+        let indent = "  ";
+        if elements.is_empty() {
+            strs.push(format!("{indent}[no elements]"));
+        } else {
+            elements.iter().for_each(|c| {
+                pretty_ast(c)
+                    .iter()
+                    .for_each(|s| strs.push(format!("{indent}{s}")))
+            });
+        }
+        strs
+    }
+
     match ast {
         Text(str) => str.lines().enumerate().for_each(|(idx, line)| {
             strs.push(format!("{} {line}", if idx == 0 { '>' } else { '|' }))
         }),
         Ast::Document(Document { elements }) => {
             strs.push("Document:".to_string());
-            if elements.is_empty() {
-                strs.push(format!("{indent}[no elements]"));
-            } else {
-                elements.iter().for_each(|c| {
-                    pretty_ast(c)
-                        .iter()
-                        .for_each(|s| strs.push(format!("{indent}{s}")))
-                });
-            }
+            strs.append(&mut children_ast(elements));
         }
 
         Ast::Paragraph(Paragraph { elements }) => {
             strs.push("Paragraph:".to_string());
-            if elements.is_empty() {
-                strs.push(format!("{indent}[no elements]"));
-            } else {
-                elements.iter().for_each(|c| {
-                    pretty_ast(c)
-                        .iter()
-                        .for_each(|s| strs.push(format!("{indent}{s}")))
-                });
-            }
+            strs.append(&mut children_ast(elements));
         }
 
         Ast::Tag(Tag {
@@ -437,15 +436,7 @@ fn pretty_ast(ast: &Ast) -> Vec<String> {
             recurse: _,
         }) => {
             strs.push(format!("{tag_name}:"));
-            if elements.is_empty() {
-                strs.push(format!("{indent}[no elements]"));
-            } else {
-                elements.iter().for_each(|c| {
-                    pretty_ast(c)
-                        .iter()
-                        .for_each(|s| strs.push(format!("{indent}{s}")))
-                });
-            }
+            strs.append(&mut children_ast(elements));
         }
 
         Ast::Module(Module {
