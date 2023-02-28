@@ -1,0 +1,19 @@
+{
+    "name": "code",
+    "arguments": {
+        "lang": "txt",
+        "font_size": "12",
+        "tab_size": "4",
+        "theme": "mocha",
+        "bg": "default"
+    },
+    "data": "def coolFunction():\n    print(\"Wow!\")",
+    "inline": false,
+    "__test_transform_to": "html",
+    "__test_expected_result": [
+        {
+            "name": "raw",
+            "data": "<pre style=\"box_sizing: border_box; padding: 0.5rem; tab-size: 4; font-size: 12px; background-color: #3b3228; \"><span style=\"color:#d0c8c6;\">def coolFunction():</span><br><span style=\"color:#d0c8c6;\">    print(&quot;Wow!&quot;)</span></pre>"
+        }
+    ]
+}

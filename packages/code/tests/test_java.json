@@ -1,0 +1,19 @@
+{
+    "name": "code",
+    "arguments": {
+        "lang": "java",
+        "font_size": "16",
+        "tab_size": "4",
+        "theme": "mocha",
+        "bg": "06080A"
+    },
+    "data": "public static void main(String[] args){\\n    String msg = \\\"Hello ModMark\\\";\\n    System.out.println(msg);\\n}",
+    "inline": false,
+    "__test_transform_to": "html",
+    "__test_expected_result": [
+        {
+            "name": "raw",
+            "data": "<pre style=\"box_sizing: border_box; padding: 0.5rem; tab-size: 4; font-size: 16px; background-color: #06080A; \"><span style=\"color:#a89bb9;\">public static void </span><span style=\"color:#8ab3b5;\">main</span><span style=\"color:#d0c8c6;\">(</span><span style=\"color:#f4bc87;\">String</span><span style=\"color:#a89bb9;\">[]</span><span style=\"color:#d0c8c6;\"> args){\\n    </span><span style=\"color:#f4bc87;\">String</span><span style=\"color:#d0c8c6;\"> msg = \\&quot;</span><span style=\"color:#beb55b;\">Hello ModMark</span><span style=\"color:#7bbda4;\">\\&quot;</span><span style=\"color:#beb55b;\">;</span><span style=\"color:#7bbda4;\">\\n</span><span style=\"color:#beb55b;\">    System.out.println(msg);</span><span style=\"color:#7bbda4;\">\\n</span><span style=\"color:#beb55b;\">}</span></pre>"
+        }
+    ]
+}
