@@ -16,6 +16,8 @@ define_standard_package_loader! {
     "table",
     "html",
     "latex",
+    "link",
+    "list",
     "code",
     "math",
     "layout",

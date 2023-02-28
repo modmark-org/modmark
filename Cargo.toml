@@ -1,19 +1,16 @@
 [workspace]
-members = [
-    "cli",
-    "core",
-    "parser",
-    "package-tests"
-]
+members = ["cli", "core", "parser", "package-tests"]
 
 exclude = [
     "packages/table",
     "packages/html",
     "packages/latex",
+    "packages/link",
+    "packages/list",
     "packages/code",
     "packages/math",
     "packages/layout",
-    "playground/web_bindings"
+    "playground/web_bindings",
 ]
 
 # We need to specifiy that we use the new resolver to
