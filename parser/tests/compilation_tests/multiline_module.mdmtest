@@ -1,0 +1,84 @@
+This tests that the following multiline modules are parsed correctly,
+where some of them doesn't have a body and are followed by one or many
+newlines, while some of them do have bodies.
+
+```mdm
+[module1]
+body
+
+not body
+
+[module2]
+
+not body
+not body
+
+not body
+
+[module3]
+body
+body
+
+[module4]
+
+
+
+not body
+```
+
+```json
+{
+    "name": "Document",
+    "children": [
+        {
+            "name": "module1",
+            "args": {},
+            "body": "body",
+            "one_line": false
+        },
+        {
+            "name": "Paragraph",
+            "children": [
+                "not body"
+            ]
+        },
+        {
+            "name": "module2",
+            "args": {},
+            "body": "",
+            "one_line": false
+        },
+        {
+            "name": "Paragraph",
+            "children": [
+                "not body\nnot body"
+            ]
+        },
+        {
+            "name": "Paragraph",
+            "children": [
+                "not body"
+            ]
+        },
+        {
+            "name": "module3",
+            "args": {},
+            "body": "body\nbody",
+            "one_line": false
+        },
+        {
+            "name": "module4",
+            "args": {},
+            "body": "",
+            "one_line": false
+        },
+        {
+            "name": "Paragraph",
+            "children": [
+                "not body"
+            ]
+        }
+    ]
+}
+
+```
