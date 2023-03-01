@@ -25,7 +25,7 @@ fn manifest() {
         "transforms": [
             {
                 "from": "table",
-                "to": ["html"],
+                "to": ["html", "latex"],
                 "arguments": [
                     {"name": "col_delimiter", "default": "|", "description": "The string delimiter for columns"}
                 ],
@@ -48,44 +48,94 @@ fn transform(from: &String, to: &String) {
 
 fn transform_table(to: &String) {
     match to.as_str() {
-        "html" => {
-            let input: Value = {
-                let mut buffer = String::new();
-                io::stdin().read_to_string(&mut buffer).unwrap();
-                serde_json::from_str(&buffer).unwrap()
-            };
-
-            let Value::String(delimiter) = &input["arguments"]["col_delimiter"] else {
-                panic!("No col_delimiter argument was provided");
-            };
-
-            let rows: Vec<Vec<&str>> = input["data"]
-                .as_str()
-                .unwrap()
-                .lines()
-                .map(|row| row.split(delimiter).collect())
-                .collect();
-
-            let mut output = String::new();
-            output.push('[');
-            output.push_str(r#"{"name": "raw", "data": "<table>"},"#);
-            for row in rows {
-                output.push_str(r#"{"name": "raw", "data": "<tr>"},"#);
-                for col in row {
-                    output.push_str(r#"{"name": "raw", "data": "<td>"},"#);
-                    write!(output, r#"{{"name": "inline_content", "data": "{col}"}},"#).unwrap();
-                    output.push_str(r#"{"name": "raw", "data": "</td>"},"#);
-                }
-                output.push_str(r#"{"name": "raw", "data": "</tr>"},"#);
-            }
-            output.push_str(r#"{"name": "raw", "data": "</table>"}"#);
-            output.push(']');
-
-            print!("{output}");
-        }
+        "html" => transform_html(),
+        "latex" => transform_latex(),
         other => {
             eprintln!("Cannot convert table to {other}");
             return;
         }
     }
+}
+
+fn transform_latex() {
+    let input: Value = {
+        let mut buffer = String::new();
+        io::stdin().read_to_string(&mut buffer).unwrap();
+        serde_json::from_str(&buffer).unwrap()
+    };
+
+    let Value::String(delimiter) = &input["arguments"]["col_delimiter"] else {
+        panic!("No col_delimiter argument was provided");
+    };
+
+    let rows: Vec<Vec<&str>> = input["data"]
+    .as_str()
+    .unwrap()
+    .lines()
+    .map(|row| row.split(delimiter).collect())
+    .collect();
+
+    let width = rows[0].len();
+
+    let shape = "c".repeat(width);
+
+    let mut output = String::new();
+    output.push('[');
+    write!(output, r#"{{"name": "raw", "data": "\\begin{{center}}\n\\begin{{tabular}}{{{shape}}}\n"}},"#).unwrap();
+    
+    
+
+    for row in rows {
+        let mut row = row.iter().peekable();
+        while let Some(col) = row.next() {
+            write!(output, r#"{{"name": "inline_content", "data": "{col}"}},"#).unwrap();
+            if row.peek().is_some() {
+                output.push_str(r#"{"name": "raw", "data": " & "},"#);
+            }
+        }
+        output.push_str(r#"{"name": "raw", "data": "\\\\\n"},"#);
+    }
+    
+    write!(output, r#"{{"name": "raw", "data": "\\end{{tabular}}\n\\end{{center}}\n"}}"#).unwrap();
+    output.push(']');
+
+    print!("{output}");
+}
+
+fn transform_html() {
+    let input: Value = {
+        let mut buffer = String::new();
+        io::stdin().read_to_string(&mut buffer).unwrap();
+        serde_json::from_str(&buffer).unwrap()
+    };
+
+    let Value::String(delimiter) = &input["arguments"]["col_delimiter"] else {
+        panic!("No col_delimiter argument was provided");
+    };
+
+
+    let rows: Vec<Vec<&str>> = input["data"]
+        .as_str()
+        .unwrap()
+        .lines()
+        .map(|row| row.split(delimiter).collect())
+        .collect();
+
+    let mut output = String::new();
+    output.push('[');
+    output.push_str(r#"{"name": "raw", "data": "<table>"},"#);
+    for row in rows {
+        output.push_str(r#"{"name": "raw", "data": "<tr>"},"#);
+        for col in row {
+            output.push_str(r#"{"name": "raw", "data": "<td>"},"#);
+            write!(output, r#"{{"name": "inline_content", "data": "{col}"}},"#).unwrap();
+            output.push_str(r#"{"name": "raw", "data": "</td>"},"#);
+        }
+        output.push_str(r#"{"name": "raw", "data": "</tr>"},"#);
+    }
+    output.push_str(r#"{"name": "raw", "data": "</table>"}"#);
+    output.push(']');
+
+    print!("{output}");
+
 }
