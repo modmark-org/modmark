@@ -5,9 +5,10 @@ It allows for syntactical constructions similar to Markdown,
 such as **bold text**, //italic text//, ~~some ==crazy
 __combination__==~~, but the coolest feature of all are modules:
 
-Here, we invoke the table module, and print [math][x], [math][x^2] and
-[math][x^3] for [math][x] between [math][1] and [math][4]. The input to
-the table module contains some math modules, and that works just fine!
+Here, we invoke the table module, and print [math][x], [math][x^2]
+and [math][x^3] for [math][x] between [math][1] and [math][4]. The
+input to the table module contains some math modules, and that
+works just fine!
 
 [table]
 [math][x]|[math][x^2]|[math][x^3]
@@ -20,10 +21,10 @@ What is this //table// thing? It is a module. Modules live
 within packages, which are programs who reside outside language.
 They are simply .wasm-programs which gets the input of the
 module, in this case all the text in the paragraph starting
-with [__text][[table]], and can do anything it want with it. In
+with \[table], and can do anything it want with it. In
 this case, ModMark sends the text together with information such
 as that the target output format is HTML, to the package which
-houses the [__text][[table]] module. The module then generates
+houses the \[table] module. The module then generates
 the corresponding <table> and </table> tags, and the result
 appears here.
 
