@@ -1,53 +1,47 @@
 # **How to contribute**
 
-## Git workflow
+We are using GitHub Issues and Pull Requests to structure and organize changes to the project. Pull requests are always welcome! Below are specific instructions for maintainers:
 
-<br />
+## GitHub workflow
 
-### **Create issue**
+### 1. Create Issue
 
-The workflow pipeline starts with someone creating a issue, this could be a feature request or a bug for example. This is done through [the issues page](https://github.com/modmark-org/modmark/issues). The templates are self explanatory, and after this mark the issue on the "markmod" project board below the "projects" header.
+The workflow pipeline starts with someone creating a issue, this could be for a feature request or for reporting a bug bug for example. This is done through [the issues page](https://github.com/modmark-org/modmark/issues). The templates are self-explanatory, and after this, the issue on the "markmod" project board below the "projects" header.
 
-<br />
+### 2. Create a branch
 
-### **Create branch**
+When you want to resolve an issue, you may create a branch by doing:
 
 > git checkout -b [branch-name]
 
-To start working on the issue create a branch from main. This should be named using the following naming convention:
+The branch should be created from the `main` branch, and should follow the following naming convention:
 
-> name/GH-[issuenr]/iteration
+> name/GH-[issue-no]/[iteration-no]
 
 Thus, the first iteration of issue nr 3 could look like:
 
 > hugom/GH-3/0
 
-<br />
-
-### **Commit**
+### 3. Implement the fix in your branch
 
 When you feel satisfied with the code written add the files you want to add to the codebase by using:
 
 > git commit
 
-Then write a commit-message that references the original issue your solving. The following text should describe what the commit does, its important this is written in **IMPERATIVE FORM**. Thus, a commit message that fix issue 3 would look like this:
+Then write a commit message that references the original issue your solving, by prefixing the message with `GH-[issue-no]`. The message should briefly describe what the commit does, and it is important that this is written in **imperative form**. Thus, a commit message that fix issue 3 could look like this:
 
 > GH-3: Fix and develop something
 
-Note how this uses "fix" and not "fixes"
+Note how this uses "fix" and not "fixes" in imperative form.
 
-<br />
+### 4. Push
 
-### **Push**
-
-Now that the code is commited you need to push it to the main repository. To do this you have to connect your new branch to the upstream which is done by the following:
+When the code is committed, you need to push it to the main repository. To do this you have to connect your new branch to the upstream which is done by the following:
 
 > git push --set-upstream origin [branch-name]
 
- <br />
+### 5. Make a Pull Request
 
-### **Pull request**
+To rebase your branch into `main`, open a pull request on [GitHub](https://github.com/modmark-org/modmark/pulls). To be able to rebase this, one other person has to do a code review approve it, and it has to pass all the tests. The pull request message should contain a description of what you have done, and must include the following text:
 
-To lastly rebase this unto main, open a pull request on [github](www.github.com). To be able to rebase this one other person has to approve and it must pass all the test without merge conflicts. The pull request message should be structured as following:
-
-> \- Resolves: GH-[issuenr]
+> Resolves: GH-[issue-no]
