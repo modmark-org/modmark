@@ -1,0 +1,23 @@
+{
+    "name": "math",
+    "arguments": {
+        "import": "false"
+    },
+    "data": "x^2",
+    "inline": false,
+    "__test_transform_to": "latex",
+    "__test_expected_result": [
+        {
+            "data": "\\begin{equation}",
+            "name": "raw"
+        },
+        {
+            "data": "x^2",
+            "name": "raw"
+        },
+        {
+            "data": "\\end{equation}",
+            "name": "raw"
+        }
+    ]
+}

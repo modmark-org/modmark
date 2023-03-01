@@ -1,0 +1,15 @@
+{
+    "name": "math",
+    "arguments": {
+        "import": "false"
+    },
+    "data": "x^2",
+    "inline": false,
+    "__test_transform_to": "html",
+    "__test_expected_result": [
+        {
+            "data": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi>x</mi><mn>2</mn></msup></math>",
+            "name": "raw"
+        }
+    ]
+}

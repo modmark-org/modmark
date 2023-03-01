@@ -1,0 +1,19 @@
+{
+    "name": "math",
+    "arguments": {
+        "import": "true"
+    },
+    "data": "x^2",
+    "inline": true,
+    "__test_transform_to": "html",
+    "__test_expected_result": [
+        {
+            "data": "<script id=\"MathJax-script\" async src=\"https://cdn.jsdelivr.net/npm/mathjax@3/es5/mml-chtml.js\"></script>",
+            "name": "raw"
+        },
+        {
+            "data": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><msup><mi>x</mi><mn>2</mn></msup></math>",
+            "name": "raw"
+        }
+    ]
+}
