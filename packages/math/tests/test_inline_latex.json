@@ -1,0 +1,15 @@
+{
+    "name": "math",
+    "arguments": {
+        "import": "false"
+    },
+    "data": "x^2",
+    "inline": true,
+    "__test_transform_to": "latex",
+    "__test_expected_result": [
+        {
+            "data": "$x^2$",
+            "name": "raw"
+        }
+    ]
+}
