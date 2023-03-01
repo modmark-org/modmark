@@ -130,7 +130,7 @@ mod tests {
             description: "This package supports [table] modules".to_string(),
             transforms: vec![Transform {
                 from: "table".to_string(),
-                to: vec![OutputFormat::new("html")],
+                to: vec![OutputFormat::new("html"), OutputFormat::new("latex")],
                 arguments: vec![ArgInfo {
                     name: "col_delimiter".to_string(),
                     default: Some("|".to_string()),
