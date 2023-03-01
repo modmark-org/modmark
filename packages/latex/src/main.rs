@@ -110,9 +110,13 @@ fn transform_heading(heading: Value) -> String {
     let Value::String(s) = &heading["arguments"]["level"] else {
         panic!();
     };
-    let level = s.parse::<u8>().unwrap().clamp(1, 3);
+    let level = s.parse::<u8>().unwrap();
+    if level > 3 {
+        eprintln!("Latex only supports headings up to level 3");
+    }
+    let clamped_level = level.clamp(1, 3); //latex only supports 1-3
     let mut subs = String::new();
-    if level > 1 {
+    if clamped_level > 1 {
         subs.push_str(&"sub".repeat((level - 1) as usize));
     }
     
@@ -156,6 +160,8 @@ fn escape_text(module: Value) -> String {
             .replace('&', r"\\&")
             .replace('_', r"\\_")
             .replace('\n', " ")
+            .replace('<', r"\\textless{}")
+            .replace('>', r"\\textgreater{}")
             .replace('~', r"\\textasciitilde{}")
             .replace('^', r"\\textasciicircum{}");
         format!(r#"[{{"name": "raw", "data":"{s}"}}]"#)
