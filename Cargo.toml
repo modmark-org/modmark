@@ -7,7 +7,7 @@ members = [
 ]
 
 
-exclude = ["packages/table", "packages/html", "packages/latex" "packages/code", "playground/web_bindings"]
+exclude = ["packages/table", "packages/html", "packages/latex", "packages/code", "playground/web_bindings"]
 
 
 # We need to specifiy that we use the new resolver to
