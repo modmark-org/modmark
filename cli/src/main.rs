@@ -1,5 +1,5 @@
-use std::io::{stdout, Write};
-use std::{env, fs, fs::File, path::Path, path::PathBuf, sync::Mutex, time::Duration};
+mod error;
+mod package;
 
 use clap::Parser;
 use crossterm::{
@@ -7,16 +7,15 @@ use crossterm::{
     style::{self, Stylize},
     terminal, ExecutableCommand,
 };
+use error::CliError;
+use modmark_core::{context::CompilationState, OutputFormat};
+use modmark_core::{eval, Context};
 use notify::{Config, Event, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher, WatcherKind};
 use once_cell::sync::Lazy;
+use std::io::{stdout, Write};
+use std::{env, fs, fs::File, path::Path, path::PathBuf, sync::Mutex, time::Duration};
 
-use core::context::CompilationState;
-use core::{eval, Context, OutputFormat};
-use error::CliError;
 use parser::{parse, Ast};
-
-mod error;
-mod package;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
@@ -76,8 +75,8 @@ fn print_tree(tree: &Ast) {
     println!("{}", tree.tree_string());
 }
 
-fn watch(args: &Args, target: &String) -> Result<(), CliError> {
-    fn watch_compile(
+async fn watch(args: &Args, target: &String) -> Result<(), CliError> {
+    async fn watch_compile(
         event: notify::Result<Event>,
         args: &Args,
         target: &String,
@@ -140,22 +139,23 @@ fn watch(args: &Args, target: &String) -> Result<(), CliError> {
 
     watcher.watch(Path::new(&args.input), RecursiveMode::Recursive)?;
 
-    watch_compile(Ok(Event::default()), args, target)?;
+    watch_compile(Ok(Event::default()), args, target).await?;
 
     for event in rx {
-        watch_compile(event, args, target)?;
+        watch_compile(event, args, target).await?;
     }
 
     Ok(())
 }
 
-fn main() -> Result<(), CliError> {
+#[tokio::main]
+async fn main() -> Result<(), CliError> {
     let args = Args::parse();
     let current_path = env::current_dir()?;
     let target = current_path.into_os_string().into_string().unwrap();
 
     if args.watch {
-        watch(&args, &target)?;
+        watch(&args, &target).await?;
     } else {
         match compile_file(&args) {
             Ok((tree, state)) => {
@@ -195,5 +195,9 @@ fn main() -> Result<(), CliError> {
         }
     }
 
+    /*
+        let pm = package::PackageManager;
+        let wasm_module = pm.resolve("pkgs:math").await?;
+    */
     Ok(())
 }
