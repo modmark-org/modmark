@@ -18,6 +18,7 @@ define_standard_package_loader! {
     "latex",
     "code",
     "math",
+    "layout",
 }
 
 // Here, all native packages are declared. The macro expands to two functions,
