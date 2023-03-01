@@ -39,19 +39,21 @@ fn transform(from: &str) -> String {
 
     match from {
         "__bold" => transform_tag(input, "textbf"),
-        "__italic" => transform_tag(input, "emph"),
+        "__italic" => transform_tag(input, "textit"),
         "__superscript" => transform_tag(input, "textsuperscript"),
         "__subscript" => transform_tag(input, "textsubscript"),
         "__underlined" => transform_tag(input, "underline"),
         "__strikethrough" => transform_tag(input, "sout"), //fixme: needs a package to use
-        "__verbatim" => transform_block(input, "verbatim"),
+        "__verbatim" => transform_verbatim(input),
         "__paragraph" => transform_paragraph(input),
-        "__document" => transform_block(input, "document"),
+        "__document" => transform_document(input),
         "__text" => escape_text(input),
         "__heading" => transform_heading(input),
         _ => panic!("element not supported"),
     }
 }
+
+
 
 fn transform_paragraph(paragraph: Value) -> String {
     let mut result = String::new();
@@ -85,6 +87,22 @@ fn transform_tag(node: Value, latex_function: &str) -> String {
     result
 }
 
+fn transform_verbatim(text: Value) -> String {
+    let mut result = String::new();
+    result.push('[');
+    write!(result, r#"{{"name": "raw", "data": "\\verb|"}},"#,).unwrap();
+    if let Value::Array(children) = &text["children"] {
+        for child in children {
+            result.push_str(&serde_json::to_string(child).unwrap());
+            result.push(',');
+        }
+    }
+    write!(result, r#"{{"name": "raw", "data": "|"}}"#,).unwrap();
+    result.push(']');
+
+    result
+}
+
 fn transform_heading(heading: Value) -> String {
     let mut result = String::new();
     result.push('[');
@@ -92,7 +110,7 @@ fn transform_heading(heading: Value) -> String {
     let Value::String(s) = &heading["arguments"]["level"] else {
         panic!();
     };
-    let level = s.parse::<u8>().unwrap().clamp(1, 6);
+    let level = s.parse::<u8>().unwrap().clamp(1, 3);
     let mut subs = String::new();
     if level > 1 {
         subs.push_str(&"sub".repeat((level - 1) as usize));
@@ -112,17 +130,17 @@ fn transform_heading(heading: Value) -> String {
     result
 }
 
-fn transform_block(doc: Value, tag: &str) -> String {
+fn transform_document(doc: Value) -> String {
     let mut result = String::new();
     result.push('[');
-    write!(result, r#"{{"name": "raw", "data": "\\begin{{{tag}}}\n"}},"#,).unwrap();
+    write!(result, r#"{{"name": "raw", "data": "\\documentclass{{article}}\n\\usepackage{{ulem}}\n\n\\begin{{document}}\n"}},"#,).unwrap();
     if let Value::Array(children) = &doc["children"] {
         for child in children {
             result.push_str(&serde_json::to_string(child).unwrap());
             result.push(',');
         }
     }
-    write!(result, r#"{{"name": "raw", "data": "\n\\end{{{tag}}}"}}"#,).unwrap();
+    write!(result, r#"{{"name": "raw", "data": "\n\\end{{document}}"}}"#,).unwrap();
     result.push(']');
 
     result
