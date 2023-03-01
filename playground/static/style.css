@@ -44,8 +44,8 @@ code {
 }
 
 button,
-select,
-input {
+input,
+select {
     display: flex;
     align-items: center;
     gap: 0.2rem;
@@ -53,10 +53,21 @@ input {
     box-shadow: 0 0 2px rgba(0, 0, 0, 0.501);
     border-radius: 0.3rem;
     padding: 0.5rem 1rem 0.5rem 1rem;
-    background: rgb(231, 231, 231);
-    transition: 0.2s background;
+    background-color: rgb(231, 231, 231);
+    transition: 0.2s background-color;
     color: black;
+}
+
+select {
     -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border: none;
+    background-image: url("expand_more.svg");
+    background-size: 10%;
+    background-position: right center;
+    background-repeat: no-repeat;
+    padding-right: 1.5rem;
 }
 
 button {
@@ -65,7 +76,7 @@ button {
 
 button:hover,
 select:hover {
-    background: rgb(222, 222, 222);
+    background-color: rgb(222, 222, 222);
 }
 
 .menu {
