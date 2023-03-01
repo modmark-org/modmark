@@ -11,7 +11,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 parser = { version = "*", path = "../../parser/" }
 thiserror = "1.0.38"
-core = { version = "*", path = "../../core/", default-features = false, features = ["web", "bundle_std_packages"] }
+modmark_core = { version = "*", path = "../../core/", default-features = false, features = ["web", "bundle_std_packages"] }
 wasm-bindgen = "0.2.63"
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires

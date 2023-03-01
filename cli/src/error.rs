@@ -1,4 +1,4 @@
-use core::CoreError;
+use modmark_core::CoreError;
 use parser::ParseError;
 use std::io;
 use thiserror::Error;
@@ -19,4 +19,22 @@ pub enum CliError {
 
     #[error("Cannot infer output format, please specifiy --format")]
     UnknownOutputFormat,
+
+    #[error("Reqwest error '{0}'")]
+    Reqwest(#[from] reqwest::Error),
+
+    #[error("Serde error '{0}'")]
+    Serde(#[from] serde_json::Error),
+
+    #[error("Could not create cache path")]
+    Cache,
+
+    #[error("Could not get registry source")]
+    Registry,
+
+    #[error("Specifier '{0}' not supported")]
+    Specifier(String),
+
+    #[error("Could not find local path to '{0}'")]
+    Local(String),
 }
