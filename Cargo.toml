@@ -6,7 +6,15 @@ members = [
     "package-tests"
 ]
 
-exclude = ["packages/table", "packages/html", "packages/latex", "packages/code", "packages/math", "playground/web_bindings"]
+exclude = [
+    "packages/table",
+    "packages/html",
+    "packages/latex",
+    "packages/code",
+    "packages/math",
+    "packages/layout",
+    "playground/web_bindings"
+]
 
 # We need to specifiy that we use the new resolver to
 # get wasmer to build correctly when using a workspace
