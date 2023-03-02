@@ -1,6 +1,7 @@
 use crate::error::CliError;
-use async_trait::async_trait;
 use directories::ProjectDirs;
+use futures::future::join_all;
+use modmark_core::Resolve;
 use serde_json;
 use std::{
     env::current_dir,
@@ -9,55 +10,83 @@ use std::{
     path::PathBuf,
 };
 
-#[async_trait]
-pub trait Resolve {
-    async fn resolve(&self, path: &str) -> Result<Vec<u8>, CliError>;
-}
+static RUNTIME: once_cell::sync::Lazy<tokio::runtime::Runtime> = once_cell::sync::Lazy::new(|| {
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+});
 
-pub struct PackageManager;
+pub struct PackageManager {}
 
-#[async_trait]
 impl Resolve for PackageManager {
-    async fn resolve(&self, path: &str) -> Result<Vec<u8>, CliError> {
-        let splitter = path.split_once(":");
-
-        let Some((specifier, package_path)) = splitter else {
-           return fetch_local(path);
-        };
-
-        match specifier {
-            "https" => return fetch_url("https://www.", package_path).await,
-            "pkgs" => return fetch_registry(package_path).await,
-            other => return Err(CliError::Specifier(other.to_string())),
-        }
+    type Error = CliError;
+    fn resolve(&self, path: &str) -> Result<Vec<u8>, Self::Error> {
+        RUNTIME.block_on(resolve_package(path))
+    }
+    fn resolve_all(&self, paths: Vec<&str>) -> Vec<Result<Vec<u8>, Self::Error>> {
+        RUNTIME.block_on(resolve_packages(paths))
     }
 }
 
-async fn fetch_url(url_root: &str, package_path: &str) -> Result<Vec<u8>, CliError> {
+async fn resolve_packages(paths: Vec<&str>) -> Vec<Result<Vec<u8>, CliError>> {
+    let futures = paths.iter().map(|path| resolve_package(path));
+
+    return join_all(futures).await;
+}
+
+async fn resolve_package(path: &str) -> Result<Vec<u8>, CliError> {
+    let splitter = path.split_once(':');
+
+    let Some((specifier, package_path)) = splitter else {
+           return fetch_local(path);
+        };
+
+    match specifier {
+        "http" => fetch_url(&path).await,
+        "https" => fetch_url(&path).await,
+        "pkgs" => fetch_registry(package_path).await,
+        other => Err(CliError::Specifier(other.to_string())),
+    }
+}
+
+async fn fetch_url(package_path: &str) -> Result<Vec<u8>, CliError> {
     let mut cache_path = match ProjectDirs::from("org", "modmark", "packages") {
         Some(path) => path.cache_dir().to_path_buf(),
         None => return Err(CliError::Cache),
     };
 
-    cache_path.push(PathBuf::from(&package_path));
+    let splitter = package_path.split_once(':');
+    let Some((_, mut domain_path)) = splitter else {
+        return Err(CliError::Cache)
+    };
 
-    let mut path = cache_path.clone();
-    path.pop();
+    if domain_path.len() < 2 {
+        return Err(CliError::Cache);
+    }
 
-    create_dir_all(PathBuf::from(&path))?;
+    domain_path = &domain_path[2..];
+
+    cache_path.push(PathBuf::from(&domain_path));
+
+    let Some(path) = cache_path.parent() else {return Err(CliError::Cache)};
+
+    create_dir_all(path)?;
 
     if cache_path.exists() {
         Ok(fs::read(cache_path)?)
     } else {
-        let mut website = url_root.to_string();
-        website.push_str(&package_path);
+        let response = reqwest::get(package_path).await?;
 
-        let response = reqwest::get(website).await?;
-        let content = response.text().await?;
+        if response.status() != 200 {
+            return Err(CliError::Get(response.status().to_string()));
+        }
+
+        let content = response.bytes().await?;
 
         let mut file = File::create(&cache_path)?;
 
-        copy(&mut content.as_bytes(), &mut file)?;
+        copy(&mut content.as_ref(), &mut file)?;
 
         Ok(fs::read(cache_path)?)
     }
@@ -91,11 +120,16 @@ async fn fetch_registry(package_name: &str) -> Result<Vec<u8>, CliError> {
         let Some(package_link) = package_link.as_str() else {return Err(CliError::Registry)};
         let package_response = reqwest::get(package_link).await?;
 
-        let package_content = package_response.text().await?;
+        if package_response.status() != 200 {
+            return Err(CliError::Get(package_response.status().to_string()));
+        }
+
+        let package_content = package_response.bytes().await?;
 
         let mut file = File::create(&cache_path)?;
 
-        copy(&mut package_content.as_bytes(), &mut file)?;
+        copy(&mut package_content.as_ref(), &mut file)?;
+
         Ok(fs::read(cache_path)?)
     }
 }

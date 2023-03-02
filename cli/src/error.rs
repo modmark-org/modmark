@@ -2,6 +2,7 @@ use modmark_core::CoreError;
 use parser::ParseError;
 use std::io;
 use thiserror::Error;
+use tokio::task::JoinError;
 
 #[derive(Error, Debug)]
 pub enum CliError {
@@ -23,6 +24,9 @@ pub enum CliError {
     #[error("Reqwest error '{0}'")]
     Reqwest(#[from] reqwest::Error),
 
+    #[error("Tokio join error '{0}'")]
+    Join(#[from] JoinError),
+
     #[error("Serde error '{0}'")]
     Serde(#[from] serde_json::Error),
 
@@ -37,4 +41,7 @@ pub enum CliError {
 
     #[error("Could not find local path to '{0}'")]
     Local(String),
+
+    #[error("Could not download package: Error code '{0}'")]
+    Get(String),
 }
