@@ -75,8 +75,8 @@ fn print_tree(tree: &Ast) {
     println!("{}", tree.tree_string());
 }
 
-async fn watch(args: &Args, target: &String) -> Result<(), CliError> {
-    async fn watch_compile(
+fn watch(args: &Args, target: &String) -> Result<(), CliError> {
+    fn watch_compile(
         event: notify::Result<Event>,
         args: &Args,
         target: &String,
@@ -148,23 +148,22 @@ async fn watch(args: &Args, target: &String) -> Result<(), CliError> {
 
     watcher.watch(Path::new(&args.input), RecursiveMode::Recursive)?;
 
-    watch_compile(Ok(Event::default()), args, target).await?;
+    watch_compile(Ok(Event::default()), args, target)?;
 
     for event in rx {
-        watch_compile(event, args, target).await?;
+        watch_compile(event, args, target)?;
     }
 
     Ok(())
 }
 
-#[tokio::main]
-async fn main() -> Result<(), CliError> {
+fn main() -> Result<(), CliError> {
     let args = Args::parse();
     let current_path = env::current_dir()?;
     let target = current_path.into_os_string().into_string().unwrap();
 
     if args.watch {
-        watch(&args, &target).await?;
+        watch(&args, &target)?;
     } else {
         match compile_file(&args) {
             Ok((tree, state)) => {
@@ -204,9 +203,5 @@ async fn main() -> Result<(), CliError> {
         }
     }
 
-    /*
-        let pm = package::PackageManager;
-        let wasm_module = pm.resolve("pkgs:math").await?;
-    */
     Ok(())
 }
