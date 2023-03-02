@@ -289,3 +289,26 @@ function updateOutput(input) {
     let timeElapsed = new Date() - start;
     status.innerHTML = buttonContent(`Compiled in ${timeElapsed} ms`, "magic_button");
 }
+
+const overleafButton = document.getElementById("overleaf-button");
+overleafButton.onclick = openInOverleaf;
+
+
+function openInOverleaf() {
+    let code = debugEditor.getValue();
+    console.log(formatedcode)
+    let url = "https://www.overleaf.com/docs"
+    // post the code to overleaf
+    let form = document.createElement("form");
+    form.setAttribute("method", "post");
+    form.setAttribute("action", url);
+    form.setAttribute("target", "_blank");
+    let hiddenField = document.createElement("input");
+    hiddenField.setAttribute("type", "hidden");
+    hiddenField.setAttribute("name", "snip");
+    hiddenField.setAttribute("value", code);
+    form.appendChild(hiddenField);
+    document.body.appendChild(form);
+    form.submit();
+    console.log("form submitted");
+}
