@@ -43,7 +43,11 @@ fn manifest() {
                 "arguments": [
                     {"name": "separator", "default": ",", "description": "The pattern used to separate items in the input content." },
                     {"name": "gap", "default": "10", "description": "The gap between items given in pixels." },
-                    {"name": "max_width", "default": "none", "description": "Max width of the row given in pixels"},
+                    {"name": "max_width", "default": "none", "description":
+                        "Max width of the row given in pixels. \
+                        Note that content that is too wide will \
+                        be cropped if used without wrapping."
+                    },
                     {"name": "wrap", "default": "false", "description": "true/false - Decides if items will wrap around to new rows."},
                 ]
             }
@@ -70,11 +74,10 @@ fn transform_flex(from: &str, to: &str) {
             } else {
                 panic!("No {} argument was provided", $arg);
             }
-        }
+        };
     }
     match to {
         "html" => {
-
             let input: Value = {
                 let mut buffer = String::new();
                 io::stdin().read_to_string(&mut buffer).unwrap();
@@ -87,22 +90,21 @@ fn transform_flex(from: &str, to: &str) {
             let max_width = get_arg!(input, "max_width");
             let wrap = get_arg!(input, "wrap");
 
-            let style = if from == "row" {
-                get_row_style(gap, max_width, wrap)
-            } else if from == "center" {
-                get_center_style(gap, max_width, wrap)
-            } else {
-                panic!("Expected center or row module")
+            let style = match from {
+                "row" => get_row_style(gap, max_width, wrap),
+                "center" => get_center_style(gap, max_width, wrap),
+                other => panic!("Unexpected transform from {}", other),
             };
 
-            let mut output = String::new();
-            let open = format!("<div {style}>");
-            write!(output, "{},", json!({"name": "raw", "data": open})).unwrap();
-            for item in content.split(separator) {
-                write!(output, "{},", json!({"name": "block_content", "data": item})).unwrap();
-            }
-            write!(output, "{}", json!({"name": "raw", "data": "</div>"})).unwrap();
-            print!("[{output}]");
+            let open = json!({"name": "raw", "data": format!("<div {style}>")});
+            let items = content
+                .split(separator)
+                .map(|item| json!({"name": "block_content", "data": item}).to_string())
+                .collect::<Vec<String>>()
+                .join(",");
+            let close = json!({"name": "raw", "data": format!("</div>")});
+
+            print!("[{},{},{}]", open, items, close);
         }
         other => {
             eprintln!("Cannot convert {from} to {other}");
@@ -115,18 +117,26 @@ fn get_row_style(gap: &str, max_width: &str, wrap: &str) -> String {
 
     if gap.parse::<usize>().is_ok() {
         write!(style, "gap: {gap}px; ").unwrap();
+    } else {
+        eprintln!("Unexpected value for argument: gap")
     }
 
     if max_width.parse::<usize>().is_ok() {
         write!(style, "max-width: {max_width}px; ").unwrap();
     } else {
         write!(style, "max-width: 100%; ").unwrap();
+        if max_width != "none" {
+            eprintln!("Unexpected value for argument: max_width")
+        }
     }
 
     if wrap == "true" {
         write!(style, "flex-wrap: wrap; ").unwrap();
     } else {
         write!(style, "overflow: hidden; ").unwrap();
+        if wrap != "false" {
+            eprintln!("Unexpected value for argument: wrap")
+        }
     }
 
     style.push('\"');
@@ -138,23 +148,31 @@ fn get_center_style(gap: &str, max_width: &str, wrap: &str) -> String {
         "style=\"display:flex; \
         justify-content: center; \
         margin-left: auto; \
-        margin-right: auto; "
+        margin-right: auto; ",
     );
 
     if gap.parse::<usize>().is_ok() {
         write!(style, "gap: {gap}px; ").unwrap();
+    } else {
+        eprintln!("Unexpected value for argument: gap")
     }
 
     if max_width.parse::<usize>().is_ok() {
         write!(style, "max-width: {max_width}px; ").unwrap();
     } else {
         write!(style, "max-width: 100%; ").unwrap();
+        if max_width != "none" {
+            eprintln!("Unexpected value for argument: max_width")
+        }
     }
 
     if wrap == "true" {
         write!(style, "flex-wrap: wrap; ").unwrap();
     } else {
         write!(style, "overflow: hidden; ").unwrap();
+        if wrap != "false" {
+            eprintln!("Unexpected value for argument: wrap")
+        }
     }
 
     style.push('\"');
