@@ -2,6 +2,7 @@ use modmark_core::CoreError;
 use parser::ParseError;
 use std::io;
 use thiserror::Error;
+use tokio::task::JoinError;
 
 #[derive(Error, Debug)]
 pub enum CliError {
@@ -22,6 +23,9 @@ pub enum CliError {
 
     #[error("Reqwest error '{0}'")]
     Reqwest(#[from] reqwest::Error),
+
+    #[error("Tokio join error '{0}'")]
+    Join(#[from] JoinError),
 
     #[error("Serde error '{0}'")]
     Serde(#[from] serde_json::Error),

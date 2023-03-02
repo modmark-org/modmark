@@ -1,6 +1,7 @@
 use crate::error::CliError;
-use async_trait::async_trait;
 use directories::ProjectDirs;
+use futures::future::join_all;
+use modmark_core::Resolve;
 use serde_json;
 use std::{
     env::current_dir,
@@ -9,27 +10,47 @@ use std::{
     path::PathBuf,
 };
 
-#[async_trait]
-pub trait Resolve {
-    async fn resolve(&self, path: &str) -> Result<Vec<u8>, CliError>;
+pub struct PackageManager {}
+
+impl Resolve for PackageManager {
+    type Error = CliError;
+    fn resolve(&self, path: &str) -> Result<Vec<u8>, Self::Error> {
+        let out = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(resolve_package(path))?;
+
+        return Ok(out);
+    }
+    fn resolve_all(&self, paths: Vec<&str>) -> Vec<Result<Vec<u8>, Self::Error>> {
+        let out = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(resolve_packages(paths));
+
+        return out;
+    }
 }
 
-pub struct PackageManager;
+async fn resolve_packages(paths: Vec<&str>) -> Vec<Result<Vec<u8>, CliError>> {
+    let futures = paths.iter().map(|path| resolve_package(path));
 
-#[async_trait]
-impl Resolve for PackageManager {
-    async fn resolve(&self, path: &str) -> Result<Vec<u8>, CliError> {
-        let splitter = path.split_once(":");
+    return join_all(futures).await;
+}
 
-        let Some((specifier, package_path)) = splitter else {
+async fn resolve_package(path: &str) -> Result<Vec<u8>, CliError> {
+    let splitter = path.split_once(":");
+
+    let Some((specifier, package_path)) = splitter else {
            return fetch_local(path);
         };
 
-        match specifier {
-            "https" => return fetch_url("https://www.", package_path).await,
-            "pkgs" => return fetch_registry(package_path).await,
-            other => return Err(CliError::Specifier(other.to_string())),
-        }
+    match specifier {
+        "https" => return fetch_url("https://www.", package_path).await,
+        "pkgs" => return fetch_registry(package_path).await,
+        other => return Err(CliError::Specifier(other.to_string())),
     }
 }
 
