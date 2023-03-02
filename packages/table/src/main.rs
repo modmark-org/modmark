@@ -47,17 +47,6 @@ fn transform(from: &String, to: &String) {
 }
 
 fn transform_table(to: &String) {
-    match to.as_str() {
-        "html" => transform_html(),
-        "latex" => transform_latex(),
-        other => {
-            eprintln!("Cannot convert table to {other}");
-            return;
-        }
-    }
-}
-
-fn transform_latex() {
     let input: Value = {
         let mut buffer = String::new();
         io::stdin().read_to_string(&mut buffer).unwrap();
@@ -75,6 +64,17 @@ fn transform_latex() {
     .map(|row| row.split(delimiter).collect())
     .collect();
 
+    match to.as_str() {
+        "html" => transform_html(rows),
+        "latex" => transform_latex(rows),
+        other => {
+            eprintln!("Cannot convert table to {other}");
+            return;
+        }
+    }
+}
+
+fn transform_latex(rows: Vec<Vec<&str>>) {
     let width = rows[0].len();
 
     let shape = "c".repeat(width);
@@ -102,24 +102,7 @@ fn transform_latex() {
     print!("{output}");
 }
 
-fn transform_html() {
-    let input: Value = {
-        let mut buffer = String::new();
-        io::stdin().read_to_string(&mut buffer).unwrap();
-        serde_json::from_str(&buffer).unwrap()
-    };
-
-    let Value::String(delimiter) = &input["arguments"]["col_delimiter"] else {
-        panic!("No col_delimiter argument was provided");
-    };
-
-
-    let rows: Vec<Vec<&str>> = input["data"]
-        .as_str()
-        .unwrap()
-        .lines()
-        .map(|row| row.split(delimiter).collect())
-        .collect();
+fn transform_html(rows: Vec<Vec<&str>>) {
 
     let mut output = String::new();
     output.push('[');
