@@ -36,8 +36,8 @@ fn manifest() {
     .unwrap());
 }
 
-fn transform(from: &String, to: &String) {
-    match from.as_str() {
+fn transform(from: &str, to: &str) {
+    match from {
         "table" => transform_table(to),
         other => {
             eprintln!("Package does not support {other}");
@@ -46,7 +46,7 @@ fn transform(from: &String, to: &String) {
     }
 }
 
-fn transform_table(to: &String) {
+fn transform_table(to: &str) {
     let input: Value = {
         let mut buffer = String::new();
         io::stdin().read_to_string(&mut buffer).unwrap();
@@ -58,13 +58,13 @@ fn transform_table(to: &String) {
     };
 
     let rows: Vec<Vec<&str>> = input["data"]
-    .as_str()
-    .unwrap()
-    .lines()
-    .map(|row| row.split(delimiter).collect())
-    .collect();
+        .as_str()
+        .unwrap()
+        .lines()
+        .map(|row| row.split(delimiter).collect())
+        .collect();
 
-    match to.as_str() {
+    match to {
         "html" => transform_html(rows),
         "latex" => transform_latex(rows),
         other => {
@@ -81,9 +81,11 @@ fn transform_latex(rows: Vec<Vec<&str>>) {
 
     let mut output = String::new();
     output.push('[');
-    write!(output, r#"{{"name": "raw", "data": "\\begin{{center}}\n\\begin{{tabular}}{{{shape}}}\n"}},"#).unwrap();
-    
-    
+    write!(
+        output,
+        r#"{{"name": "raw", "data": "\\begin{{center}}\n\\begin{{tabular}}{{{shape}}}\n"}},"#
+    )
+    .unwrap();
 
     for row in rows {
         let mut row = row.iter().peekable();
@@ -95,15 +97,18 @@ fn transform_latex(rows: Vec<Vec<&str>>) {
         }
         output.push_str(r#"{"name": "raw", "data": "\\\\\n"},"#);
     }
-    
-    write!(output, r#"{{"name": "raw", "data": "\\end{{tabular}}\n\\end{{center}}\n"}}"#).unwrap();
+
+    write!(
+        output,
+        r#"{{"name": "raw", "data": "\\end{{tabular}}\n\\end{{center}}\n"}}"#
+    )
+    .unwrap();
     output.push(']');
 
     print!("{output}");
 }
 
 fn transform_html(rows: Vec<Vec<&str>>) {
-
     let mut output = String::new();
     output.push('[');
     output.push_str(r#"{"name": "raw", "data": "<table>"},"#);
@@ -120,5 +125,4 @@ fn transform_html(rows: Vec<Vec<&str>>) {
     output.push(']');
 
     print!("{output}");
-
 }
