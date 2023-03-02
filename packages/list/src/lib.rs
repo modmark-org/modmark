@@ -1,6 +1,7 @@
+use serde_json::json;
 use std::str::FromStr;
 
-use serde_json::json;
+const MAX_DEPTH: usize = 255;
 
 #[derive(Debug)]
 pub struct NoListError;
@@ -16,30 +17,33 @@ enum ItemType {
 }
 
 impl ItemType {
-    fn opening_tag(&self) -> String {
+    fn opening_tag(&self, level: usize) -> String {
         use ItemType::*;
         match self {
-            Bullet => "<ul>",
-            Decimal => r#"<ol type="1">"#,
-            LowerAlpha => r#"<ol type="a">"#,
-            UpperAlpha => r#"<ol type="A">"#,
-            LowerRoman => r#"<ol type="i">"#,
-            UpperRoman => r#"<ol type="I">"#,
+            Bullet => "<ul>".to_string(),
+            Decimal => format!(r#"<ol type="1" start="{level}">"#),
+            LowerAlpha => format!(r#"<ol type="a" start="{level}">"#),
+            UpperAlpha => format!(r#"<ol type="A" start="{level}">"#),
+            LowerRoman => format!(r#"<ol type="i" start="{level}">"#),
+            UpperRoman => format!(r#"<ol type="I" start="{level}">"#),
+        }
+    }
+
+    fn closing_tag(&self) -> String {
+        if *self == ItemType::Bullet {
+            "</ul>"
+        } else {
+            "</ol>"
         }
         .to_string()
     }
 
-    fn closing_tag(&self) -> String {
-        use ItemType::*;
-        match self {
-            Bullet => "</ul>",
-            Decimal => "</ol>",
-            LowerAlpha => "</ol>",
-            UpperAlpha => "</ol>",
-            LowerRoman => "</ol>",
-            UpperRoman => "</ol>",
+    fn is_ordered(&self) -> bool {
+        if *self == ItemType::Bullet {
+            false
+        } else {
+            true
         }
-        .to_string()
     }
 }
 
@@ -119,16 +123,15 @@ impl FromStr for List {
                                 .chars()
                                 .take_while(|&x| x.is_ascii_whitespace())
                                 .count()
-                                / 2)
+                                / 4)
                                 + 1;
                             items.push(ListItem {
                                 item_type,
                                 content: line
                                     .chars()
                                     .skip_while(|&x| x.is_ascii_whitespace())
-                                    .collect::<String>()
-                                    .split_ascii_whitespace()
-                                    .skip(1)
+                                    .skip_while(|&x| !x.is_ascii_whitespace())
+                                    .skip_while(|&x| x.is_ascii_whitespace())
                                     .collect::<String>(),
                                 level,
                             });
@@ -156,65 +159,46 @@ impl List {
         if self.items.len() == 0 {
             return String::new();
         }
-        let initial_arr = json!([
-            {"name": "raw", "data": self.items[0].item_type.opening_tag()},
-            {"name": "raw", "data": "<li>"},
-            {"name": "block_content", "data": self.items[0].content},
-            {"name": "raw", "data": "</li>"}
-        ]);
-        let (mut json_arr, mut tag_stack, _) = self.items.iter().skip(1).fold(
-            (
-                initial_arr,
-                vec![self.items[0].item_type],
-                self.items[0].item_type,
-            ),
-            |(mut json_arr, mut tag_stack, last_type), item| {
-                let mut flag = false;
+        let mut counters = vec![1; MAX_DEPTH];
+        let (mut json_arr, mut tag_stack) = self.items.iter().fold(
+            (json!([]), vec![]),
+            |(mut json_arr, mut tag_stack), item| {
                 while item.level != tag_stack.len() {
                     if item.level > tag_stack.len() {
                         tag_stack.push(item.item_type);
-                        let opening_tag = item.item_type.opening_tag();
+                        let opening_tag = item.item_type.opening_tag(counters[item.level]);
                         json_arr
                             .as_array_mut()
                             .unwrap()
                             .push(json!({"name": "raw", "data": opening_tag}));
-                        flag = true;
                     } else {
+                        let reset_level = tag_stack.len();
                         let closing_tag = tag_stack.pop().unwrap().closing_tag();
                         json_arr
                             .as_array_mut()
                             .unwrap()
                             .push(json!({"name": "raw", "data": closing_tag}));
+                        *counters.get_mut(reset_level).unwrap() = 1;
                     }
                 }
-                if last_type == item.item_type || flag {
-                    json_arr.as_array_mut().unwrap().extend(
-                        json!([
-                            {"name": "raw", "data": "<li>"},
-                            {"name": "block_content", "data": item.content},
-                            {"name": "raw", "data": "</li>"}
-                        ])
-                        .as_array()
-                        .unwrap()
-                        .clone(),
-                    )
-                } else {
-                    let closing_tag = tag_stack.pop().unwrap().closing_tag();
-                    tag_stack.push(item.item_type);
-                    json_arr.as_array_mut().unwrap().extend(
-                        json!([
-                            {"name": "raw", "data": closing_tag},
-                            {"name": "raw", "data": item.item_type.opening_tag()},
-                            {"name": "raw", "data": "<li>"},
-                            {"name": "block_content", "data": item.content},
-                            {"name": "raw", "data": "</li>"}
-                        ])
-                        .as_array()
-                        .unwrap()
-                        .clone(),
-                    )
+                let closing_tag = tag_stack.pop().unwrap().closing_tag();
+                tag_stack.push(item.item_type);
+                json_arr.as_array_mut().unwrap().extend(
+                    json!([
+                        {"name": "raw", "data": closing_tag},
+                        {"name": "raw", "data": item.item_type.opening_tag(counters[item.level])},
+                        {"name": "raw", "data": "<li>"},
+                        {"name": "block_content", "data": item.content},
+                        {"name": "raw", "data": "</li>"}
+                    ])
+                    .as_array()
+                    .unwrap()
+                    .clone(),
+                );
+                if item.item_type.is_ordered() {
+                    *counters.get_mut(item.level).unwrap() += 1;
                 }
-                (json_arr, tag_stack, item.item_type)
+                (json_arr, tag_stack)
             },
         );
 
