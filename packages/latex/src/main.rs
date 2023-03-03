@@ -156,6 +156,7 @@ fn escape_text(module: Value) -> String {
         let s = s.split('\\').map(|t| t.replace('{', r"\\{").replace('}', r"\\}")).collect::<Vec<String>>().join(r"\\textbacklash{}")
             .replace('#', r"\\#")
             .replace('$', r"\\$")
+            .replace("\"","\\\"")
             .replace('%', r"\\%")
             .replace('&', r"\\&")
             .replace('_', r"\\_")
