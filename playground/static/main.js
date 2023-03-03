@@ -224,7 +224,7 @@ function updateOutput(input) {
 
                 debugEditor.session.setMode("");
                 debugEditor.setValue(ast_debug(input));
-                debugEditor.getSession().selection.clearSelection()
+                debugEditor.getSession().selection.clearSelection();
                 break;
             case "json-output":
                 debugEditor.container.style.display = "block";
@@ -233,7 +233,7 @@ function updateOutput(input) {
 
                 debugEditor.session.setMode("ace/mode/json");
                 debugEditor.setValue(json_output(input));
-                debugEditor.getSession().selection.clearSelection()
+                debugEditor.getSession().selection.clearSelection();
                 break;
             case "transpile-other": {
                 let {content, warnings, errors} = JSON.parse(transpile(input, formatInput.value));
@@ -246,6 +246,7 @@ function updateOutput(input) {
 
                 debugEditor.session.setMode("");
                 debugEditor.setValue(content);
+                debugEditor.getSession().selection.clearSelection();
             }
                 break;
             case "transpile":
