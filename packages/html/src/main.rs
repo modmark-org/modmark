@@ -181,7 +181,7 @@ fn manifest() -> String {
     serde_json::to_string(&json!(
         {
             "version": "0.1",
-            "name": "HTML",
+            "name": "html",
             "description": "This packages provides HTML support for the basic Modmark features.",
             "transforms": [
                 {

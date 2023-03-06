@@ -19,7 +19,7 @@ fn main() {
 fn manifest() {
     print!("{}", serde_json::to_string(&json!(
         {
-        "name": "Standard table package",
+        "name": "table",
         "version": "0.1",
         "description": "This package supports [table] modules",
         "transforms": [
