@@ -58,6 +58,17 @@ You will be sent the element as json object via stdout, and you respond by sendi
 
 If you want to see some examples of what this json format looks like, you can check out the subdirectories or visit the online playground and select "JSON output".
 
+## Conventions
+
+There are some conventions when creating and naming packages.
+ * All packages in this directory should be cargo crates, where the crate name and only binary target name should match the directory name.
+ * All package names must start with a lowercase letter and may only contain lowercase letters, underscores and dashes.
+ * Each package must contain at least one transform (a package isn't very useful without one)
+ * Each transform must satisfy the following:
+   * Its `from` field (the parent or module name) must only contain lowercase letters, digits, dashes, underscores and dots
+   * Its `to` array must have at least one entry, and they all must be in all lowercase letters, since it is meant to match a format or file extension
+   * Its arguments should have names starting with a lowercase letter and may only contain lowercase letters, numbers and underscores
+
 ## Handling errors
 
 Errors occur in all pieces of code, including your packages. As a part of the sandbox we build to run your packages in, we have built in some error handling.

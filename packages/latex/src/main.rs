@@ -174,7 +174,7 @@ fn manifest() -> String {
     serde_json::to_string(&json!(
         {
             "version": "0.1",
-            "name": "Latex",
+            "name": "latex",
             "description": "This packages provides Latex support for the basic Modmark features.",
             "transforms": [
                 {

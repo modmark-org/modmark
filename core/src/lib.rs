@@ -119,13 +119,10 @@ mod tests {
     #[test]
     fn table_manifest_test() {
         let ctx = Context::default();
-        let info = ctx
-            .get_package_info("Standard table package")
-            .unwrap()
-            .clone();
+        let info = ctx.get_package_info("table").unwrap().clone();
 
         let foo = PackageInfo {
-            name: "Standard table package".to_string(),
+            name: "table".to_string(),
             version: "0.1".to_string(),
             description: "This package supports [table] modules".to_string(),
             transforms: vec![Transform {
