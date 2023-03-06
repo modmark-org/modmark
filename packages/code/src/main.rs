@@ -4,9 +4,9 @@ use std::io::{self, Read};
 
 use serde_json::{json, Value};
 use syntect::easy::HighlightLines;
-use syntect::parsing::SyntaxSet;
-use syntect::highlighting::{ThemeSet, Color};
+use syntect::highlighting::{Color, ThemeSet};
 use syntect::html::{styled_line_to_highlighted_html, IncludeBackground};
+use syntect::parsing::SyntaxSet;
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -65,7 +65,7 @@ fn transform_code(to: &str) {
             } else {
                 panic!("No {} argument was provided", $arg);
             }
-        }
+        };
     }
     match to {
         "html" => {
@@ -85,10 +85,14 @@ fn transform_code(to: &str) {
             let (highlighted, default_bg) = get_highlighted(code, lang, theme);
             let style = get_style(font_size, tab_size, bg, default_bg);
 
-            let html = format!(r#"<pre {style}>{highlighted}</pre>"#);
-            let json = json!({"name": "raw", "data": html}).to_string();
-
-            print!("[{json}]");
+            if let Value::Bool(inline) = &input["inline"] {
+                let html = if *inline {
+                    format!(r#"<code {style}>{highlighted}</code>"#)
+                } else {
+                    format!(r#"<pre {style}>{highlighted}</pre>"#)
+                };
+                print!("[{}]", json!({"name": "raw", "data": html}));
+            }
         }
         other => {
             eprintln!("Cannot convert code to {other}");
@@ -96,7 +100,12 @@ fn transform_code(to: &str) {
     }
 }
 
-fn get_style(font_size: &String, tab_size: &String, bg: &String, default_bg: Option<Color>) -> String {
+fn get_style(
+    font_size: &String,
+    tab_size: &String,
+    bg: &String,
+    default_bg: Option<Color>,
+) -> String {
     let hex = if bg == "default" && default_bg.is_some() {
         let c = default_bg.unwrap();
         format!("{:02x}{:02x}{:02x}", c.r, c.g, c.b)
@@ -125,7 +134,7 @@ fn get_highlighted(code: &str, lang: &String, tm: &str) -> (String, Option<Color
         "github" => &ts.themes["InspiredGitHub"],
         "solar_dark" => &ts.themes["Solarized (dark)"],
         "solar_light" => &ts.themes["Solarized (light)"],
-        _ => &ts.themes["InspiredGitHub"]
+        _ => &ts.themes["InspiredGitHub"],
     };
 
     if let Some(syntax) = ss.find_syntax_by_token(lang) {
@@ -145,6 +154,14 @@ fn get_highlighted(code: &str, lang: &String, tm: &str) -> (String, Option<Color
             .split('\n')
             .map(|s| s.trim_end_matches('\r'))
             .collect::<Vec<&str>>();
-        (html.join("<br>"), Some(Color{r: 200, g: 200, b: 200, a: 255}))
+        (
+            html.join("<br>"),
+            Some(Color {
+                r: 200,
+                g: 200,
+                b: 200,
+                a: 255,
+            }),
+        )
     }
 }
