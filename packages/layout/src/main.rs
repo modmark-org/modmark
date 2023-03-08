@@ -33,7 +33,7 @@ fn manifest() {
                         {"name": "gap", "default": "10", "description":
                             "The gap between items. You can \
                             optionally add a css unit, otherwise \
-                            rem will be used.."
+                            rem will be used."
                         },
                         {"name": "max_width", "default": "none", "description":
                             "Max width of the row. You can optionally add \
@@ -52,7 +52,7 @@ fn manifest() {
                         {"name": "gap", "default": "10", "description":
                             "The gap between items. You can \
                             optionally add a css unit, otherwise \
-                            it will default to rem."
+                            rem will be used."
                         },
                         {"name": "max_width", "default": "none", "description":
                             "Max width of the row. You can optionally add \
