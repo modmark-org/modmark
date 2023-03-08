@@ -83,9 +83,9 @@ fn transform_code(to: &str) {
             let bg = get_arg!(input, "bg");
 
             let (highlighted, default_bg) = get_highlighted(code, lang, theme);
-            let style = get_style(font_size, tab_size, bg, default_bg);
 
             if let Value::Bool(inline) = &input["inline"] {
+                let style = get_style(inline, font_size, tab_size, bg, default_bg);
                 let html = if *inline {
                     format!(r#"<code {style}>{highlighted}</code>"#)
                 } else {
@@ -101,11 +101,13 @@ fn transform_code(to: &str) {
 }
 
 fn get_style(
+    inline: &bool,
     font_size: &String,
     tab_size: &String,
     bg: &String,
     default_bg: Option<Color>,
 ) -> String {
+    let padding = if *inline { "0.1" } else { "0.5" };
     let hex = if bg == "default" && default_bg.is_some() {
         let c = default_bg.unwrap();
         format!("{:02x}{:02x}{:02x}", c.r, c.g, c.b)
@@ -115,10 +117,11 @@ fn get_style(
 
     let mut style = String::from("style=\"");
     write!(style, "box_sizing: border_box; ").unwrap();
-    write!(style, "padding: 0.5rem; ").unwrap();
+    write!(style, "padding: {padding}rem; ").unwrap();
     write!(style, "tab-size: {tab_size}; ").unwrap();
     write!(style, "font-size: {font_size}px; ").unwrap();
     write!(style, "background-color: #{hex}; ").unwrap();
+
     style.push('\"');
     style
 }
