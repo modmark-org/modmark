@@ -153,19 +153,17 @@ fn transform_document(doc: Value) -> String {
 
 fn escape_text(module: Value) -> String {
     if let Value::String(s) = &module["data"] {
-        let s = s.split('\\').map(|t| t.replace('{', r"\\{").replace('}', r"\\}")).collect::<Vec<String>>().join(r"\\textbacklash{}")
-            .replace('#', r"\\#")
-            .replace('$', r"\\$")
-            .replace("\"","\\\"")
-            .replace('%', r"\\%")
-            .replace('&', r"\\&")
-            .replace('_', r"\\_")
-            .replace('\n', " ")
-            .replace('<', r"\\textless{}")
-            .replace('>', r"\\textgreater{}")
-            .replace('~', r"\\textasciitilde{}")
-            .replace('^', r"\\textasciicircum{}");
-        format!(r#"[{{"name": "raw", "data":"{s}"}}]"#)
+        let s = s.split('\\').map(|t| t.replace('{', r"\{").replace('}', r"\}")).collect::<Vec<String>>().join(r"\textbacklash{}")
+            .replace('#', r"\#")
+            .replace('$', r"\$")
+            .replace('%', r"\%")
+            .replace('&', r"\&")
+            .replace('_', r"\_")
+            .replace('<', r"\textless{}")
+            .replace('>', r"\textgreater{}")
+            .replace('~', r"\textasciitilde{}")
+            .replace('^', r"\textasciicircum{}");
+        format!("{}", json!{[{"name":"raw","data":s}]})
     } else {
         panic!("Malformed text module");
     }
