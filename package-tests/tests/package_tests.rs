@@ -67,6 +67,7 @@ fn test_package_input(file: &Path) -> datatest_stable::Result<()> {
             "--manifest-path={}",
             manifest_path.to_string_lossy()
         ))
+        .arg("-q")
         .arg("--")
         .arg("transform")
         .arg(from)
@@ -131,6 +132,7 @@ fn test_package_conventions(file: &Path) -> datatest_stable::Result<()> {
         let cmd = Command::new(env!("CARGO"))
             .arg("run")
             .arg(format!("--manifest-path={}", file.to_string_lossy()))
+            .arg("-q")
             .arg("--")
             .arg("manifest")
             .stdout(Stdio::piped())
@@ -203,6 +205,13 @@ fn test_package_conventions(file: &Path) -> datatest_stable::Result<()> {
     // Now, let's check the package manifest
     // Check that the name is lowercase/digit/_/- and starts lowercase
     let name = manifest.name;
+
+    assert_eq!(
+        name.as_str(),
+        package_folder,
+        "Package should have the same name as the enclosing folder"
+    );
+
     let ok_name = name.starts_with(|c: char| c.is_ascii_lowercase())
         && name
             .chars()
