@@ -69,7 +69,7 @@ impl CompilationState {
 }
 
 impl Debug for Context {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("Context")
             .field("packages", &self.packages)
             .field("transforms", &self.transforms)
@@ -218,6 +218,7 @@ impl Context {
         Ok(())
     }
 
+    //noinspection RsLiveness
     /// This is a helper function to load a package directly from its wasm source. It will be
     /// compiled using `Package::new` to become a `Package` and then loaded using `load_package`
     pub fn load_package_from_wasm(&mut self, wasm_source: &[u8]) -> Result<(), CoreError> {
@@ -230,6 +231,18 @@ impl Context {
         self.load_package(pkg)
     }
 
+    /// Gets the transform and package the transform is in, for a transform from a specific element
+    /// to a specific output format. Returns None if no such transform exists
+    pub fn get_transform_to(
+        &self,
+        element_name: &str,
+        output_format: &OutputFormat,
+    ) -> Option<&(Transform, Package)> {
+        self.transforms
+            .get(element_name)
+            .and_then(|t| t.find_transform_to(output_format))
+    }
+
     /// This gets the transform info for a given element and output format. If a native package
     /// supplies a transform for that element, that will be returned and the output format returned
     pub fn get_transform_info(
@@ -237,9 +250,7 @@ impl Context {
         element_name: &str,
         output_format: &OutputFormat,
     ) -> Option<&Transform> {
-        self.transforms
-            .get(element_name)
-            .and_then(|t| t.find_transform_to(output_format))
+        self.get_transform_to(element_name, output_format)
             .map(|(transform, _)| transform)
     }
 
@@ -265,9 +276,7 @@ impl Context {
                 body: _,
                 inline: _,
             } => {
-                let Some((_, package)) =
-                    self.transforms.get(name).and_then(|t|t.find_transform_to(output_format))
-                     else {
+                let Some((_, package)) = self.get_transform_to(name, output_format) else {
                     return Err(CoreError::MissingTransform(name.clone(), output_format.to_string()));
                 };
 
@@ -312,6 +321,7 @@ impl Context {
         std_packages::handle_native(self, package_name, node_name, element, args, output_format)
     }
 
+    //noinspection RsLiveness
     /// This function transforms an Element to another Element by invoking the Wasm module.
     fn transform_from_wasm(
         &self,
@@ -443,11 +453,11 @@ impl Context {
         self.packages.get(name).map(|pkg| pkg.info.as_ref())
     }
 
-    /// Borrow a vector with Packageinfo from every loaded package
+    /// Borrow a vector with PackageInfo from every loaded package
     pub fn get_all_package_info(&self) -> Vec<&PackageInfo> {
         self.packages
-            .iter()
-            .map(|(_, pkg)| pkg.info.as_ref())
+            .values()
+            .map(|pkg| pkg.info.as_ref())
             .collect()
     }
 
@@ -461,7 +471,7 @@ impl Context {
         serde_json::to_string_pretty(&entry).map_err(|e| e.into())
     }
 
-    /// Deserialize a compound (i.e a list of `JsonEntries`) that are recived from a package
+    /// Deserialize a compound (i.e a list of `JsonEntries`) that are received from a package
     pub fn deserialize_compound(input: &str) -> Result<Element, CoreError> {
         let entries: Vec<JsonEntry> =
             serde_json::from_str(input).map_err(|error| CoreError::DeserializationError {
@@ -510,7 +520,7 @@ impl Context {
         output_format: &OutputFormat,
     ) -> Result<JsonEntry, CoreError> {
         match element {
-            // When the eval function naivly evaluates all children before a parent compund
+            // When the eval function naively evaluates all children before a parent compound
             // nodes should never be present here. This may however change in the future.
             Element::Compound(_) => unreachable!(),
             Element::Parent {
@@ -550,21 +560,34 @@ impl Context {
         }
     }
 
+    /// Gets the `ArgInfo`s associated with an element targeting the given output format, if such
+    /// a transformation exists, otherwise generates an `MissingTransform` error. This is intended
+    /// for use in `collect_(parent/module)_arguments` to reduce repeated code.
+    fn get_args_info(
+        &self,
+        element_name: &str,
+        output_format: &OutputFormat,
+    ) -> Result<&Vec<ArgInfo>, CoreError> {
+        self.get_transform_info(element_name, output_format)
+            .map(|info| info.arguments.as_ref())
+            .ok_or(CoreError::MissingTransform(
+                element_name.to_string(),
+                output_format.0.to_string(),
+            ))
+    }
+
     fn collect_parent_arguments(
         &self,
         args: &HashMap<String, String>,
         parent_name: &str,
         output_format: &OutputFormat,
     ) -> Result<HashMap<String, String>, CoreError> {
-        // Collect the arguments and add default values for unspecifed arguments
+        // Collect the arguments and add default values for unspecified arguments
         let mut collected_args = HashMap::new();
         let mut given_args = args.clone();
 
         // Get info about what args this parent node
-        let empty_vec = vec![];
-        let args_info: &Vec<ArgInfo> = self
-            .get_transform_info(parent_name, output_format)
-            .map_or(&empty_vec, |info| info.arguments.as_ref());
+        let args_info = self.get_args_info(parent_name, &output_format)?;
 
         for arg_info in args_info {
             let ArgInfo {
@@ -608,10 +631,7 @@ impl Context {
         let mut collected_args = HashMap::new();
 
         // Get info about what args this parent node supports
-        let empty_vec = vec![];
-        let args_info = self
-            .get_transform_info(module_name, output_format)
-            .map_or(&empty_vec, |info| info.arguments.as_ref());
+        let args_info = self.get_args_info(module_name, &output_format)?;
 
         for arg_info in args_info {
             let ArgInfo {
@@ -670,7 +690,7 @@ impl Context {
 }
 
 impl Default for Context {
-    /// A Context with all default packages lodaded
+    /// A Context with all default packages loaded
     fn default() -> Self {
         let mut ctx = Self::new();
         ctx.load_default_packages().unwrap();
@@ -679,7 +699,7 @@ impl Default for Context {
 }
 
 /// This enum is in the same shape as the json objects that
-/// will be sent and recieved when communicating with packages
+/// will be sent and received when communicating with packages
 #[derive(Serialize, Deserialize)]
 #[serde(untagged)]
 enum JsonEntry {
@@ -699,7 +719,7 @@ enum JsonEntry {
     },
 }
 
-/// This is just a helper to ensure that omited "inline" fields
+/// This is just a helper to ensure that omitted "inline" fields
 /// default to true.
 fn default_inline() -> bool {
     true
