@@ -1,5 +1,32 @@
-// noinspection JSFileReferences
-import init, {ast, ast_debug, json_output, package_info, transpile} from "./pkg/web_bindings.js";
+let seq = 0;
+let compiler_callback;
+let compiler_failure;
+let compiler = new Worker("./compiler.js");
+
+compiler.onmessage = (event) => {
+    // Render the document once the wasm module containing the
+    // compiler has been instantiated.
+    if (event.data.type === "init") {
+        updateOutput(editor.getValue());
+        return;
+    }
+
+    if (event.data.seq != seq) return;
+    if (event.data.success) {
+        compiler_callback(event.data.result);
+    } else {
+        compiler_failure(event.data.error);
+    }
+}
+
+async function compilerAction(action) {
+    let promise = new Promise((res, rej) => {
+        compiler_callback = res;
+        compiler_failure = rej;
+    });
+    compiler.postMessage({ seq: ++seq, ...action });
+    return promise;
+}
 
 let view = "editor";
 const editorView = document.getElementById("editor-view");
@@ -15,7 +42,10 @@ editor.setOptions(editorOptions);
 editor.session.setUseWrapMode(true);
 
 // Load the example document async, not to freeze loading the rest of the playground
-fetch("example.mdm").then(res => res.text().then(text => editor.session.setValue(text)));
+fetch("example.mdm").then(res => res.text().then(text => {
+    editor.session.setValue(text);
+    updateOutput(text);
+}));
 
 // Warnings and errors
 const errorLog = document.getElementById("error-log");
@@ -67,13 +97,9 @@ if (match !== null) {
     leftMenu.appendChild(button);
 }
 
-
-init().then(() => {
-    editor.session.on("change", (_event) => handleChange());
-    selector.onchange = handleMenuUpdate;
-    formatInput.onchange = handleMenuUpdate;
-    updateOutput(editor.getValue());
-});
+editor.session.on("change", (_event) => handleChange());
+selector.onchange = handleMenuUpdate;
+formatInput.onchange = handleMenuUpdate;
 
 function handleMenuUpdate(_event) {
     if (selector.value === "transpile-other") {
@@ -131,9 +157,8 @@ function toggleView() {
     }
 }
 
-
-function loadPackageInfo() {
-    const info = JSON.parse(package_info());
+async function loadPackageInfo() {
+    const info = JSON.parse(await compilerAction({ type: "package_info" }));
 
     const createTransformList = (transform) => {
         let args = transform.arguments.map((arg) => `<li><div>
@@ -149,7 +174,7 @@ function loadPackageInfo() {
         </div> `
     };
 
-    const createElem = ({name, version, description, transforms}) => {
+    const createElem = ({ name, version, description, transforms }) => {
         let expanded = false;
 
         let container = document.createElement("div");
@@ -199,7 +224,7 @@ function addWarning(message) {
 }
 
 
-function updateOutput(input) {
+async function updateOutput(input) {
     // Clear the errors and warnings
     errorLog.innerText = "";
     errorPrompt.style.display = "none";
@@ -214,7 +239,7 @@ function updateOutput(input) {
                 render.style.display = "none";
 
                 debugEditor.session.setMode("");
-                debugEditor.setValue(ast(input));
+                debugEditor.setValue(await compilerAction({ type: "ast", source: input }));
                 debugEditor.getSession().selection.clearSelection()
                 break;
             case "ast-debug":
@@ -223,7 +248,7 @@ function updateOutput(input) {
                 render.style.display = "none";
 
                 debugEditor.session.setMode("");
-                debugEditor.setValue(ast_debug(input));
+                debugEditor.setValue(await compilerAction({ type: "ast_debug", source: input }));
                 debugEditor.getSession().selection.clearSelection();
                 break;
             case "json-output":
@@ -232,11 +257,11 @@ function updateOutput(input) {
                 render.style.display = "none";
 
                 debugEditor.session.setMode("ace/mode/json");
-                debugEditor.setValue(json_output(input));
+                debugEditor.setValue(await compilerAction({ type: "json_output", source: input }));
                 debugEditor.getSession().selection.clearSelection();
                 break;
             case "transpile-other": {
-                let {content, warnings, errors} = JSON.parse(transpile(input, formatInput.value));
+                let { content, warnings, errors } = JSON.parse(await compilerAction({ type: "transpile", source: input, format: formatInput.value }));
                 errors.forEach(addError);
                 warnings.forEach(addWarning);
 
@@ -252,7 +277,7 @@ function updateOutput(input) {
             case "transpile":
             case "render-iframe":
             case "render": {
-                let {content, warnings, errors} = JSON.parse(transpile(input, "html"));
+                let { content, warnings, errors } = JSON.parse(await compilerAction({ type: "transpile", source: input, format: "html" }));
                 errors.forEach(addError);
                 warnings.forEach(addWarning);
 
