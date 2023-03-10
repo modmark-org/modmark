@@ -1,0 +1,87 @@
+{
+    "name": "table",
+    "arguments": {
+        "delimiter": "|",
+        "header": "none",
+        "alignment": "left",
+        "borders": "horizontal",
+        "strip_whitespace": "true"
+    },
+    "data": "a |   b      \n c|d",
+    "inline": false,
+    "__test_transform_to": "html",
+    "__test_expected_result": [
+        {
+            "data": "<table style=\"border: 1px solid black; border-collapse: collapse;\">",
+            "name": "raw"
+        },
+        {
+            "data": "<tr>",
+            "name": "raw"
+        },
+        {
+            "data": "<td style=\"text-align: left; border-top: 1px solid black; border-bottom: 1px solid black; border-collapse: collapse;\">",
+            "name": "raw"
+        },
+        {
+            "data": "a",
+            "name": "inline_content"
+        },
+        {
+            "data": "</td>",
+            "name": "raw"
+        },
+        {
+            "data": "<td style=\"text-align: left; border-top: 1px solid black; border-bottom: 1px solid black; border-collapse: collapse;\">",
+            "name": "raw"
+        },
+        {
+            "data": "b",
+            "name": "inline_content"
+        },
+        {
+            "data": "</td>",
+            "name": "raw"
+        },
+        {
+            "data": "</tr>",
+            "name": "raw"
+        },
+        {
+            "data": "<tr>",
+            "name": "raw"
+        },
+        {
+            "data": "<td style=\"text-align: left; border-top: 1px solid black; border-bottom: 1px solid black; border-collapse: collapse;\">",
+            "name": "raw"
+        },
+        {
+            "data": "c",
+            "name": "inline_content"
+        },
+        {
+            "data": "</td>",
+            "name": "raw"
+        },
+        {
+            "data": "<td style=\"text-align: left; border-top: 1px solid black; border-bottom: 1px solid black; border-collapse: collapse;\">",
+            "name": "raw"
+        },
+        {
+            "data": "d",
+            "name": "inline_content"
+        },
+        {
+            "data": "</td>",
+            "name": "raw"
+        },
+        {
+            "data": "</tr>",
+            "name": "raw"
+        },
+        {
+            "data": "</table>",
+            "name": "raw"
+        }
+    ]
+}

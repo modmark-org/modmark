@@ -1,0 +1,87 @@
+{
+    "name": "table",
+    "arguments": {
+        "delimiter": "|",
+        "header": "bold",
+        "alignment": "left",
+        "borders": "none",
+        "strip_whitespace": "true"
+    },
+    "data": "a |   b      \n c|d",
+    "inline": false,
+    "__test_transform_to": "html",
+    "__test_expected_result": [
+        {
+            "data": "<table>",
+            "name": "raw"
+        },
+        {
+            "data": "<tr>",
+            "name": "raw"
+        },
+        {
+            "data": "<th style=\"text-align: left;\">",
+            "name": "raw"
+        },
+        {
+            "data": "a",
+            "name": "inline_content"
+        },
+        {
+            "data": "</th>",
+            "name": "raw"
+        },
+        {
+            "data": "<th style=\"text-align: left;\">",
+            "name": "raw"
+        },
+        {
+            "data": "b",
+            "name": "inline_content"
+        },
+        {
+            "data": "</th>",
+            "name": "raw"
+        },
+        {
+            "data": "</tr>",
+            "name": "raw"
+        },
+        {
+            "data": "<tr>",
+            "name": "raw"
+        },
+        {
+            "data": "<td style=\"text-align: left;\">",
+            "name": "raw"
+        },
+        {
+            "data": "c",
+            "name": "inline_content"
+        },
+        {
+            "data": "</td>",
+            "name": "raw"
+        },
+        {
+            "data": "<td style=\"text-align: left;\">",
+            "name": "raw"
+        },
+        {
+            "data": "d",
+            "name": "inline_content"
+        },
+        {
+            "data": "</td>",
+            "name": "raw"
+        },
+        {
+            "data": "</tr>",
+            "name": "raw"
+        },
+        {
+            "data": "</table>",
+            "name": "raw"
+        }
+    ]
+}

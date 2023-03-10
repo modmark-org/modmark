@@ -240,6 +240,7 @@ impl TryFrom<&str> for Borders {
 // The struct holding a table. Since the text contained within holds pointers to stdin, we need
 // lifetimes to avoid copying
 #[derive(Debug)]
+#[allow(dead_code)]
 struct Table<'a> {
     width: usize,
     height: usize,
@@ -255,6 +256,8 @@ impl Table<'_> {
         let mut vec: Vec<Value> = vec![];
 
         let col_key = if self.width == 0 {
+            // If we have an empty table, we need some alignment still since otherwise
+            // we get an latex error
             "|l|".to_string()
         } else if self.borders == Borders::All || self.borders == Borders::Vertical {
             self.alignment.latex_str(self.width, true)
@@ -267,11 +270,14 @@ impl Table<'_> {
         vec.push(raw!("\\begin{center}\n"));
         vec.push(raw!(format!("\\begin{{tabular}} {{ {} }}\n", col_key)));
 
+        // Only "None" borders should not have top row
         if self.borders != Borders::None {
             vec.push(raw!("\\hline\n"));
         }
 
+        // Loop though all rows
         for (idx, row) in self.content.iter().enumerate() {
+            // Collect all inline_content values, if heading add bold tags **
             let values = if idx == 0 && self.header {
                 row.iter()
                     .map(|c| format!("**{c}**"))
@@ -283,6 +289,7 @@ impl Table<'_> {
                     .collect::<Vec<Value>>()
             };
 
+            // For each cell in the row, push it and add & between, and \\\n to the end
             for (idx, val) in values.into_iter().enumerate() {
                 if idx != 0 {
                     vec.push(raw!(" & "));
@@ -291,13 +298,16 @@ impl Table<'_> {
             }
             vec.push(raw!(" \\\\\n"));
 
+            // If we should have a border in-between all rows, add it
             if self.borders == Borders::All || self.borders == Borders::Horizontal {
                 vec.push(raw!("\\hline\n"));
             }
         }
 
-        if self.borders == Borders::Outer {
-            vec.push(raw!(r"\hline"))
+        // Both horizontal and all already added this line, so it only needs to be
+        // added on outer and vertical
+        if self.borders == Borders::Outer || self.borders == Borders::Vertical {
+            vec.push(raw!("\\hline\n"))
         }
         vec.push(raw!("\\end{tabular}\n"));
         vec.push(raw!(r"\end{center}"));
@@ -307,27 +317,31 @@ impl Table<'_> {
     // Turns this table to HTML and gets a JSON value (containing mostly raw stuff) to return
     fn to_html(&self) -> Value {
         let mut vec: Vec<Value> = vec![];
+        // Push opening tag, border style on table if outer borders
         if self.borders == Borders::None {
             vec.push(raw!("<table>"));
         } else {
             vec.push(raw!(
-                r#"<table style="border: 1px solid black; border-collapse: collapse;""#
+                r#"<table style="border: 1px solid black; border-collapse: collapse;">"#
             ));
         }
 
+        // Here is the style for all th/td elements
         let inside_border_style = if self.borders == Borders::All {
-            "border: 1px solid black; border-collapse: collapse;"
+            " border: 1px solid black; border-collapse: collapse;"
         } else if self.borders == Borders::Vertical {
-            "border-left: 1px solid black; border-right: 1px solid black; border-collapse: collapse;"
+            " border-left: 1px solid black; border-right: 1px solid black; border-collapse: collapse;"
         } else if self.borders == Borders::Horizontal {
-            "border-top: 1px solid black; border-bottom: 1px solid black; border-collapse: collapse;"
+            " border-top: 1px solid black; border-bottom: 1px solid black; border-collapse: collapse;"
         } else {
             ""
         };
 
+        // Loop though each row
         for (idx, row) in self.content.iter().enumerate() {
             vec.push(raw!("<tr>"));
 
+            // If it is the header, use th, else use td
             if idx == 0 && self.header {
                 for (idx, elem) in row.iter().enumerate() {
                     let alignment = self.alignment.for_column(idx).html_style();
@@ -357,6 +371,7 @@ impl Table<'_> {
 }
 
 // Parses the JSON input to a table, if possible. Warnings/errors are printed out when running this.
+// Many of the arguments uses try_into() to optionally get a Border, Alignment etc
 fn parse_table(input: &Value) -> Option<Table> {
     let delimiter = input["arguments"]["delimiter"].as_str().unwrap();
     if delimiter.contains('\\') {
