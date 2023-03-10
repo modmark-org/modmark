@@ -1,9 +1,6 @@
 use std::convert::TryInto;
 use std::env;
-use std::fmt::Write;
 use std::io::{self, Read};
-use std::iter::repeat;
-use std::process::exit;
 
 use serde_json::{json, Value};
 
@@ -25,6 +22,7 @@ macro_rules! inline_content {
     }
 }
 
+// Entry point
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
     let action = &args[0];
@@ -38,59 +36,72 @@ fn main() {
 }
 
 fn manifest() {
-    print!("{}", serde_json::to_string(&json!(
-        {
-        "name": "table",
-        "version": "0.1",
-        "description": "This package supports [table] modules",
-        "transforms": [
+    print!(
+        "{}",
+        json!(
             {
-                "from": "table",
-                "to": ["html", "latex"],
-                "arguments": [
-                    {"name": "header", "default": "none", "description": "Style to apply to heading, none/bold"},
-                    {"name": "alignment", "default": "left", "description": "Horizontal alignment in cells, left/center/right or l/c/r for each column"},
-                    {"name": "borders", "default": "all", "description": "Which borders to draw, all/horizontal/vertical/outer/none"},
-                    {"name": "delimiter", "default": "|", "description": "The delimiter between cells"},
-                    {"name": "strip_whitespace", "default": "true", "description": "true/false to strip/don't strip whitespace in cells"}
-                ],
+            "name": "table",
+            "version": "0.1",
+            "description": "This package supports [table] modules",
+            "transforms": [
+                {
+                    "from": "table",
+                    "to": ["html", "latex"],
+                    "arguments": [
+                        {"name": "header", "default": "none", "description": "Style to apply to heading, none/bold"},
+                        {"name": "alignment", "default": "left", "description": "Horizontal alignment in cells, left/center/right or l/c/r for each column"},
+                        {"name": "borders", "default": "all", "description": "Which borders to draw, all/horizontal/vertical/outer/none"},
+                        {"name": "delimiter", "default": "|", "description": "The delimiter between cells"},
+                        {"name": "strip_whitespace", "default": "true", "description": "true/false to strip/don't strip whitespace in cells"}
+                    ],
+                }
+            ]
             }
-        ]
-        }
-    ))
-    .unwrap());
+        )
+    );
 }
 
-fn transform(from: &String, to: &String) {
-    match from.as_str() {
+fn transform(from: &str, to: &str) {
+    match from {
         "table" => transform_table(to),
         other => {
             eprintln!("Package does not support {other}");
-            return;
         }
     }
 }
 
-#[derive(PartialEq, Debug)]
-enum Target {
-    HTML,
-    LaTeX,
-}
+fn transform_table(to: &str) {
+    // We make sure to exit early if invalid format, not to do unnecessary calculations
+    if to != "latex" && to != "html" {
+        eprintln!("Unsupported format {to}, only HTML and LaTeX are supported!");
+        return;
+    }
 
-impl TryFrom<&str> for Target {
-    type Error = ();
-    fn try_from(str: &str) -> Result<Self, Self::Error> {
-        let str = str.to_ascii_lowercase();
-        if &str == "html" {
-            Ok(Target::HTML)
-        } else if &str == "latex" {
-            Ok(Target::LaTeX)
-        } else {
-            Err(())
-        }
+    // We read stdin
+    let input: Value = {
+        let mut buffer = String::new();
+        io::stdin().read_to_string(&mut buffer).unwrap();
+        serde_json::from_str(&buffer).unwrap()
+    };
+
+    // Try to parse it as a table. If none, parse_table made sure to log the errors and we exit
+    // without returning valid JSON
+    let Some(table) = parse_table(&input) else {
+        return;
+    };
+
+    // If table was valid, execute! (also, we know that we have nothing else than latex/html so
+    // anything else is unreachable)
+    match to {
+        "html" => println!("{}", table.to_html()),
+        "latex" => println!("{}", table.to_latex()),
+        _ => unreachable!(),
     }
 }
 
+// The alignment for all columns in the table. The alignment can be set to either the same value for
+// all columns (entering "right" makes it be right-adjusted in all columns), represented by
+// Alignment::All(...), or it might be different for each column, represented by Alignment::Columns
 #[derive(PartialEq, Eq, Debug)]
 enum Alignment {
     All(ColumnAlignment),
@@ -98,6 +109,9 @@ enum Alignment {
 }
 
 impl Alignment {
+    // This gets the LaTeX alignment string. If we have a left-aligned column followed by an
+    // right-aligned column, and we use borders, we get |l|r|. Width is used for when we have
+    // Alignment::All
     fn latex_str(&self, width: usize, border: bool) -> String {
         match self {
             Alignment::All(alignment) => {
@@ -125,14 +139,51 @@ impl Alignment {
         }
     }
 
+    // Gets the alignment for one specific column. May panic if that column doesn't exist
     fn for_column(&self, idx: usize) -> &ColumnAlignment {
         match self {
             Alignment::All(c) => c,
             Alignment::Columns(c) => &c[idx],
         }
     }
+
+    // Gets the width of this Alignment configuration, if it has a fixed one
+    fn width(&self) -> Option<usize> {
+        if let Alignment::Columns(vec) = self {
+            Some(vec.len())
+        } else {
+            None
+        }
+    }
 }
 
+impl TryFrom<&str> for Alignment {
+    type Error = ();
+    // This goes from the argument (like "left" or "llcc") to the Alignment, if possible,
+    // otherwise errors unit error
+    fn try_from(str: &str) -> Result<Self, Self::Error> {
+        use Alignment::*;
+        use ColumnAlignment::*;
+
+        match str.to_ascii_lowercase().as_str() {
+            "left" => Ok(All(Left)),
+            "center" => Ok(All(Center)),
+            "right" => Ok(All(Right)),
+            s => s
+                .chars()
+                .map(|c| match c.to_ascii_lowercase() {
+                    'l' => Ok(Left),
+                    'c' => Ok(Center),
+                    'r' => Ok(Right),
+                    _ => Err(()),
+                })
+                .collect::<Result<Vec<ColumnAlignment>, ()>>()
+                .map(Columns),
+        }
+    }
+}
+
+// Defines the alignment for one specific column
 #[derive(PartialEq, Eq, Debug)]
 enum ColumnAlignment {
     Left,
@@ -158,6 +209,8 @@ impl ColumnAlignment {
     }
 }
 
+// The different border options that exist. All these options implies "outer" borders but the None
+// option, so horizontal contains vertical outer borders
 #[derive(PartialEq, Eq, Debug)]
 enum Borders {
     All,
@@ -167,6 +220,7 @@ enum Borders {
     None,
 }
 
+// Argument to value
 impl TryFrom<&str> for Borders {
     type Error = ();
     fn try_from(str: &str) -> Result<Self, Self::Error> {
@@ -183,40 +237,8 @@ impl TryFrom<&str> for Borders {
     }
 }
 
-impl Alignment {
-    fn width(&self) -> Option<usize> {
-        if let Alignment::Columns(vec) = self {
-            Some(vec.len())
-        } else {
-            None
-        }
-    }
-}
-
-impl TryFrom<&str> for Alignment {
-    type Error = ();
-    fn try_from(str: &str) -> Result<Self, Self::Error> {
-        use Alignment::*;
-        use ColumnAlignment::*;
-
-        match str.to_ascii_lowercase().as_str() {
-            "left" => Ok(All(Left)),
-            "center" => Ok(All(Center)),
-            "right" => Ok(All(Right)),
-            s => s
-                .chars()
-                .map(|c| match c.to_ascii_lowercase() {
-                    'l' => Ok(Left),
-                    'c' => Ok(Center),
-                    'r' => Ok(Right),
-                    _ => Err(()),
-                })
-                .collect::<Result<Vec<ColumnAlignment>, ()>>()
-                .map(|v| Columns(v)),
-        }
-    }
-}
-
+// The struct holding a table. Since the text contained within holds pointers to stdin, we need
+// lifetimes to avoid copying
 #[derive(Debug)]
 struct Table<'a> {
     width: usize,
@@ -228,10 +250,13 @@ struct Table<'a> {
 }
 
 impl Table<'_> {
-    fn to_latex(&self) -> Vec<Value> {
+    // Turns this table to LaTeX and gets a JSON value (containing mostly raw stuff) to return
+    fn to_latex(&self) -> Value {
         let mut vec: Vec<Value> = vec![];
 
-        let col_key = if self.borders == Borders::All || self.borders == Borders::Vertical {
+        let col_key = if self.width == 0 {
+            "|l|".to_string()
+        } else if self.borders == Borders::All || self.borders == Borders::Vertical {
             self.alignment.latex_str(self.width, true)
         } else if self.borders == Borders::None {
             self.alignment.latex_str(self.width, false)
@@ -276,10 +301,11 @@ impl Table<'_> {
         }
         vec.push(raw!("\\end{tabular}\n"));
         vec.push(raw!(r"\end{center}"));
-        vec
+        json!(vec)
     }
 
-    fn to_html(&self) -> Vec<Value> {
+    // Turns this table to HTML and gets a JSON value (containing mostly raw stuff) to return
+    fn to_html(&self) -> Value {
         let mut vec: Vec<Value> = vec![];
         if self.borders == Borders::None {
             vec.push(raw!("<table>"));
@@ -299,23 +325,24 @@ impl Table<'_> {
             ""
         };
 
-        let ths = format!("<th{inside_border_style}>");
-        let tds = format!("<td{inside_border_style}>");
-
         for (idx, row) in self.content.iter().enumerate() {
             vec.push(raw!("<tr>"));
 
             if idx == 0 && self.header {
                 for (idx, elem) in row.iter().enumerate() {
                     let alignment = self.alignment.for_column(idx).html_style();
-                    vec.push(raw!(format!(r#"<th style="{alignment}{inside_border_style}">"#)));
+                    vec.push(raw!(format!(
+                        r#"<th style="{alignment}{inside_border_style}">"#
+                    )));
                     vec.push(inline_content!(elem));
                     vec.push(raw!("</th>"));
                 }
             } else {
                 for (idx, elem) in row.iter().enumerate() {
                     let alignment = self.alignment.for_column(idx).html_style();
-                    vec.push(raw!(format!(r#"<td style="{alignment}{inside_border_style}">"#)));
+                    vec.push(raw!(format!(
+                        r#"<td style="{alignment}{inside_border_style}">"#
+                    )));
                     vec.push(inline_content!(elem));
                     vec.push(raw!("</td>"));
                 }
@@ -325,10 +352,11 @@ impl Table<'_> {
         }
 
         vec.push(raw!("</table>"));
-        vec
+        json!(vec)
     }
 }
 
+// Parses the JSON input to a table, if possible. Warnings/errors are printed out when running this.
 fn parse_table(input: &Value) -> Option<Table> {
     let delimiter = input["arguments"]["delimiter"].as_str().unwrap();
     if delimiter.contains('\\') {
@@ -387,13 +415,29 @@ fn parse_table(input: &Value) -> Option<Table> {
     let body = input["data"].as_str().unwrap();
     let mut content = parse_content(body, delimiter, strip_whitespace);
     let height = content.len();
-    //TODO: Fix special case where height = 0
+
+    if height == 0 {
+        eprintln!("Empty table");
+        return Some(Table {
+            width: 0,
+            height,
+            content,
+            alignment,
+            borders,
+            header,
+        });
+    }
+
+    // We get the max width
     let width = content.iter().map(|r| r.len()).max().unwrap();
+    // If any row differ from this, it is jagged and we make sure to resize the arrays
     if content.iter().any(|r| r.len() != width) {
         eprintln!("The table is jagged; some rows are wider than others.");
         content.iter_mut().for_each(|r| r.resize(width, ""))
     }
 
+    // This is an fatal error since we don't want users that have specified column-by-column to get
+    // completely overwritten, so we fail here
     if let Some(w) = alignment.width() {
         if w != width {
             eprintln!("Alignment given for {} columns but {} exist", w, width);
@@ -418,6 +462,8 @@ fn parse_content<'a>(input: &'a str, delimiter: &'a str, trim: bool) -> Vec<Vec<
         .collect()
 }
 
+// This function splits a text by a given delimiter, taking into account backslash escaping and so
+// on. It may also trim the cells if the trim argument is true.
 fn split_by_delimiter<'a>(input: &'a str, delimiter: &'a str, trim: bool) -> Vec<&'a str> {
     let mut res = vec![];
     let mut escaped = false;
@@ -434,7 +480,7 @@ fn split_by_delimiter<'a>(input: &'a str, delimiter: &'a str, trim: bool) -> Vec
         }
         if input[idx..].starts_with(delimiter) {
             let str = if trim {
-                &input[start_idx..idx].trim()
+                input[start_idx..idx].trim()
             } else {
                 &input[start_idx..idx]
             };
@@ -446,7 +492,7 @@ fn split_by_delimiter<'a>(input: &'a str, delimiter: &'a str, trim: bool) -> Vec
 
     if start_idx != input.as_bytes().len() {
         let str = if trim {
-            &input[start_idx..].trim()
+            input[start_idx..].trim()
         } else {
             &input[start_idx..]
         };
@@ -454,27 +500,4 @@ fn split_by_delimiter<'a>(input: &'a str, delimiter: &'a str, trim: bool) -> Vec
         res.push(str)
     }
     res
-}
-
-fn transform_table(to: &str) {
-    let Ok(format): Result<Target, _> = to.try_into() else {
-        eprintln!("Unsupported format {to}, only HTML and LaTeX are supported!");
-        return;
-    };
-
-    let input: Value = {
-        let mut buffer = String::new();
-        io::stdin().read_to_string(&mut buffer).unwrap();
-        serde_json::from_str(&buffer).unwrap()
-    };
-
-    let Some(table) = parse_table(&input) else {
-        return;
-    };
-
-    if format == Target::LaTeX {
-        println!("{}", json! {table.to_latex()});
-    } else if format == Target::HTML {
-        println!("{}", json! {table.to_html()});
-    }
 }
