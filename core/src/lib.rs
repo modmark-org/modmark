@@ -127,12 +127,30 @@ mod tests {
             description: "This package supports [table] modules".to_string(),
             transforms: vec![Transform {
                 from: "table".to_string(),
-                to: vec![OutputFormat::new("html")],
-                arguments: vec![ArgInfo {
-                    name: "col_delimiter".to_string(),
-                    default: Some("|".to_string()),
-                    description: "The string delimiter for columns".to_string(),
-                }],
+                to: vec![OutputFormat::new("html"), OutputFormat::new("latex")],
+                arguments: vec![
+                    ArgInfo {
+                        name: "header".to_string(),
+                        default: Some("none".to_string()),
+                        description: "Style to apply to heading, none/bold".to_string(),
+                    }, ArgInfo {
+                        name: "alignment".to_string(),
+                        default: Some("left".to_string()),
+                        description: "Horizontal alignment in cells, left/center/right or l/c/r for each column".to_string(),
+                    }, ArgInfo {
+                        name: "borders".to_string(),
+                        default: Some("all".to_string()),
+                        description: "Which borders to draw, all/horizontal/vertical/outer/none".to_string(),
+                    }, ArgInfo {
+                        name: "delimiter".to_string(),
+                        default: Some("|".to_string()),
+                        description: "The delimiter between cells".to_string(),
+                    }, ArgInfo {
+                        name: "strip_whitespace".to_string(),
+                        default: Some("true".to_string()),
+                        description: "true/false to strip/don't strip whitespace in cells".to_string(),
+                    },
+                ],
             }],
         };
 
