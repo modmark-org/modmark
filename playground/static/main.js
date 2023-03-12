@@ -11,7 +11,7 @@ compiler.onmessage = (event) => {
         return;
     }
 
-    if (event.data.seq != seq) return;
+    if (event.data.seq !== seq) return;
     if (event.data.success) {
         compiler_callback(event.data.result);
     } else {
