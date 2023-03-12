@@ -54,7 +54,7 @@ pub enum CoreError {
     },
     #[error("Transform does not terminate")]
     NonTerminatingTransform,
-    #[error("Parsing error: {0:#?}.")]
+    #[error("Parsing error: {0}.")]
     Parsing(#[from] ParseError),
     #[error("Native call error: Non-module given to package {0} named {1}")]
     NonModuleToNative(String, String),

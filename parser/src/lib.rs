@@ -13,10 +13,12 @@ use nom::{combinator::*, Finish, IResult, Parser};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::config::{parse_config_module, Config, ConfigError};
 use crate::punct::smart_punctuate;
 use crate::tag::CompoundAST;
 use crate::Ast::Text;
 
+mod config;
 mod module;
 mod or;
 mod punct;
@@ -60,6 +62,8 @@ pub enum ParseError {
     ArgumentOrderError,
     #[error("Nom error: '{0}'")]
     NomError(String),
+    #[error("Configuration error: {0}")]
+    ConfigError(#[from] ConfigError),
 }
 
 impl<T> From<Error<T>> for ParseError
@@ -147,6 +151,22 @@ pub fn parse_to_ast_document(source: &str) -> Result<Document, ParseError> {
         .finish()
         .map(|(_, x)| x)
         .map_err(|e| e.into())
+}
+
+pub fn parse_with_config(source: &str) -> Result<(Ast, Option<Config>), ParseError> {
+    parse_document_with_config(source).map(|(d, c)| (Ast::Document(d), c))
+}
+
+fn parse_document_with_config(input: &str) -> Result<(Document, Option<Config>), ParseError> {
+    parse_config_module(input)
+        .finish()
+        .map_err(ParseError::ConfigError)
+        .and_then(|(rest, cfg)| {
+            parse_document(rest)
+                .finish()
+                .map_err(Into::into)
+                .map(|(_, x)| (x, cfg))
+        })
 }
 
 /// Parses a document, which consists of multiple paragraphs and block modules, and returns a
