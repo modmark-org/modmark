@@ -1,7 +1,7 @@
 let seq = 0;
 let compiler_callback;
 let compiler_failure;
-let compiler = new Worker("./compiler.js");
+let compiler = new Worker("./compiler.js", {type: "module"});
 
 compiler.onmessage = (event) => {
     // Render the document once the wasm module containing the
@@ -11,7 +11,7 @@ compiler.onmessage = (event) => {
         return;
     }
 
-    if (event.data.seq != seq) return;
+    if (event.data.seq !== seq) return;
     if (event.data.success) {
         compiler_callback(event.data.result);
     } else {
