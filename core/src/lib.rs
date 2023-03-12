@@ -77,7 +77,14 @@ pub fn eval(
     // TODO: Move this out so that we have a flag in the CLI and a switch in the playground to
     //   do verbose errors or "debug mode" or similar
     ctx.state.verbose_errors = true;
-    let document = parser::parse(source)?.try_into()?;
+    //let document = parser::parse(source)?.try_into()?;
+    let (doc_ast, config) = parser::parse_with_config(source)?;
+    let document = doc_ast.try_into()?;
+
+    if let Some(cfg) = config {
+        println!("Config: {:#?}", cfg);
+    }
+
     let res = eval_elem(document, ctx, format);
 
     res.map(|s| (s, ctx.take_state()))
