@@ -1,4 +1,4 @@
-use core::{eval, Context, CoreError, OutputFormat};
+use modmark_core::{eval, Context, CoreError, OutputFormat};
 use std::cell::RefCell;
 
 use parser::ParseError;

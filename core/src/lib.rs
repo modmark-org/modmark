@@ -21,6 +21,12 @@ mod std_packages_macros;
 #[cfg(all(feature = "web", feature = "native"))]
 compile_error!("feature \"native\" and feature \"web\" cannot be enabled at the same time");
 
+pub trait Resolve {
+    type Error;
+    fn resolve(&self, path: &str) -> Result<Vec<u8>, Self::Error>;
+    fn resolve_all(&self, paths: Vec<&str>) -> Vec<Result<Vec<u8>, Self::Error>>;
+}
+
 #[derive(Debug, Clone, Eq, Deserialize, Serialize)]
 pub struct OutputFormat(String);
 

@@ -1,5 +1,5 @@
-use std::io::{stdout, Write};
-use std::{env, fs, fs::File, path::Path, path::PathBuf, sync::Mutex, time::Duration};
+mod error;
+mod package;
 
 use clap::Parser;
 use crossterm::{
@@ -7,16 +7,15 @@ use crossterm::{
     style::{self, Stylize},
     terminal, ExecutableCommand,
 };
+use error::CliError;
+use modmark_core::{context::CompilationState, OutputFormat};
+use modmark_core::{eval, Context};
 use notify::{Config, Event, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher, WatcherKind};
 use once_cell::sync::Lazy;
+use std::io::{stdout, Write};
+use std::{env, fs, fs::File, path::Path, path::PathBuf, sync::Mutex, time::Duration};
 
-use core::context::CompilationState;
-use core::{eval, Context, OutputFormat};
-use error::CliError;
 use parser::{parse, Ast};
-
-mod error;
-mod package;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
