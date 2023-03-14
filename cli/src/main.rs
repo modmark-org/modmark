@@ -82,16 +82,25 @@ fn watch(args: &Args, target: &String) -> Result<(), CliError> {
         args: &Args,
         target: &String,
     ) -> Result<(), CliError> {
-        let mut stdout = stdout();
+        // If the "event" is an error, map into a CliError and return it
+        event.map_err(CliError::Notify)?;
 
+        let mut stdout = stdout();
         stdout.execute(terminal::Clear(terminal::ClearType::All))?;
         stdout.execute(cursor::MoveTo(0, 0))?;
         stdout.execute(style::PrintStyledContent("Recompiling...".yellow()))?;
 
-        let (tree, state) = match event {
-            Ok(_) => compile_file(args),
-            Err(e) => return Err(CliError::Notify(e)),
-        }?;
+        let (tree, state) = match compile_file(args) {
+            Ok(result) => result,
+            Err(error) => {
+                stdout.execute(terminal::Clear(terminal::ClearType::All))?;
+                stdout.execute(cursor::MoveTo(0, 0))?;
+                stdout.execute(style::PrintStyledContent(
+                    format!("Compilation error:\n{}\n\n", error.to_string()).red(),
+                ))?;
+                return Ok(());
+            }
+        };
 
         stdout.execute(terminal::Clear(terminal::ClearType::All))?;
         stdout.execute(cursor::MoveTo(0, 0))?;
