@@ -19,6 +19,7 @@ define_standard_package_loader! {
     "code",
     "math",
     "layout",
+    "files",
 }
 
 // Here, all native packages are declared. The macro expands to two functions,

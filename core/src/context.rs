@@ -8,14 +8,14 @@ use std::{
 };
 
 use either::{Either, Left};
+use parser::ModuleArguments;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "native")]
 use wasmer::{Cranelift, Engine, EngineBuilder};
 use wasmer::{Instance, Module, Store};
 use wasmer_wasi::{Pipe, WasiState};
 
-use parser::ModuleArguments;
-
+use crate::fs::MemFS;
 use crate::package::PackageImplementation;
 use crate::{std_packages, Element};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
@@ -26,6 +26,8 @@ pub struct Context {
     #[cfg(feature = "native")]
     engine: Engine,
     pub(crate) state: CompilationState,
+    #[cfg(feature = "web")]
+    pub filesystem: MemFS,
 }
 
 #[derive(Default, Clone, Debug)]
@@ -121,6 +123,8 @@ impl Context {
             #[cfg(feature = "native")]
             engine: EngineBuilder::new(Cranelift::new()).engine(),
             state: CompilationState::default(),
+            #[cfg(feature = "web")]
+            filesystem: MemFS::new(),
         }
     }
 
@@ -374,10 +378,22 @@ impl Context {
             }
         };
 
+        #[cfg(feature = "native")]
         let wasi_env = WasiState::new("")
             .stdin(Box::new(input))
             .stdout(Box::new(output.clone()))
             .stderr(Box::new(err_out.clone()))
+            .preopen(|p| p.directory("assets").alias(".").read(true))?
+            .args(["transform", name, &output_format.to_string()])
+            .finalize(&mut store)?;
+
+        #[cfg(feature = "web")]
+        let wasi_env = WasiState::new("")
+            .stdin(Box::new(input))
+            .stdout(Box::new(output.clone()))
+            .stderr(Box::new(err_out.clone()))
+            .set_fs(Box::new(self.filesystem.clone()))
+            .preopen(|p| p.directory("/").alias(".").read(true))?
             .args(["transform", name, &output_format.to_string()])
             .finalize(&mut store)?;
 
