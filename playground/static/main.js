@@ -277,6 +277,56 @@ function leaveDir() {
 
 async function loadPackageInfo() {
     const info = JSON.parse(await compilerAction({ type: "package_info" }));
+
+    const createTransformList = (transform) => {
+        let args = transform.arguments.map((arg) => `<li><div>
+            <strong class="name">${arg.name}</strong>
+            <span class="default">${arg.default ? 'default = \"' + arg.default + "\"" : 'required'}</span>
+            <span class="description" > ${arg.description}</span>
+        </div></li> `).join("\n");
+
+        return `<div>
+            <code class="from">${transform.from}</code>
+            <span class="to">${transform.to.join(" ")}</span>
+            <ul class="arguments">${args}</ul>
+        </div> `
+    };
+
+    const createElem = ({ name, version, description, transforms }) => {
+        let expanded = false;
+
+        let container = document.createElement("div");
+        container.classList.add("container");
+
+        container.innerHTML = `
+                <h3 class="name">${name}</h3>
+                <span class="version">version ${version}</span>
+                <p class="description">
+                    ${description}
+                </p> 
+                <div class="details">
+                    <h4>Transforms</h4>
+                    <div class="transforms">
+                        ${transforms.sort((a, b) => a.name < b.name).map(createTransformList).join("\n")}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        container.onclick = (_event) => {
+            if (expanded) {
+                container.classList.remove("expanded");
+            } else {
+                container.classList.add("expanded");
+            }
+            expanded = !expanded;
+        }
+
+        return container;
+    }
+
+    packageContent.innerHTML = "";
+    info.map(info => createElem(info)).forEach(elem => packageContent.appendChild(elem));
 }
 
 function addError(message) {

@@ -8,17 +8,17 @@ use std::{
 };
 
 use either::{Either, Left};
+use parser::ModuleArguments;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "native")]
 use wasmer::{Cranelift, Engine, EngineBuilder};
 use wasmer::{Instance, Module, Store};
 use wasmer_wasi::{Pipe, WasiState};
-use parser::ModuleArguments;
 
+use crate::fs::MemFS;
 use crate::package::PackageImplementation;
 use crate::{std_packages, Element};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
-use crate::fs::MemFS;
 
 pub struct Context {
     pub(crate) packages: HashMap<String, Package>,

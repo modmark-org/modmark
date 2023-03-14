@@ -1,12 +1,9 @@
 use std::fmt::Debug;
-use std::io::{Write};
-use std::sync::Arc;
+use std::io::Write;
 use std::path::Path;
+use std::sync::Arc;
 use wasmer_vfs::mem_fs::FileSystem as MemoryFileSystem;
-use wasmer_vfs::{
-    FileSystem,  Metadata, OpenOptions, ReadDir,
-};
-
+use wasmer_vfs::{FileSystem, Metadata, OpenOptions, ReadDir};
 
 #[derive(Debug, Clone)]
 pub struct MemFS {
@@ -45,7 +42,9 @@ impl FileSystem for MemFS {
 
 impl MemFS {
     pub fn new() -> MemFS {
-        MemFS { inner: Arc::new(MemoryFileSystem::default()) }
+        MemFS {
+            inner: Arc::new(MemoryFileSystem::default()),
+        }
     }
 
     pub fn list_dir(&self, path: &str) -> Vec<(String, bool)> {
@@ -61,7 +60,7 @@ impl MemFS {
                 }
                 v
             }
-            _ => vec![]
+            _ => vec![],
         }
     }
 
