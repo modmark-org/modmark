@@ -1,0 +1,422 @@
+body {
+    padding: 0;
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+}
+
+.material-symbols-outlined {
+    position: relative;
+    font-variation-settings: 'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 48;
+    font-size: 1rem;
+}
+
+.dir-entry .material-symbols-outlined {
+    font-size: 1.4rem;
+}
+
+a {
+    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    text-decoration: none;
+    color: black;
+    transition: 0.3s background-color;
+    box-sizing: border-box;
+    padding: 0.5rem;
+    border-radius: 0.3rem;
+}
+
+a:hover {
+    background-color: rgb(222, 222, 222);
+}
+
+
+pre,
+textarea,
+code {
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+code {
+    background: #f2f1f1;
+    padding: 0.3rem;
+    border-radius: 0.3rem;
+}
+
+button,
+input,
+select {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    border: none;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.501);
+    border-radius: 0.3rem;
+    padding: 0.5rem 1rem 0.5rem 1rem;
+    background-color: rgb(231, 231, 231);
+    transition: 0.2s background-color;
+    color: black;
+}
+
+select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border: none;
+    background-image: url("expand_more.svg");
+    background-size: 10%;
+    background-position: right center;
+    background-repeat: no-repeat;
+    padding-right: 1.5rem;
+}
+
+button {
+    cursor: pointer;
+}
+
+button:hover,
+select:hover {
+    background-color: rgb(222, 222, 222);
+}
+
+.menu {
+    background: #f3f4f6;
+    border-bottom: solid 1px rgba(0, 0, 0, 0.171);
+    position: relative;
+    margin: 0;
+    height: 4rem;
+    width: 100%;
+    padding: 1rem;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.menu-items {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.left-menu {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.menu h1 {
+    margin: 0;
+    font-size: 1.3rem;
+}
+
+#format-input {
+    display: none;
+}
+
+#wrapper {
+    width: 100%;
+    display: flex;
+    height: calc(100vh - 4rem);
+}
+
+#editor-view {
+    width: 100%;
+    display: flex;
+    overflow-x: hidden;
+    transition: 0.3s width;
+}
+
+#preview,
+#editor {
+    position: relative;
+    width: 50%;
+    height: 100%;
+    box-sizing: border-box;
+    overflow: auto;
+    margin: 0;
+    border: none;
+    transition: 0.3s width;
+}
+
+#preview {
+    background: rgb(242, 242, 242);
+}
+
+#preview-content {
+    position: relative;
+    height: 100%;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 0.5rem;
+}
+
+
+#debug-editor {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+#render-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+#status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    position: absolute;
+    box-sizing: border-box;
+    right: 1rem;
+    border-radius: 1rem;
+    padding: 0.5rem 1rem 0.5rem 1rem;
+    color: rgb(26, 26, 26);
+    border: solid 1px rgba(0, 0, 0, 0.199);
+    z-index: 1000;
+    transition: all 0.2s;
+    cursor: none;
+    user-select: none;
+    background: #f2f2f2;
+}
+
+#error-prompt,
+#warning-prompt {
+    display: none;
+    box-sizing: border-box;
+    padding: 1rem;
+    width: 100%;
+    background: #fceced;
+    border-bottom: solid 1px #e9cdc4;
+}
+
+#warning-prompt {
+    background: #fef7ea;
+    border-color: #efddb9;
+}
+
+#warning-prompt strong {
+    color: #d69c15;
+}
+
+#warning-prompt .material-symbols-outlined {
+    top: 2px;
+    color: #d69c15;
+}
+
+#error-prompt strong {
+    color: #de455a;
+}
+
+#error-prompt .material-symbols-outlined {
+    top: 2px;
+    color: #de455a;
+}
+
+
+#error-log .issue,
+#warning-log .issue {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+#error-log pre,
+#warning-log pre {
+    overflow: scroll;
+    opacity: 0.4;
+}
+
+
+#package-view {
+    width: 0;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    transition: 0.3s width;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.16);
+}
+
+#packages {
+    max-width: 60rem;
+    box-sizing: border-box;
+    padding: 1rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+
+#package-content .container {
+    width: 100%;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.308);
+    box-sizing: border-box;
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    border-radius: 0.3rem;
+    cursor: pointer;
+}
+
+#package-content .expanded .details {
+    max-height: 1000px;
+}
+
+#package-content .details {
+    overflow: hidden;
+    transition: max-height 300ms;
+    max-height: 0;
+}
+
+#package-content .container h4 {
+    font-size: 1.2rem;
+}
+
+#package-content .container > .version {
+    opacity: 0.6;
+}
+
+#package-content .container > .name {
+    font-size: 1.6rem;
+    display: inline;
+}
+
+#package-content .container .arguments li div {
+    display: flex;
+    gap: 1rem;
+}
+
+#package-content .container .arguments li div .default {
+    opacity: 0.6;
+}
+
+#file-menu {
+    background-color: #e8e8e8;
+    width: 0;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    transition: 0.3s width;
+}
+
+#file-header {
+    background-color: #f3f4f6;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding: 0.5rem 1rem 0.5rem;
+    border-bottom: solid 1px rgba(0, 0, 0, 0.171);
+    border-right: solid 1px rgba(0, 0, 0, 0.171);
+    font-size: 1.3rem;
+    overflow: hidden;
+}
+
+#file-upload {
+    box-shadow: none;
+    background-color: transparent;
+    padding: 0;
+    display: none;
+}
+
+/* improve this to replicate buttons better */
+#upload-button {
+    border: none;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.501);
+    border-radius: 0.3rem;
+    padding: 0.55rem 1rem 0.55rem 1rem; /* not good */
+    background-color: rgb(231, 231, 231);
+    transition: 0.2s background-color;
+    color: black;
+    font-size: 0.8rem;
+}
+
+#upload-button:hover {
+    background-color: rgb(224, 224, 224);
+}
+
+#file-navigation {
+    padding: 1rem;
+    height: 2rem;
+    font-size: 1.3rem;
+    text-align: center;
+    vertical-align: center;
+    position: relative;
+}
+
+#file-navigation span {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+#return-button {
+    position: absolute;
+}
+
+#file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    color: #2f2f2f;
+    height: 100%;
+    overflow-y: scroll;
+}
+
+.dir-entry {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.1rem;
+    height: 1.2rem;
+}
+
+.dir-name,
+.file-name {
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    max-width: 15rem;
+    overflow-x: hidden;
+}
+
+.rename-button,
+.remove-button {
+    box-shadow: none;
+    background-color: transparent;
+    display: none;
+    padding: 0;
+    font-size: 0.4rem;
+}
+
+.dir-entry:hover .rename-button,
+.dir-entry:hover .remove-button {
+    display: block;
+}
+
+@media only screen and (max-width: 800px) {
+    #editor-view {
+        height: auto;
+        flex-direction: column;
+    }
+
+    #editor,
+    #preview {
+        height: calc((100vh - 4rem) / 2);
+        width: 100%;
+    }
+
+    .menu-items {
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+}
+

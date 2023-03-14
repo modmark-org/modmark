@@ -1,0 +1,12 @@
+{
+  "name": "web_bindings",
+  "version": "0.1.0",
+  "files": [
+    "web_bindings_bg.wasm",
+    "web_bindings.js",
+    "web_bindings.d.ts"
+  ],
+  "module": "web_bindings.js",
+  "types": "web_bindings.d.ts",
+  "sideEffects": false
+}

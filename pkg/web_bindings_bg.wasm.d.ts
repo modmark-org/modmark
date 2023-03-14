@@ -1,0 +1,18 @@
+/* tslint:disable */
+/* eslint-disable */
+export const memory: WebAssembly.Memory;
+export function ast(a: number, b: number, c: number): void;
+export function ast_debug(a: number, b: number, c: number): void;
+export function transpile(a: number, b: number, c: number, d: number, e: number): void;
+export function json_output(a: number, b: number, c: number): void;
+export function package_info(a: number): void;
+export function canonical_abi_realloc(a: number, b: number, c: number, d: number): number;
+export function canonical_abi_free(a: number, b: number, c: number): void;
+export function __wbg_wasmerruntimeerror_free(a: number): void;
+export function wasmerruntimeerror___wbgd_downcast_token(): number;
+export function __wbindgen_malloc(a: number): number;
+export function __wbindgen_realloc(a: number, b: number, c: number): number;
+export const __wbindgen_export_2: WebAssembly.Table;
+export function __wbindgen_add_to_stack_pointer(a: number): number;
+export function __wbindgen_free(a: number, b: number): void;
+export function __wbindgen_exn_store(a: number): void;
