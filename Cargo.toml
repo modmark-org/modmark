@@ -13,7 +13,7 @@ exclude = [
     "packages/code",
     "packages/math",
     "packages/layout",
-    "packages/textfile",
+    "packages/files",
     "playground/web_bindings"
 ]
 

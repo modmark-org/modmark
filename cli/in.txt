@@ -1,4 +1,0 @@
-The following text is read from an external file
-
-[file]
-textfile.txt
