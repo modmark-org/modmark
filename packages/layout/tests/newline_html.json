@@ -1,0 +1,13 @@
+{
+    "name": "newline",
+    "data": "",
+    "arguments": {},
+    "inline": true,
+    "__test_transform_to": "html",
+    "__test_expected_result": [
+        {
+            "name": "raw",
+            "data": "<br/>"
+        }
+    ]
+}
