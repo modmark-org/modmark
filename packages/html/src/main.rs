@@ -129,7 +129,7 @@ fn transform_error(error: Value) -> String {
     //   calls to other modules that may fail. I have taken care to not use __text but rather just
     //   entered the text myself, because if I used __text and that failed, it would lead to
     //   infinite recursion, which is bad
-    write!(result, "{},", raw!(r#"<span style="background:#ffebeb; padding: 0.5rem; color: black; border-radius: 0.3rem; box-shadow: 0 0 2px #0000003b;">"#)).unwrap();
+    write!(result, "{},", raw!(r#"<span style="display: inline-block; background:#ffebeb; padding: 0.5rem; color: black; border-radius: 0.3rem; box-shadow: 0 0 2px #0000003b;">"#)).unwrap();
 
     let data = escape(format!("Error originating from {source}: {err} on input {input}").as_str());
     write!(result, "{},", raw!(data)).unwrap();
