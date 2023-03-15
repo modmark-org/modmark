@@ -7,6 +7,7 @@ use serde_json::{json, Value};
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
     let action = &args[0];
+
     match action.as_str() {
         "manifest" => manifest(),
         "transform" => transform(&args[1], &args[2]),
@@ -25,6 +26,16 @@ fn manifest() {
             "version": "0.1",
             "description": "This package provides primitive layout modules.",
             "transforms": [
+                {
+                    "from": "newline",
+                    "to": ["html", "latex"],
+                    "arguments": [],
+                },
+                {
+                    "from": "newpage",
+                    "to": ["html", "latex"],
+                    "arguments": [],
+                },
                 {
                     "from": "row",
                     "to": ["html"],
@@ -70,15 +81,54 @@ fn manifest() {
 }
 
 fn transform(from: &str, to: &str) {
+    let input = {
+        let mut buffer = String::new();
+        io::stdin().read_to_string(&mut buffer).unwrap();
+        serde_json::from_str(&buffer).unwrap()
+    };
+
     match from {
-        "row" | "center" => transform_flex(from, to),
+        "row" | "center" => transform_flex(from, to, input),
+        "newline" => transform_newline(to, input),
+        "newpage" => transform_newpage(to, input),
         other => {
             eprintln!("Package does not support {other}");
         }
     }
 }
 
-fn transform_flex(from: &str, to: &str) {
+fn transform_newline(to: &str, input: Value) {
+    if let Value::String(data) = &input["data"] {
+        if !data.is_empty() {
+            eprintln!("The newline module was fed with some input. Maybe this was a misstake? Consider adding delimiters like this: [newline]().");
+        }
+    }
+
+    match to {
+        "latex" => println!("[{}]", json!({"name": "raw", "data": "\\\\"})),
+        "html" => println!("[{}]", json!({"name": "raw", "data": "<br/>"})),
+        other => eprintln!("Cannot convert to '{other}' format."),
+    }
+}
+
+fn transform_newpage(to: &str, input: Value) {
+    if let Value::String(data) = &input["data"] {
+        if !data.is_empty() {
+            eprintln!("The newpage module was fed with some input. Maybe this was a misstake? Consider adding delimiters like this: [newpage]().");
+        }
+    }
+
+    match to {
+        "latex" => println!("[{}]", json!({"name": "raw", "data": "\\newpage"})),
+        "html" => println!(
+            "[{}]",
+            json!({"name": "raw", "data": r#"<div style="break-after: page;"></div>"#})
+        ),
+        other => eprintln!("Cannot convert to '{other}' format."),
+    }
+}
+
+fn transform_flex(from: &str, to: &str, input: Value) {
     macro_rules! get_arg {
         ($input:expr, $arg:expr) => {
             if let Value::String(val) = &$input["arguments"][$arg] {
@@ -88,14 +138,9 @@ fn transform_flex(from: &str, to: &str) {
             }
         };
     }
+
     match to {
         "html" => {
-            let input: Value = {
-                let mut buffer = String::new();
-                io::stdin().read_to_string(&mut buffer).unwrap();
-                serde_json::from_str(&buffer).unwrap()
-            };
-
             let content = input["data"].as_str().unwrap();
             let separator = get_arg!(input, "separator");
             let gap = get_arg!(input, "gap");
@@ -137,8 +182,8 @@ fn get_style(layout: &str, gap: &str, max_width: &str, wrap: &str) -> String {
     };
 
     let units = vec![
-        "cm", "mm", "in", "px", "pt", "pc", "em", "ex",
-        "ch", "rem", "vw", "vh", "vmin", "vmax", "%",
+        "cm", "mm", "in", "px", "pt", "pc", "em", "ex", "ch", "rem", "vw", "vh", "vmin", "vmax",
+        "%",
     ];
 
     let gap = gap.replace(" ", "");
