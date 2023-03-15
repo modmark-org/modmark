@@ -100,7 +100,7 @@ fn transform(from: &str, to: &str) {
 fn transform_newline(to: &str, input: Value) {
     if let Value::String(data) = &input["data"] {
         if !data.is_empty() {
-            eprintln!("The newline module was fed with some input. Maybe this was a misstake? Consider adding delimiters like this: [newline]().");
+            eprintln!("The newline module was fed with some input. Maybe this was a mistake? Consider adding delimiters like this: [newline]().");
         }
     }
 
@@ -114,7 +114,7 @@ fn transform_newline(to: &str, input: Value) {
 fn transform_newpage(to: &str, input: Value) {
     if let Value::String(data) = &input["data"] {
         if !data.is_empty() {
-            eprintln!("The newpage module was fed with some input. Maybe this was a misstake? Consider adding delimiters like this: [newpage]().");
+            eprintln!("The newpage module was fed with some input. Maybe this was a mistake? Consider adding delimiters like this: [newpage]().");
         }
     }
 
