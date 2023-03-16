@@ -1,4 +1,4 @@
-use serde_json::json;
+use serde_json::{json, Value};
 use std::str::FromStr;
 
 const MAX_DEPTH: usize = 255;
@@ -134,7 +134,7 @@ impl FromStr for List {
                         Err(_) => {
                             let last_index = items.len() - 1;
                             let mut last_item = items[last_index].clone();
-                            if line.is_empty() {
+                            if !line.is_empty() {
                                 last_item.content.push_str(line);
                             } else {
                                 last_item.content.push('\n');
@@ -155,30 +155,26 @@ impl List {
             return String::new();
         }
         let mut counters = vec![1; MAX_DEPTH];
-        let (mut json_arr, mut tag_stack) = self.items.iter().fold(
-            (json!([]), vec![]),
+        let (mut json_vec, mut tag_stack) = self.items.iter().fold(
+            (Vec::<Value>::new(), vec![]),
             |(mut json_arr, mut tag_stack), item| {
                 while item.level != tag_stack.len() {
                     if item.level > tag_stack.len() {
                         tag_stack.push(item.item_type);
                         let opening_tag = item.item_type.opening_tag(counters[item.level]);
                         json_arr
-                            .as_array_mut()
-                            .unwrap()
                             .push(json!({"name": "raw", "data": opening_tag}));
                     } else {
                         let reset_level = tag_stack.len();
                         let closing_tag = tag_stack.pop().unwrap().closing_tag();
                         json_arr
-                            .as_array_mut()
-                            .unwrap()
                             .push(json!({"name": "raw", "data": closing_tag}));
                         *counters.get_mut(reset_level).unwrap() = 1;
                     }
                 }
                 let closing_tag = tag_stack.pop().unwrap().closing_tag();
                 tag_stack.push(item.item_type);
-                json_arr.as_array_mut().unwrap().extend(
+                json_arr.extend(
                     json!([
                         {"name": "raw", "data": closing_tag},
                         {"name": "raw", "data": item.item_type.opening_tag(counters[item.level])},
@@ -199,12 +195,10 @@ impl List {
 
         while let Some(item_type) = tag_stack.pop() {
             let closing_tag = item_type.closing_tag();
-            json_arr
-                .as_array_mut()
-                .unwrap()
+            json_vec
                 .push(json!({"name": "raw", "data": closing_tag}));
         }
 
-        json_arr.to_string()
+        json!(json_vec).to_string()
     }
 }
