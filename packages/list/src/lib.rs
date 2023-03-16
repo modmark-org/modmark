@@ -39,11 +39,7 @@ impl ItemType {
     }
 
     fn is_ordered(&self) -> bool {
-        if *self == ItemType::Bullet {
-            false
-        } else {
-            true
-        }
+        *self != ItemType::Bullet
     }
 }
 
@@ -96,25 +92,24 @@ impl FromStr for List {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // If the first nonempty line is not a list item, return err
         s.lines()
-            .skip_while(|&l| l == "")
-            .next()
-            .unwrap_or_else(|| "")
+            .find(|&l| !l.is_empty())
+            .unwrap_or("")
             .trim()
             .split_ascii_whitespace()
             .next()
-            .unwrap_or_else(|| "")
+            .unwrap_or("")
             .parse::<ItemType>()
             .map_err(|_| NoListError)?;
 
         let items: Vec<ListItem> =
             s.lines()
-                .skip_while(|&l| l == "")
+                .skip_while(|&l| l.is_empty())
                 .fold(Vec::new(), |mut items, line| {
                     let start = line
                         .trim()
                         .split_ascii_whitespace()
                         .next()
-                        .unwrap_or_else(|| "")
+                        .unwrap_or("")
                         .parse::<ItemType>();
 
                     match start {
@@ -139,7 +134,7 @@ impl FromStr for List {
                         Err(_) => {
                             let last_index = items.len() - 1;
                             let mut last_item = items[last_index].clone();
-                            if line != "" {
+                            if line.is_empty() {
                                 last_item.content.push_str(line);
                             } else {
                                 last_item.content.push('\n');
@@ -156,7 +151,7 @@ impl FromStr for List {
 
 impl List {
     pub fn to_html(&self) -> String {
-        if self.items.len() == 0 {
+        if self.items.is_empty() {
             return String::new();
         }
         let mut counters = vec![1; MAX_DEPTH];

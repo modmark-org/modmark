@@ -37,18 +37,17 @@ fn manifest() {
     );
 }
 
-fn transform(from: &String, to: &String) {
-    match from.as_str() {
+fn transform(from: &str, to: &str) {
+    match from {
         "list" => transform_list(to),
         other => {
             eprintln!("Package does not support {other}");
-            return;
         }
     }
 }
 
-fn transform_list(to: &String) {
-    match to.as_str() {
+fn transform_list(to: &str) {
+    match to {
         "html" => {
             let input: Value = {
                 let mut buffer = String::new();
@@ -66,7 +65,6 @@ fn transform_list(to: &String) {
         }
         other => {
             eprintln!("Cannot convert list to {other}");
-            return;
         }
     }
 }
