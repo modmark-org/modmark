@@ -38,18 +38,17 @@ fn manifest() {
     );
 }
 
-fn transform(from: &String, to: &String) {
-    match from.as_str() {
+fn transform(from: &str, to: &str) {
+    match from {
         "link" => transform_link(to),
         other => {
             eprintln!("Package does not support {other}");
-            return;
         }
     }
 }
 
-fn transform_link(to: &String) {
-    match to.as_str() {
+fn transform_link(to: &str) {
+    match to {
         "html" => {
             let input: Value = {
                 let mut buffer = String::new();
@@ -66,18 +65,17 @@ fn transform_link(to: &String) {
             let escaped_link = link.replace('"', "%22");
 
             let link_tag = format!(r#"<a href="{escaped_link}">"#);
-            let text = if label == "" { link } else { label };
+            let text = if label.is_empty() { link } else { label };
 
             let output = json!([
                 {"name": "raw", "data": link_tag},
                 {"name": "inline_content", "data": text},
                 {"name": "raw", "data": "</a>"}
             ]);
-            print!("{}", output.to_string());
+            print!("{output}");
         }
         other => {
             eprintln!("Cannot convert table to {other}");
-            return;
         }
     }
 }
