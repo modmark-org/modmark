@@ -168,6 +168,7 @@ async function loadPackageInfo() {
         </div></li> `).join("\n");
 
         return `<div>
+            <div class="transformDescription">${transform.description ?? ""}</div>
             <code class="from">${transform.from}</code>
             <span class="to">${transform.to.join(" ")}</span>
             <ul class="arguments">${args}</ul>

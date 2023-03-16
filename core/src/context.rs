@@ -162,6 +162,7 @@ impl Context {
                 from,
                 to,
                 arguments: _,
+                description: _,
             } = transform;
 
             // Check if the package is implemented natively or if it is an external package

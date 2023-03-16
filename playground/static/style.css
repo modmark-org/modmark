@@ -6,10 +6,10 @@ body {
 
 .material-symbols-outlined {
     position: relative;
-    font-variation-settings: 'FILL' 0,
-    'wght' 400,
-    'GRAD' 0,
-    'opsz' 48;
+    font-variation-settings: 'FILL'0,
+        'wght'400,
+        'GRAD'0,
+        'opsz'48;
     font-size: 1rem;
 }
 
@@ -274,13 +274,17 @@ select:hover {
     font-size: 1.2rem;
 }
 
-#package-content .container > .version {
+#package-content .container>.version {
     opacity: 0.6;
 }
 
-#package-content .container > .name {
+#package-content .container>.name {
     font-size: 1.6rem;
     display: inline;
+}
+
+#package-content .transformDescription {
+    margin-bottom: 0.4rem;
 }
 
 #package-content .container .arguments li div {

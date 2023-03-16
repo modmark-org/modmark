@@ -36,7 +36,8 @@ macro_rules! define_native_packages {
                                 (Transform {
                                     from: $transform.to_string(),
                                     to: vec![],
-                                    arguments: $arg_info
+                                    description: None,
+                                    arguments: $arg_info,
                                 }),
                             )*
                         ]

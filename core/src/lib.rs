@@ -161,6 +161,7 @@ mod tests {
             transforms: vec![Transform {
                 from: "table".to_string(),
                 to: vec![OutputFormat::new("html"), OutputFormat::new("latex")],
+                description: None,
                 arguments: vec![
                     ArgInfo {
                         name: "header".to_string(),
