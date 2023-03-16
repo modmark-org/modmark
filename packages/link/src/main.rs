@@ -20,7 +20,7 @@ fn manifest() {
         "{}",
         serde_json::to_string(&json!(
             {
-            "name": "Standard link package",
+            "name": "link",
             "version": "0.1",
             "description": "This package supports [link] modules",
             "transforms": [

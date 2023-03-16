@@ -21,7 +21,7 @@ fn manifest() {
         "{}",
         serde_json::to_string(&json!(
             {
-            "name": "Standard list package",
+            "name": "list",
             "version": "0.1",
             "description": "This package supports [list] modules",
             "transforms": [
