@@ -23,7 +23,7 @@ add new //modules// to the language, which adds functionality to the
 language, like [link label="links"](https://modmark.org), lists and more!
 ```
 
-The `[link]` syntax invokes a **module**, which lives outside the language itself, and the ability to use custom modules enhances the language and gives it capabilities way beyond what one single syntax set may. Make sure to check out the [playground](https://modmark.org) to see an example document which uses modules! *The playground currently doesn't work on [Chromium-based browsers](https://github.com/modmark-org/modmark/issues/45)*
+The `[link]` syntax invokes a **module**, which lives outside the language itself, and the ability to use custom modules enhances the language and gives it capabilities way beyond what one single syntax set may. Make sure to check out the [playground](https://modmark.org) to see an example document which uses modules!
 
 You can see more of the syntax [here](MODMARK.md), or continue reading to find out more about the project structure and technical details.
 
