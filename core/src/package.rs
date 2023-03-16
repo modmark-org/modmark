@@ -13,6 +13,7 @@ use wasmer_wasi::{Pipe, WasiState};
 pub struct Transform {
     pub from: String,
     pub to: Vec<OutputFormat>,
+    pub description: Option<String>,
     pub arguments: Vec<ArgInfo>,
 }
 
