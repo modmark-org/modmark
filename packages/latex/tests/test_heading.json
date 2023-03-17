@@ -1,0 +1,56 @@
+{
+    "name": "__heading",
+    "arguments": {
+        "level": "2"
+    },
+    "children": [
+        {
+            "name": "raw",
+            "data": "Raw stuff",
+            "arguments": {},
+            "inline": true
+        },
+        {
+            "name": "__bold",
+            "arguments": {},
+            "children": [
+                {
+                    "name": "__text",
+                    "data": "Hello, world",
+                    "arguments": {},
+                    "inline": true
+                }
+            ]
+        }
+    ],
+    "__test_transform_to": "latex",
+    "__test_expected_result": [
+        {
+            "data": "\n\\subsection{",
+            "name": "raw"
+          },
+          {
+            "arguments": {},
+            "data": "Raw stuff",
+            "inline": true,
+            "name": "raw"
+          },
+          {
+            "arguments": {},
+            "children": [
+              {
+                "arguments": {},
+                "data": "Hello, world",
+                "inline": true,
+                "name": "__text"
+              }
+            ],
+            "name": "__bold"
+          },
+          {
+            "data": "}\n",
+            "name": "raw"
+          }
+        
+    ]
+}

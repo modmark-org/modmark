@@ -1,0 +1,29 @@
+{
+    "name": "__bold",
+    "arguments": {},
+    "children": [
+        {
+            "name": "__text",
+            "data": "Hello, world",
+            "arguments": {},
+            "inline": true
+        }
+    ],
+    "__test_transform_to": "latex",
+    "__test_expected_result": [
+        {
+            "data": "\\textbf{",
+            "name": "raw"
+          },
+          {
+            "arguments": {},
+            "data": "Hello, world",
+            "inline": true,
+            "name": "__text"
+          },
+          {
+            "data": "}",
+            "name": "raw"
+          }
+    ]
+}

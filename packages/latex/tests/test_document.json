@@ -1,0 +1,54 @@
+{
+    "name": "__document",
+    "arguments": {},
+    "children": [
+        {
+            "name": "raw",
+            "data": "Raw stuff",
+            "arguments": {},
+            "inline": true
+        },
+        {
+            "name": "__bold",
+            "arguments": {},
+            "children": [
+                {
+                    "name": "__text",
+                    "data": "Hello, world",
+                    "arguments": {},
+                    "inline": true
+                }
+            ]
+        }
+    ],
+    "__test_transform_to": "latex",
+    "__test_expected_result": [
+        {
+            "data": "\\documentclass{article}\n\\usepackage{ulem}\n\n\\begin{document}\n",
+            "name": "raw"
+          },
+          {
+            "arguments": {},
+            "data": "Raw stuff",
+            "inline": true,
+            "name": "raw"
+          },
+          {
+            "arguments": {},
+            "children": [
+              {
+                "arguments": {},
+                "data": "Hello, world",
+                "inline": true,
+                "name": "__text"
+              }
+            ],
+            "name": "__bold"
+          },
+          {
+            "data": "\n\\end{document}",
+            "name": "raw"
+          }
+        
+    ]
+}
