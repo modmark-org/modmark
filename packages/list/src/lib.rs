@@ -7,25 +7,26 @@ const MAX_DEPTH: usize = 255;
 pub struct NoListError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+// Options in ordered types represent if they have a specified start value
 enum ItemType {
     Bullet,
-    Decimal,
-    LowerAlpha,
-    UpperAlpha,
-    LowerRoman,
-    UpperRoman,
+    Decimal(Option<u32>),
+    LowerAlpha(Option<u32>),
+    UpperAlpha(Option<u32>),
+    LowerRoman(Option<u32>),
+    UpperRoman(Option<u32>),
 }
 
 impl ItemType {
-    fn opening_tag(&self, level: usize) -> String {
+    fn opening_tag(&self, start: u32) -> String {
         use ItemType::*;
         match self {
             Bullet => "<ul>".to_string(),
-            Decimal => format!(r#"<ol type="1" start="{level}">"#),
-            LowerAlpha => format!(r#"<ol type="a" start="{level}">"#),
-            UpperAlpha => format!(r#"<ol type="A" start="{level}">"#),
-            LowerRoman => format!(r#"<ol type="i" start="{level}">"#),
-            UpperRoman => format!(r#"<ol type="I" start="{level}">"#),
+            Decimal(_) => format!(r#"<ol type="1" start="{start}">"#),
+            LowerAlpha(_) => format!(r#"<ol type="a" start="{start}">"#),
+            UpperAlpha(_) => format!(r#"<ol type="A" start="{start}">"#),
+            LowerRoman(_) => format!(r#"<ol type="i" start="{start}">"#),
+            UpperRoman(_) => format!(r#"<ol type="I" start="{start}">"#),
         }
     }
 
@@ -41,6 +42,18 @@ impl ItemType {
     fn is_ordered(&self) -> bool {
         *self != ItemType::Bullet
     }
+
+    fn get_start_preference(&self) -> Option<u32> {
+        use ItemType::*;
+        match *self {
+            Bullet => None,
+            Decimal(start) => start,
+            LowerAlpha(start) => start,
+            UpperAlpha(start) => start,
+            LowerRoman(start) => start,
+            UpperRoman(start) => start,
+        }
+    }
 }
 
 struct InvalidItem;
@@ -50,25 +63,55 @@ impl FromStr for ItemType {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         use ItemType::*;
+        let start_str = if s.starts_with('(') && s.ends_with(')') {
+            &s[1..s.len() - 1]
+        } else if s.ends_with(')') || s.ends_with('.') {
+            &s[0..s.len() - 1]
+        } else {
+            ""
+        };
+
+        if !start_str.is_empty() {
+            if let Ok(start) = start_str.parse::<u32>() {
+                return Ok(Decimal(Some(start)));
+            } else if let Some(start) = roman::from(&start_str.to_ascii_uppercase()) {
+                if start_str.chars().next().unwrap().is_ascii_lowercase() {
+                    return Ok(LowerRoman(Some(start.unsigned_abs())));
+                } else {
+                    return Ok(UpperRoman(Some(start.unsigned_abs())));
+                }
+            } else if start_str.chars().next().unwrap().is_ascii_alphabetic() {
+                let c = start_str.chars().next().unwrap();
+                let order = alpha_to_start(&c);
+                if let Some(start) = order {
+                    if c.is_ascii_lowercase() {
+                        return Ok(LowerAlpha(Some(start)));
+                    } else {
+                        return Ok(UpperAlpha(Some(start)));
+                    }
+                }
+            }
+        }
+
         match s {
             "-" => Ok(Bullet),
             "+" => Ok(Bullet),
             "*" => Ok(Bullet),
-            "1." => Ok(Decimal),
-            "1)" => Ok(Decimal),
-            "(1)" => Ok(Decimal),
-            "a." => Ok(LowerAlpha),
-            "a)" => Ok(LowerAlpha),
-            "(a)" => Ok(LowerAlpha),
-            "A." => Ok(UpperAlpha),
-            "A)" => Ok(UpperAlpha),
-            "(A)" => Ok(UpperAlpha),
-            "i." => Ok(LowerRoman),
-            "i)" => Ok(LowerRoman),
-            "(i)" => Ok(LowerRoman),
-            "I." => Ok(UpperRoman),
-            "I)" => Ok(UpperRoman),
-            "(I)" => Ok(UpperRoman),
+            "1." => Ok(Decimal(None)),
+            "1)" => Ok(Decimal(None)),
+            "(1)" => Ok(Decimal(None)),
+            "a." => Ok(LowerAlpha(None)),
+            "a)" => Ok(LowerAlpha(None)),
+            "(a)" => Ok(LowerAlpha(None)),
+            "A." => Ok(UpperAlpha(None)),
+            "A)" => Ok(UpperAlpha(None)),
+            "(A)" => Ok(UpperAlpha(None)),
+            "i." => Ok(LowerRoman(None)),
+            "i)" => Ok(LowerRoman(None)),
+            "(i)" => Ok(LowerRoman(None)),
+            "I." => Ok(UpperRoman(None)),
+            "I)" => Ok(UpperRoman(None)),
+            "(I)" => Ok(UpperRoman(None)),
             _ => Err(InvalidItem),
         }
     }
@@ -134,11 +177,8 @@ impl FromStr for List {
                         Err(_) => {
                             let last_index = items.len() - 1;
                             let mut last_item = items[last_index].clone();
-                            if !line.is_empty() {
-                                last_item.content.push_str(line);
-                            } else {
-                                last_item.content.push('\n');
-                            }
+                            last_item.content.push('\n');
+                            last_item.content.push_str(line);
                             items[last_index] = last_item;
                         }
                     }
@@ -154,26 +194,33 @@ impl List {
         if self.items.is_empty() {
             return String::new();
         }
-        let mut counters = vec![1; MAX_DEPTH];
+        let mut counters: Vec<u32> = vec![1; MAX_DEPTH];
         let (mut json_vec, mut tag_stack) = self.items.iter().fold(
             (Vec::<Value>::new(), vec![]),
             |(mut json_arr, mut tag_stack), item| {
+                // new_level is used to check if the start preference
+                // of a item can be used
+                let mut new_level = false;
                 while item.level != tag_stack.len() {
                     if item.level > tag_stack.len() {
+                        new_level = true;
                         tag_stack.push(item.item_type);
                         let opening_tag = item.item_type.opening_tag(counters[item.level]);
-                        json_arr
-                            .push(json!({"name": "raw", "data": opening_tag}));
+                        json_arr.push(json!({"name": "raw", "data": opening_tag}));
                     } else {
                         let reset_level = tag_stack.len();
                         let closing_tag = tag_stack.pop().unwrap().closing_tag();
-                        json_arr
-                            .push(json!({"name": "raw", "data": closing_tag}));
+                        json_arr.push(json!({"name": "raw", "data": closing_tag}));
                         *counters.get_mut(reset_level).unwrap() = 1;
                     }
                 }
                 let closing_tag = tag_stack.pop().unwrap().closing_tag();
                 tag_stack.push(item.item_type);
+                if new_level {
+                    if let Some(start) = item.item_type.get_start_preference() {
+                        *counters.get_mut(item.level).unwrap() = start;
+                    }
+                }
                 json_arr.extend(
                     json!([
                         {"name": "raw", "data": closing_tag},
@@ -195,10 +242,67 @@ impl List {
 
         while let Some(item_type) = tag_stack.pop() {
             let closing_tag = item_type.closing_tag();
-            json_vec
-                .push(json!({"name": "raw", "data": closing_tag}));
+            json_vec.push(json!({"name": "raw", "data": closing_tag}));
         }
 
         json!(json_vec).to_string()
+    }
+}
+
+fn alpha_to_start(c: &char) -> Option<u32> {
+    match c {
+        'a' => Some(1),
+        'b' => Some(2),
+        'c' => Some(3),
+        'd' => Some(4),
+        'e' => Some(5),
+        'f' => Some(6),
+        'g' => Some(7),
+        'h' => Some(8),
+        'i' => Some(9),
+        'j' => Some(10),
+        'k' => Some(11),
+        'l' => Some(12),
+        'm' => Some(13),
+        'n' => Some(14),
+        'o' => Some(15),
+        'p' => Some(16),
+        'q' => Some(17),
+        'r' => Some(18),
+        's' => Some(19),
+        't' => Some(20),
+        'u' => Some(21),
+        'v' => Some(22),
+        'w' => Some(23),
+        'x' => Some(24),
+        'y' => Some(25),
+        'z' => Some(26),
+        'A' => Some(1),
+        'B' => Some(2),
+        'C' => Some(3),
+        'D' => Some(4),
+        'E' => Some(5),
+        'F' => Some(6),
+        'G' => Some(7),
+        'H' => Some(8),
+        'I' => Some(9),
+        'J' => Some(10),
+        'K' => Some(11),
+        'L' => Some(12),
+        'M' => Some(13),
+        'N' => Some(14),
+        'O' => Some(15),
+        'P' => Some(16),
+        'Q' => Some(17),
+        'R' => Some(18),
+        'S' => Some(19),
+        'T' => Some(20),
+        'U' => Some(21),
+        'V' => Some(22),
+        'W' => Some(23),
+        'X' => Some(24),
+        'Y' => Some(25),
+        'Z' => Some(26),
+        _ => None,
     }
 }
