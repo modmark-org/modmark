@@ -117,7 +117,7 @@ fn transform_heading(heading: Value) -> String {
     let clamped_level = level.clamp(1, 3); //latex only supports 1-3
     let mut subs = String::new();
     if clamped_level > 1 {
-        subs.push_str(&"sub".repeat((level - 1) as usize));
+        subs.push_str(&"sub".repeat((clamped_level - 1) as usize));
     }
     
 
