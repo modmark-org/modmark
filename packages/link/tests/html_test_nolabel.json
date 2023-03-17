@@ -1,0 +1,23 @@
+{
+  "name": "link",
+  "data": "https://google.com",
+  "arguments": {
+    "label": ""
+  },
+  "inline": true,
+  "__test_transform_to": "html",
+  "__test_expected_result": [
+    {
+      "data": "<a href=\"https://google.com\">",
+      "name": "raw"
+    },
+    {
+      "data": "https://google.com",
+      "name": "inline_content"
+    },
+    {
+      "data": "</a>",
+      "name": "raw"
+    }
+  ]
+}
