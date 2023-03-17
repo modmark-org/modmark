@@ -238,6 +238,8 @@ async function updateOutput(input) {
                 renderIframe.style.display = "none";
                 render.style.display = "none";
 
+                overleafButton.style.display = "none";
+
                 debugEditor.session.setMode("");
                 debugEditor.setValue(await compilerAction({ type: "ast", source: input }));
                 debugEditor.getSession().selection.clearSelection()
@@ -246,6 +248,8 @@ async function updateOutput(input) {
                 debugEditor.container.style.display = "block";
                 renderIframe.style.display = "none";
                 render.style.display = "none";
+
+                overleafButton.style.display = "none";
 
                 debugEditor.session.setMode("");
                 debugEditor.setValue(await compilerAction({ type: "ast_debug", source: input }));
@@ -256,6 +260,8 @@ async function updateOutput(input) {
                 renderIframe.style.display = "none";
                 render.style.display = "none";
 
+                overleafButton.style.display = "none";
+
                 debugEditor.session.setMode("ace/mode/json");
                 debugEditor.setValue(await compilerAction({ type: "json_output", source: input }));
                 debugEditor.getSession().selection.clearSelection();
@@ -265,14 +271,33 @@ async function updateOutput(input) {
                 errors.forEach(addError);
                 warnings.forEach(addWarning);
 
+                overleafButton.style.display = "none";
+
                 debugEditor.container.style.display = "block";
                 renderIframe.style.display = "none";
                 render.style.display = "none";
+
+                overleafButton.style.display = "none";
 
                 debugEditor.session.setMode("");
                 debugEditor.setValue(content);
                 debugEditor.getSession().selection.clearSelection();
             }
+                break;
+            case "latex":
+                let { content, warnings, errors } = JSON.parse(await compilerAction({ type: "transpile", source: input, format: "latex" }));
+                errors.forEach(addError);
+                warnings.forEach(addWarning);
+
+                overleafButton.style.display = "inline-block";
+
+                debugEditor.container.style.display = "block";
+                renderIframe.style.display = "none";
+                render.style.display = "none";
+                
+                debugEditor.session.setMode("");
+                debugEditor.setValue(content);
+                debugEditor.getSession().selection.clearSelection();
                 break;
             case "transpile":
             case "render-iframe":
@@ -280,6 +305,8 @@ async function updateOutput(input) {
                 let { content, warnings, errors } = JSON.parse(await compilerAction({ type: "transpile", source: input, format: "html" }));
                 errors.forEach(addError);
                 warnings.forEach(addWarning);
+
+                overleafButton.style.display = "none";
 
                 if (selector.value === "transpile") {
                     debugEditor.container.style.display = "block";
