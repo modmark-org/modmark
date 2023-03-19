@@ -23,12 +23,14 @@ fn manifest() {
             {
             "name": "list",
             "version": "0.1",
-            "description": "This package supports [list] modules",
+            "description": "This package supports [list] modules. Lists can use alpha, decimal, romans and bulletpoints (+, *, or -). When creating a numbered list items can be 1. 1) or (1). First ordered item is used as a starting point then increments.",
             "transforms": [
                 {
                     "from": "list",
                     "to": ["html"],
-                    "arguments": [],
+                    "arguments": [
+                        {"name": "indent", "default": "4", "description": "Number of spaces needed for each level of indent when writing the list."}
+                    ],
                 },
             ]
             }
@@ -56,8 +58,13 @@ fn transform_list(to: &str) {
             };
 
             let body = input["data"].as_str().unwrap();
+            let indent = input["arguments"]["indent"]
+                .as_str()
+                .unwrap_or("4")
+                .parse()
+                .unwrap_or(4);
 
-            if let Ok(list) = body.parse::<List>() {
+            if let Ok(list) = List::from_str(body, indent) {
                 print!("{}", list.to_html())
             } else {
                 eprintln!("Module block does not start with a list")

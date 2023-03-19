@@ -129,66 +129,6 @@ pub struct List {
     pub items: Vec<ListItem>,
 }
 
-impl FromStr for List {
-    type Err = NoListError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // If the first nonempty line is not a list item, return err
-        s.lines()
-            .find(|&l| !l.is_empty())
-            .unwrap_or("")
-            .trim()
-            .split_ascii_whitespace()
-            .next()
-            .unwrap_or("")
-            .parse::<ItemType>()
-            .map_err(|_| NoListError)?;
-
-        let items: Vec<ListItem> =
-            s.lines()
-                .skip_while(|&l| l.is_empty())
-                .fold(Vec::new(), |mut items, line| {
-                    let start = line
-                        .trim()
-                        .split_ascii_whitespace()
-                        .next()
-                        .unwrap_or("")
-                        .parse::<ItemType>();
-
-                    match start {
-                        Ok(item_type) => {
-                            let level = (line
-                                .chars()
-                                .take_while(|&x| x.is_ascii_whitespace())
-                                .count()
-                                / 4)
-                                + 1;
-                            items.push(ListItem {
-                                item_type,
-                                content: line
-                                    .chars()
-                                    .skip_while(|&x| x.is_ascii_whitespace())
-                                    .skip_while(|&x| !x.is_ascii_whitespace())
-                                    .skip_while(|&x| x.is_ascii_whitespace())
-                                    .collect::<String>(),
-                                level,
-                            });
-                        }
-                        Err(_) => {
-                            let last_index = items.len() - 1;
-                            let mut last_item = items[last_index].clone();
-                            last_item.content.push('\n');
-                            last_item.content.push_str(line);
-                            items[last_index] = last_item;
-                        }
-                    }
-                    items
-                });
-
-        Ok(List { items })
-    }
-}
-
 impl List {
     pub fn to_html(&self) -> String {
         if self.items.is_empty() {
@@ -246,6 +186,62 @@ impl List {
         }
 
         json!(json_vec).to_string()
+    }
+
+    pub fn from_str(s: &str, indent: u32) -> Result<Self, NoListError> {
+        // If the first nonempty line is not a list item, return err
+        s.lines()
+            .find(|&l| !l.is_empty())
+            .unwrap_or("")
+            .trim()
+            .split_ascii_whitespace()
+            .next()
+            .unwrap_or("")
+            .parse::<ItemType>()
+            .map_err(|_| NoListError)?;
+
+        let items: Vec<ListItem> =
+            s.lines()
+                .skip_while(|&l| l.is_empty())
+                .fold(Vec::new(), |mut items, line| {
+                    let start = line
+                        .trim()
+                        .split_ascii_whitespace()
+                        .next()
+                        .unwrap_or("")
+                        .parse::<ItemType>();
+
+                    match start {
+                        Ok(item_type) => {
+                            let level = (line
+                                .chars()
+                                .take_while(|&x| x.is_ascii_whitespace())
+                                .count()
+                                / indent as usize)
+                                + 1;
+                            items.push(ListItem {
+                                item_type,
+                                content: line
+                                    .chars()
+                                    .skip_while(|&x| x.is_ascii_whitespace())
+                                    .skip_while(|&x| !x.is_ascii_whitespace())
+                                    .skip_while(|&x| x.is_ascii_whitespace())
+                                    .collect::<String>(),
+                                level,
+                            });
+                        }
+                        Err(_) => {
+                            let last_index = items.len() - 1;
+                            let mut last_item = items[last_index].clone();
+                            last_item.content.push('\n');
+                            last_item.content.push_str(line);
+                            items[last_index] = last_item;
+                        }
+                    }
+                    items
+                });
+
+        Ok(List { items })
     }
 }
 
