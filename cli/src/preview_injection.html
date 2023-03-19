@@ -1,0 +1,11 @@
+<script>
+    // Script injected by ModMark CLI live preview
+    let address = "ws://" + window.location.host + window.location.pathname + "ws";
+    const socket = new WebSocket(address);
+
+    socket.addEventListener('message', (event) => {
+        if (event.data == 'reload') {
+            window.location.reload();
+        }
+    });
+</script>

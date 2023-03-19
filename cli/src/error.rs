@@ -44,4 +44,7 @@ pub enum CliError {
 
     #[error("Could not download package: Error code '{0}'")]
     Get(String),
+
+    #[error("There are no free ports for the live preview to use")]
+    NoFreePorts,
 }
