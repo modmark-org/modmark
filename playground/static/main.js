@@ -297,7 +297,8 @@ async function updateOutput(input) {
             case "transpile":
             case "render-iframe":
             case "render": {
-                let { content, warnings, errors } = JSON.parse(await compilerAction({ type: "transpile", source: input, format: "html" }));
+                let type = selector.value == "render" ? "transpile_no_document" : "transpile";
+                let { content, warnings, errors } = JSON.parse(await compilerAction({ type, source: input, format: "html" }));
                 errors.forEach(addError);
                 warnings.forEach(addWarning);
 

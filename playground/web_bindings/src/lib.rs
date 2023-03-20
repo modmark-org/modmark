@@ -1,4 +1,4 @@
-use modmark_core::{eval, Context, CoreError, OutputFormat};
+use modmark_core::{eval, eval_no_document, Context, CoreError, OutputFormat};
 use std::cell::RefCell;
 
 use parser::ParseError;
@@ -56,6 +56,33 @@ pub fn transpile(source: &str, format: &str) -> Result<String, PlaygroundError> 
     let result = CONTEXT.with(|ctx| {
         let mut ctx = ctx.borrow_mut();
         eval(source, &mut ctx, &OutputFormat::new(format))
+    })?;
+
+    let warnings = result
+        .1
+        .warnings
+        .iter()
+        .map(|issue| escape(issue.to_string()))
+        .collect();
+    let errors = result
+        .1
+        .errors
+        .iter()
+        .map(|issue| escape(issue.to_string()))
+        .collect();
+    let transpile = Transpile {
+        content: result.0,
+        warnings,
+        errors,
+    };
+    Ok(serde_json::to_string(&transpile).unwrap())
+}
+
+#[wasm_bindgen]
+pub fn transpile_no_document(source: &str, format: &str) -> Result<String, PlaygroundError> {
+    let result = CONTEXT.with(|ctx| {
+        let mut ctx = ctx.borrow_mut();
+        eval_no_document(source, &mut ctx, &OutputFormat::new(format))
     })?;
 
     let warnings = result

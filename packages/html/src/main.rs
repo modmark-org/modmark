@@ -67,6 +67,7 @@ fn transform_document(doc: Value) -> String {
     let mut result = String::new();
     result.push('[');
 
+    write!(result, "{},", raw!("<!DOCTYPE html>")).unwrap();
     write!(result, "{},", raw!("<html><head><title>Document</title>")).unwrap();
 
     write!(result, "{},", raw!("<style>")).unwrap();

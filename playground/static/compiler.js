@@ -28,6 +28,9 @@ onmessage = (event) => {
             case "transpile":
                 result = wasm_bindgen.transpile(event.data.source, event.data.format);
                 break;
+            case "transpile_no_document":
+                result = wasm_bindgen.transpile_no_document(event.data.source, event.data.format);
+                break;
         }
         postMessage({ result: result, success: true, ...event.data });
     } catch (error) {
