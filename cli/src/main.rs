@@ -112,6 +112,7 @@ static DEFAULT_REGISTRY: &str =
 
 static CTX: OnceCell<Mutex<Context<PackageManager>>> = OnceCell::new();
 static PREVIEW_PORT: OnceCell<Option<Port>> = OnceCell::new();
+static ABSOLUTE_OUTPUT_PATH: OnceCell<PathBuf> = OnceCell::new();
 static RE_INJECTION: Lazy<Regex> = Lazy::new(|| Regex::new("</body>").unwrap());
 static CONNECTION_ID_COUNTER: AtomicUsize = AtomicUsize::new(1);
 
@@ -165,7 +166,7 @@ fn print_result(result: &CompilationResult, args: &Args) -> Result<(), CliError>
 
     // Print the path to the live preview (if using one)
     if args.use_html_preview() {
-        let port = get_port(args)?;
+        let port = get_port()?;
         println!("Live preview available at: http://localhost:{port}");
     }
 
@@ -185,10 +186,12 @@ fn print_result(result: &CompilationResult, args: &Args) -> Result<(), CliError>
         }
     }
 
-    if let Some(output_path) = args.output.as_ref() {
-        // FIXME: Print the absolute path, note that we can't simply use fs::canonicalize since
-        // we don't know if the file exists beforehand. We can't just append it to the current dir either
-        // since we don't know if the user actually gave us a absolute path from the start.
+    // Print the path to the output
+    // (If we have already saved the file and have gotten the absolute path
+    // print that otherwise we print the provided path from the cli)
+    if let Some(output_path) = ABSOLUTE_OUTPUT_PATH.get() {
+        println!("Your file can be found at {}.", output_path.display());
+    } else if let Some(output_path) = args.output.as_ref() {
         println!("Your file can be found at {}.", output_path.display());
     }
 
@@ -206,6 +209,15 @@ fn save_result(result: &CompilationResult, args: &Args) -> Result<(), CliError> 
     if let Some(output) = &args.output {
         if let Ok((document, _, _)) = result {
             let mut file = File::create(output)?;
+
+            // Save the absolute path to the output file
+            // now once we have created it.
+            ABSOLUTE_OUTPUT_PATH.get_or_init(|| {
+                output
+                    .canonicalize()
+                    .expect("Failed to find absolute path of output file")
+            });
+
             file.write_all(document.as_bytes())?;
         }
     }
@@ -234,7 +246,7 @@ async fn main() -> Result<(), CliError> {
     if args.use_html_preview() {
         let connections = PreviewConnections::default();
         let document = PreviewDoc::default();
-        let port = get_port(&args)?;
+        let port = get_port()?;
 
         let run_preview_server = || async {
             let routes =
@@ -274,14 +286,14 @@ async fn main() -> Result<(), CliError> {
     // just compile the file once and save it.
     print_compiling_message()?;
     let compilation_result = compile_file(&args.input, &args.get_output_format()?);
-    print_result(&compilation_result, &args)?;
     save_result(&compilation_result, &args)?;
+    print_result(&compilation_result, &args)?;
 
     Ok(())
 }
 
 /// Choose a free port for hosting the html live preview
-fn get_port(args: &Args) -> Result<u16, CliError> {
+fn get_port() -> Result<u16, CliError> {
     PREVIEW_PORT
         .get_or_init(|| portpicker::pick_unused_port())
         .ok_or(CliError::NoFreePorts)
@@ -381,11 +393,11 @@ async fn watch_files<P: AsRef<Path>>(
                 .unwrap_or_else(|_| OutputFormat::new("html")),
         );
 
-        // Print the result to the terminal
-        print_result(&compilation_result, &args)?;
-
         // Write to the output file (if there was one)
         save_result(&compilation_result, &args)?;
+
+        // Print the result to the terminal
+        print_result(&compilation_result, &args)?;
 
         // Also save the result to the live preview document
         if let Some(document) = &document {
@@ -416,6 +428,14 @@ async fn watch_files<P: AsRef<Path>>(
     while let Some(res) = rx.next().await {
         match res {
             Ok(event) => {
+                // If we also generate a output file, discard any changes from that file
+                if let Some(output_path) = ABSOLUTE_OUTPUT_PATH.get() {
+                    if event.paths.contains(output_path) {
+                        continue;
+                    }
+                }
+
+                // We only care about changes from when files are created, removed or modified
                 if let EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) =
                     event.kind
                 {
