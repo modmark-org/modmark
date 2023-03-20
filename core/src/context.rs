@@ -17,12 +17,13 @@ use wasmer_wasi::{Pipe, WasiState};
 use parser::ModuleArguments;
 
 use crate::package::PackageImplementation;
-use crate::{std_packages, Element};
+use crate::{std_packages, Element, DenyAllResolver};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
 
-pub struct Context {
+pub struct Context<T> {
     pub(crate) packages: HashMap<String, Package>,
     pub(crate) transforms: HashMap<String, TransformVariant>,
+    pub(crate) resolver: T,
     #[cfg(feature = "native")]
     engine: Engine,
     pub(crate) state: CompilationState,
@@ -68,7 +69,7 @@ impl CompilationState {
     }
 }
 
-impl Debug for Context {
+impl<T> Debug for Context<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("Context")
             .field("packages", &self.packages)
@@ -113,17 +114,20 @@ impl TransformVariant {
     }
 }
 
-impl Context {
-    pub fn new() -> Self {
+impl Context<DenyAllResolver> {
+    pub fn new_without_resolver() -> Self {
         Context {
             packages: HashMap::new(),
             transforms: HashMap::new(),
+            resolver: DenyAllResolver,
             #[cfg(feature = "native")]
             engine: EngineBuilder::new(Cranelift::new()).engine(),
             state: CompilationState::default(),
         }
     }
+}
 
+impl<T> Context<T> {
     /// Clears the internal `CompilationState` of this Context. This ensures that any information
     /// specific to previous compilations, such as errors and warnings, gets cleared.
     pub fn clear_state(&mut self) {
@@ -701,10 +705,10 @@ impl Context {
     }
 }
 
-impl Default for Context {
+impl Default for Context<DenyAllResolver> {
     /// A Context with all default packages loaded
     fn default() -> Self {
-        let mut ctx = Self::new();
+        let mut ctx = Self::new_without_resolver();
         ctx.load_default_packages().unwrap();
         ctx
     }

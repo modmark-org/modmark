@@ -81,8 +81,8 @@ define_native_packages! {
 
 /// Returns a string containing the body of this invocation. This is the "leaf" call; no tree will
 /// be created as a result of this call
-pub fn native_raw(
-    _ctx: &mut Context,
+pub fn native_raw<T>(
+    _ctx: &mut Context<T>,
     body: &str,
     _args: HashMap<String, String>,
     _inline: bool,
@@ -93,8 +93,8 @@ pub fn native_raw(
 
 /// Re-parses the content as block content (a paragraph with tags, modules etc) and
 /// returns the resulting compound element containing the contents of the paragraph
-pub fn native_inline_content(
-    _ctx: &mut Context,
+pub fn native_inline_content<T>(
+    _ctx: &mut Context<T>,
     body: &str,
     _args: HashMap<String, String>,
     _inline: bool,
@@ -110,8 +110,8 @@ pub fn native_inline_content(
 
 /// Re-parses the content as block content (multiple paragraph or multiline module invocations) and
 /// returns the resulting compound element
-pub fn native_block_content(
-    _ctx: &mut Context,
+pub fn native_block_content<T>(
+    _ctx: &mut Context<T>,
     body: &str,
     _args: HashMap<String, String>,
     _inline: bool,
@@ -126,8 +126,8 @@ pub fn native_block_content(
 }
 
 /// Example function for setting environment variables, currently unimplemented
-pub fn native_set_env(
-    _ctx: &mut Context,
+pub fn native_set_env<T>(
+    _ctx: &mut Context<T>,
     _body: &str,
     _args: HashMap<String, String>,
     _inline: bool,
@@ -136,8 +136,8 @@ pub fn native_set_env(
     unimplemented!("native_set_env")
 }
 
-pub fn native_warn(
-    ctx: &mut Context,
+pub fn native_warn<T>(
+    ctx: &mut Context<T>,
     body: &str,
     mut args: HashMap<String, String>,
     _inline: bool,
@@ -157,8 +157,8 @@ pub fn native_warn(
     Ok(Left(Element::Compound(vec![])))
 }
 
-pub fn native_err(
-    ctx: &mut Context,
+pub fn native_err<T>(
+    ctx: &mut Context<T>,
     body: &str,
     args: HashMap<String, String>,
     inline: bool,

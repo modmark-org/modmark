@@ -46,8 +46,8 @@ macro_rules! define_native_packages {
             ]
         }
 
-        pub fn handle_native(
-            ctx: &mut Context,
+        pub fn handle_native<T>(
+            ctx: &mut Context<T>,
             package_name: &str,
             node_name: &str, // name of module or parent
             element: &Element,
@@ -88,7 +88,7 @@ macro_rules! define_native_packages {
 macro_rules! define_standard_package_loader {
     ($($name:expr),* $(,)?) => {
         #[cfg(all(feature = "bundle_std_packages", feature = "native", feature = "precompile_wasm"))]
-        pub fn load_standard_packages(ctx: &mut Context) -> Result<(), CoreError> {
+        pub fn load_standard_packages<T>(ctx: &mut Context<T>) -> Result<(), CoreError> {
             $(
                 ctx.load_precompiled_package_from_wasm(
                     include_bytes!(
@@ -106,7 +106,7 @@ macro_rules! define_standard_package_loader {
             Ok(())
         }
         #[cfg(all(feature = "bundle_std_packages", not(all(feature = "native", feature = "precompile_wasm"))))]
-        pub fn load_standard_packages(ctx: &mut Context) -> Result<(), CoreError> {
+        pub fn load_standard_packages<T>(ctx: &mut Context<T>) -> Result<(), CoreError> {
             $(
                 ctx.load_package_from_wasm(
                     include_bytes!(
@@ -124,7 +124,7 @@ macro_rules! define_standard_package_loader {
             Ok(())
         }
         #[cfg(not(feature = "bundle_std_packages"))]
-        pub fn load_standard_packages(_: &mut Context) -> Result<(), CoreError> {
+        pub fn load_standard_packages<T>(_: &mut Context<T>) -> Result<(), CoreError> {
             Ok(())
         }
     };
