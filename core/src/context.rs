@@ -594,7 +594,13 @@ impl<T> Context<T> {
             .stdin(Box::new(input))
             .stdout(Box::new(output.clone()))
             .stderr(Box::new(err_out.clone()))
-            .preopen(|p| p.directory("assets").alias(".").read(true))?
+            .preopen(|p| {
+                p.directory("assets")
+                    .alias(".")
+                    .read(true)
+                    .write(true)
+                    .create(true)
+            })?
             .args(["transform", name, &output_format.to_string()])
             .finalize(&mut store)?;
 
@@ -604,7 +610,13 @@ impl<T> Context<T> {
             .stdout(Box::new(output.clone()))
             .stderr(Box::new(err_out.clone()))
             .set_fs(Box::new(self.filesystem.clone()))
-            .preopen(|p| p.directory("/").alias(".").read(true))?
+            .preopen(|p| {
+                p.directory("/")
+                    .alias(".")
+                    .read(true)
+                    .write(true)
+                    .create(true)
+            })?
             .args(["transform", name, &output_format.to_string()])
             .finalize(&mut store)?;
 

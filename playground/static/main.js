@@ -3,7 +3,6 @@ let compiler_callback;
 let compiler_failure;
 let compiler = new Worker("./compiler.js");
 
-
 compiler.onmessage = (event) => {
     // Render the document once the wasm module containing the
     // compiler has been instantiated.
@@ -77,6 +76,7 @@ const packageContent = document.getElementById("package-content");
 
 // Files
 const fileMenu = document.getElementById("file-menu");
+const fileMenuError = document.getElementById("file-menu-error");
 const fileList = document.getElementById("file-list");
 const fileUpload = document.getElementById("file-upload")
 const folderButton = document.getElementById("folder-button");
@@ -275,6 +275,15 @@ function toggleFileMenu() {
     fileMenuVisible = !fileMenuVisible;
 }
 
+function addFileMenuError(msg) {
+    fileMenuError.innerHTML = "Error: " + msg;
+    fileMenuError.style.display = "block";
+    setTimeout(() => {
+        fileMenuError.style.display = "none";
+
+    }, 5000);
+}
+
 async function handleFileUpload() {
     const uploads = fileUpload.files;
     for (let i = 0; i < uploads.length; i++) {
@@ -282,11 +291,14 @@ async function handleFileUpload() {
         promise.then(
             async function (result) {
                 const bytes = new Uint8Array(result);
-                await compilerAction({
+                const msg = await compilerAction({
                     type: "add_file",
                     path: currentPath + uploads[i].name,
                     bytes: bytes
                 })
+                if (msg) {
+                    addFileMenuError(msg);
+                }
                 await updateFileList();
             }
         ).catch(
@@ -299,33 +311,46 @@ async function handleFileUpload() {
 
 async function addFolder() {
     folderCount += 1;
-    await compilerAction({ type: "add_folder", path: currentPath + "Folder" + folderCount })
+    const msg = await compilerAction({
+        type: "add_folder",
+        path: currentPath + "Folder" + folderCount
+    })
     await updateFileList();
+    if (msg) {
+        addFileMenuError(msg);
+    }
 }
 
 async function renameEntry() {
-    await compilerAction( {
+    const msg = await compilerAction( {
         type: "rename_entry",
         from: currentPath + selectedEntry,
         to: currentPath + this.value,
     })
     selectedEntry = "";
     await updateFileList();
+    if (msg) {
+        addFileMenuError(msg);
+    }
 }
 
 async function removeEntry() {
     const name_elem = this.parentNode.children[1];
     const name = name_elem.innerHTML;
     const type = name_elem.className;
+    let msg;
     switch (type) {
         case "dir-name":
-            await compilerAction({type: "remove_dir", path: currentPath + name})
+            msg = await compilerAction({type: "remove_dir", path: currentPath + name})
             break;
         case "file-name":
-            await compilerAction({type: "remove_file", path: currentPath + name})
+            msg = await compilerAction({type: "remove_file", path: currentPath + name})
             break;
     }
     await updateFileList();
+    if (msg) {
+        addFileMenuError(msg);
+    }
 }
 
 function promptRename() {
@@ -411,7 +436,7 @@ async function updateFileList() {
     if (folderName) {
         currentFolder.innerHTML = folderName;
     } else {
-        currentFolder.innerHTML = "<em>root</em>"
+        currentFolder.innerHTML = `<em>(root)</em>`;
     }
 }
 

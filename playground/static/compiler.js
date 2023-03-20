@@ -32,19 +32,19 @@ onmessage = (event) => {
                 result = wasm_bindgen.transpile_no_document(event.data.source, event.data.format);
                 break;
             case "add_file":
-                wasm_bindgen.add_file(event.data.path, event.data.bytes);
+                result = wasm_bindgen.add_file(event.data.path, event.data.bytes);
                 break;
             case "add_folder":
-                wasm_bindgen.add_folder(event.data.path);
+                result = wasm_bindgen.add_folder(event.data.path);
                 break;
             case "rename_entry":
-                wasm_bindgen.rename_entry(event.data.from, event.data.to);
+                result = wasm_bindgen.rename_entry(event.data.from, event.data.to);
                 break;
             case "remove_file":
-                wasm_bindgen.remove_file(event.data.path);
+                result = wasm_bindgen.remove_file(event.data.path);
                 break;
             case "remove_dir":
-                wasm_bindgen.remove_dir(event.data.path);
+                result = wasm_bindgen.remove_dir(event.data.path);
                 break;
             case "read_file":
                 result = wasm_bindgen.read_file(event.data.path);
