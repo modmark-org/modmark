@@ -237,7 +237,6 @@ async function updateOutput(input) {
                 debugEditor.container.style.display = "block";
                 renderIframe.style.display = "none";
                 render.style.display = "none";
-
                 overleafButton.style.display = "none";
 
                 debugEditor.session.setMode("");
@@ -248,7 +247,6 @@ async function updateOutput(input) {
                 debugEditor.container.style.display = "block";
                 renderIframe.style.display = "none";
                 render.style.display = "none";
-
                 overleafButton.style.display = "none";
 
                 debugEditor.session.setMode("");
@@ -259,7 +257,6 @@ async function updateOutput(input) {
                 debugEditor.container.style.display = "block";
                 renderIframe.style.display = "none";
                 render.style.display = "none";
-
                 overleafButton.style.display = "none";
 
                 debugEditor.session.setMode("ace/mode/json");
@@ -272,12 +269,11 @@ async function updateOutput(input) {
                 warnings.forEach(addWarning);
 
                 overleafButton.style.display = "none";
-
                 debugEditor.container.style.display = "block";
                 renderIframe.style.display = "none";
                 render.style.display = "none";
 
-                overleafButton.style.display = "none";
+
 
                 debugEditor.session.setMode("");
                 debugEditor.setValue(content);
@@ -290,12 +286,11 @@ async function updateOutput(input) {
                 warnings.forEach(addWarning);
 
                 overleafButton.style.display = "inline-block";
-
                 debugEditor.container.style.display = "block";
                 renderIframe.style.display = "none";
                 render.style.display = "none";
                 
-                debugEditor.session.setMode("");
+                debugEditor.session.setMode("ace/mode/latex");
                 debugEditor.setValue(content);
                 debugEditor.getSession().selection.clearSelection();
                 break;
