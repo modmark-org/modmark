@@ -440,6 +440,14 @@ select:hover,
     display: block;
 }
 
+#file-menu-error {
+    background-color: #f8c6c6;
+    text-align: center;
+    padding: 1rem;
+    border: solid 1px rgba(0, 0, 0, 0.171);
+    display: none;
+}
+
 @media only screen and (max-width: 800px) {
     #editor-view {
         height: auto;

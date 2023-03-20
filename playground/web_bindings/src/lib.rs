@@ -140,48 +140,66 @@ pub fn package_info() -> String {
 pub fn get_file_list(path: &str) -> String {
     CONTEXT.with(|ctx| {
         let ctx = ctx.borrow();
-        let entries = ctx.filesystem.list_dir(Path::new(path));
-        serde_json::to_string(&entries).unwrap()
+        // Placeholder error handling, revisit if it becomes important
+        return match ctx.filesystem.list_dir(Path::new(path)) {
+            Ok(entries) => serde_json::to_string(&entries).unwrap(),
+            Err(_) => String::new(),
+        }
     })
 }
 
 #[wasm_bindgen]
-pub fn add_file(path: &str, data: &[u8]) {
+pub fn add_file(path: &str, data: &[u8]) -> String {
     CONTEXT.with(|ctx| {
         let ctx = ctx.borrow();
-        ctx.filesystem.create_file(Path::new(path), data).unwrap();
+        return match ctx.filesystem.create_file(Path::new(path), data) {
+            Ok(_) => String::new(),
+            Err(e) => e.to_string(),
+        }
     })
 }
 
 #[wasm_bindgen]
-pub fn add_folder(path: &str) {
+pub fn add_folder(path: &str) -> String {
     CONTEXT.with(|ctx| {
         let ctx = ctx.borrow();
-        ctx.filesystem.create_dir(Path::new(path)).unwrap();
+        return match ctx.filesystem.create_dir(Path::new(path)) {
+            Ok(_) => String::new(),
+            Err(e) => e.to_string(),
+        }
     })
 }
 
 #[wasm_bindgen]
-pub fn rename_entry(path: &str, new_path: &str) {
+pub fn rename_entry(path: &str, new_path: &str) -> String {
     CONTEXT.with(|ctx| {
         let ctx = ctx.borrow();
-        ctx.filesystem.rename(Path::new(path), Path::new(new_path)).unwrap();
+        return match ctx.filesystem.rename(Path::new(path), Path::new(new_path)) {
+            Ok(_) => String::new(),
+            Err(e) => e.to_string(),
+        }
     })
 }
 
 #[wasm_bindgen]
-pub fn remove_file(path: &str) {
+pub fn remove_file(path: &str) -> String {
     CONTEXT.with(|ctx| {
         let ctx = ctx.borrow();
-        ctx.filesystem.remove_file(Path::new(path)).unwrap();
+        return match ctx.filesystem.remove_file(Path::new(path)) {
+            Ok(_) => String::new(),
+            Err(e) => e.to_string(),
+        }
     })
 }
 
 #[wasm_bindgen]
-pub fn remove_dir(path: &str) {
+pub fn remove_dir(path: &str) -> String {
     CONTEXT.with(|ctx| {
         let ctx = ctx.borrow();
-        ctx.filesystem.remove_dir(Path::new(path)).unwrap();
+        return match ctx.filesystem.remove_dir(Path::new(path)) {
+            Ok(_) => String::new(),
+            Err(e) => e.to_string(),
+        }
     })
 }
 
@@ -189,7 +207,11 @@ pub fn remove_dir(path: &str) {
 pub fn read_file(path: &str) -> Vec<u8> {
     CONTEXT.with(|ctx| {
         let ctx = ctx.borrow();
-        ctx.filesystem.read_file(Path::new(path)).unwrap()
+        // Placeholder error handling, revisit if it becomes important
+        return match ctx.filesystem.read_file(Path::new(path)) {
+            Ok(data) => data,
+            Err(_) => vec![],
+        }
     })
 }
 

@@ -3,7 +3,7 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::sync::Arc;
 use wasmer_vfs::mem_fs::FileSystem as MemoryFileSystem;
-use wasmer_vfs::{FileSystem, Metadata, OpenOptions, ReadDir};
+use wasmer_vfs::{FileSystem, FsError, Metadata, OpenOptions, ReadDir};
 
 #[derive(Debug, Clone)]
 pub struct MemFS {
@@ -16,7 +16,16 @@ impl FileSystem for MemFS {
     }
 
     fn create_dir(&self, path: &Path) -> wasmer_vfs::Result<()> {
-        self.inner.create_dir(path)
+        if let Some(parent) = path.parent() {
+            for (name, _) in self.list_dir(parent)? {
+                if path.ends_with(name.as_str()) {
+                    return Err(FsError::AddressInUse);
+                }
+            }
+            self.inner.create_dir(path)
+        } else {
+            Err(FsError::InvalidInput)
+        }
     }
 
     fn remove_dir(&self, path: &Path) -> wasmer_vfs::Result<()> {
@@ -24,7 +33,16 @@ impl FileSystem for MemFS {
     }
 
     fn rename(&self, from: &Path, to: &Path) -> wasmer_vfs::Result<()> {
-        self.inner.rename(from, to)
+        if let Some(parent) = from.parent() {
+            for (name, _) in self.list_dir(parent)? {
+                if to.ends_with(name.as_str()) {
+                    return Err(FsError::AddressInUse);
+                }
+            }
+            self.inner.rename(from, to)
+        } else {
+            Err(FsError::InvalidInput)
+        }
     }
 
     fn metadata(&self, path: &Path) -> wasmer_vfs::Result<Metadata> {
@@ -47,7 +65,7 @@ impl MemFS {
         }
     }
 
-    pub fn list_dir(&self, path: &Path) -> Vec<(String, bool)> {
+    pub fn list_dir(&self, path: &Path) -> wasmer_vfs::Result<Vec<(String, bool)>> {
         let mut v = vec![];
         match self.inner.read_dir(path) {
             Ok(entries) => {
@@ -58,16 +76,17 @@ impl MemFS {
                     v.push((name, is_folder));
                 }
             }
-            _ => {}
+            _ => {
+                return Err(FsError::BaseNotDirectory);
+            }
         }
-        v
+        Ok(v)
     }
 
+    // checking for duplicates here shouldn't be necessary since we'll overwrite if it exists
     pub fn create_file(&self, path: &Path, data: &[u8]) -> std::io::Result<()> {
         let mut options = self.new_open_options();
-        options.write(true);
-        options.create(true);
-        options.create_new(true); // TODO: what is the difference between this and create?
+        options.write(true).create(true);
         let mut f = options.open(path).unwrap();
         f.write(data)?;
         Ok(())
