@@ -329,15 +329,30 @@ async function removeEntry() {
 }
 
 function promptRename() {
-    let name_div = this.parentNode.childNodes[1];
-    selectedEntry = name_div.innerHTML;
+    let name_elem = this.parentNode.children[1];
+    selectedEntry = name_elem.innerHTML;
     let input = document.createElement("input");
-    input.style.width = "8rem";
+    input.style.width = "6rem";
     input.setAttribute("type", "text");
     input.addEventListener("focusout", updateFileList, false);
     input.addEventListener("change", renameEntry, false);
-    name_div.replaceWith(input);
+    name_elem.replaceWith(input);
     input.focus();
+}
+
+async function downloadFile() {
+    const name_elem = this.parentNode.children[1];
+    const name = name_elem.innerHTML;
+    const data = await compilerAction({type: "read_file", path: currentPath + name});
+    const blob = new Blob([data]);
+    const url = window.URL.createObjectURL(blob);
+
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = name;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
 }
 
 async function updateFileList() {
@@ -369,6 +384,7 @@ async function updateFileList() {
             text.className = "dir-name";
             text.addEventListener("dblclick", visitDir, false);
         } else {
+
             icon.innerHTML = "description";
             text.className = "file-name";
         }
@@ -377,6 +393,15 @@ async function updateFileList() {
         row.appendChild(text);
         row.appendChild(edit_button);
         row.appendChild(remove_button);
+
+        if (!isFolder) {
+            const download_button = document.createElement("button");
+            download_button.className = "download-button";
+            download_button.innerHTML = '<span class="material-symbols-outlined">download</span>'
+            download_button.addEventListener("click", downloadFile, false);
+            row.appendChild(download_button);
+        }
+
         list.push(row);
     }
 

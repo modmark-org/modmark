@@ -46,6 +46,9 @@ onmessage = (event) => {
             case "remove_dir":
                 wasm_bindgen.remove_dir(event.data.path);
                 break;
+            case "read_file":
+                result = wasm_bindgen.read_file(event.data.path);
+                break;
             case "get_file_list":
                 result = wasm_bindgen.get_file_list(event.data.path);
                 break;

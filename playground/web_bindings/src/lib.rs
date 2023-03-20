@@ -140,7 +140,7 @@ pub fn package_info() -> String {
 pub fn get_file_list(path: &str) -> String {
     CONTEXT.with(|ctx| {
         let ctx = ctx.borrow();
-        let entries = ctx.filesystem.list_dir(path);
+        let entries = ctx.filesystem.list_dir(Path::new(path));
         serde_json::to_string(&entries).unwrap()
     })
 }
@@ -149,7 +149,7 @@ pub fn get_file_list(path: &str) -> String {
 pub fn add_file(path: &str, data: &[u8]) {
     CONTEXT.with(|ctx| {
         let ctx = ctx.borrow();
-        ctx.filesystem.create_file(path, data).unwrap();
+        ctx.filesystem.create_file(Path::new(path), data).unwrap();
     })
 }
 
@@ -182,6 +182,14 @@ pub fn remove_dir(path: &str) {
     CONTEXT.with(|ctx| {
         let ctx = ctx.borrow();
         ctx.filesystem.remove_dir(Path::new(path)).unwrap();
+    })
+}
+
+#[wasm_bindgen]
+pub fn read_file(path: &str) -> Vec<u8> {
+    CONTEXT.with(|ctx| {
+        let ctx = ctx.borrow();
+        ctx.filesystem.read_file(Path::new(path)).unwrap()
     })
 }
 

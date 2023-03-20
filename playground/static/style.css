@@ -78,6 +78,7 @@ select {
 }
 
 button,
+.dir-name,
 #upload-button {
     cursor: pointer;
 }
@@ -398,7 +399,7 @@ select:hover,
 #file-list {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 1rem;
     padding: 0.5rem 1.5rem 0 1.5rem;
     color: #2f2f2f;
     height: 100%;
@@ -409,8 +410,8 @@ select:hover,
     display: flex;
     align-items: center;
     gap: 0.8rem;
-    font-size: 1.1rem;
-    height: 1.2rem;
+    font-size: 1rem;
+    height: 2rem;
 }
 
 .dir-name,
@@ -418,20 +419,24 @@ select:hover,
     -webkit-user-select: none;
     -ms-user-select: none;
     user-select: none;
-    max-width: 15rem;
     overflow-x: hidden;
 }
 
 .rename-button,
-.remove-button {
+.remove-button,
+.download-button {
     box-shadow: none;
+    box-sizing: unset;
     background-color: transparent;
     display: none;
     padding: 0;
+    font-size: 1rem;
 }
 
+.dir-entry span,
 .dir-entry:hover .rename-button,
-.dir-entry:hover .remove-button {
+.dir-entry:hover .remove-button,
+.dir-entry:hover .download-button {
     display: block;
 }
 
