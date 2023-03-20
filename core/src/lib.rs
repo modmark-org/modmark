@@ -27,6 +27,20 @@ pub trait Resolve {
     fn resolve_all(&self, paths: Vec<&str>) -> Vec<Result<Vec<u8>, Self::Error>>;
 }
 
+pub struct DenyAllResolver;
+
+impl Resolve for DenyAllResolver {
+    type Error = CoreError;
+
+    fn resolve(&self, _path: &str) -> Result<Vec<u8>, Self::Error> {
+        Err(CoreError::DenyAllResolver)
+    }
+
+    fn resolve_all(&self, paths: Vec<&str>) -> Vec<Result<Vec<u8>, Self::Error>> {
+        paths.iter().map(|_| Err(CoreError::DenyAllResolver)).collect()
+    }
+}
+
 #[derive(Debug, Clone, Eq, Deserialize, Serialize)]
 pub struct OutputFormat(String);
 
@@ -64,9 +78,9 @@ impl FromStr for OutputFormat {
 }
 
 /// Evaluates a document using the given context
-pub fn eval(
+pub fn eval<T>(
     source: &str,
-    ctx: &mut Context,
+    ctx: &mut Context<T>,
     format: &OutputFormat,
 ) -> Result<(String, CompilationState), CoreError> {
     // Note: this isn't actually needed, since take_state clears state, but it
@@ -91,9 +105,9 @@ pub fn eval(
 }
 
 /// Evaluates a document using the given context without a document element
-pub fn eval_no_document(
+pub fn eval_no_document<T>(
     source: &str,
-    ctx: &mut Context,
+    ctx: &mut Context<T>,
     format: &OutputFormat,
 ) -> Result<(String, CompilationState), CoreError> {
     ctx.clear_state();
@@ -117,9 +131,9 @@ pub fn eval_no_document(
     res.map(|s| (s, ctx.take_state()))
 }
 
-pub fn eval_elem(
+pub fn eval_elem<T>(
     root: Element,
-    ctx: &mut Context,
+    ctx: &mut Context<T>,
     format: &OutputFormat,
 ) -> Result<String, CoreError> {
     use Element::{Compound, Module, Parent};

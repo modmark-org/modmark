@@ -60,6 +60,8 @@ pub enum CoreError {
     NonModuleToNative(String, String),
     #[error("Root element is not a parent, cannot remove __document for playground")]
     RootElementNotParent,
+    #[error("DenyAllResolver is used; resolving of packages disallowed")]
+    DenyAllResolver
 }
 
 impl From<WasiError> for CoreError {
