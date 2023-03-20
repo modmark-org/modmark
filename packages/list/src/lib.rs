@@ -71,16 +71,20 @@ impl FromStr for ItemType {
             ""
         };
 
+        // Edge cases for i and I which should be roman and not alpha.
+        if start_str == "i" {
+            return Ok(LowerRoman(Some(1)));
+        }
+        if start_str == "I" {
+            return Ok(UpperRoman(Some(1)));
+        }
+
         if !start_str.is_empty() {
             if let Ok(start) = start_str.parse::<u32>() {
                 return Ok(Decimal(Some(start)));
-            } else if let Some(start) = roman::from(&start_str.to_ascii_uppercase()) {
-                if start_str.chars().next().unwrap().is_ascii_lowercase() {
-                    return Ok(LowerRoman(Some(start.unsigned_abs())));
-                } else {
-                    return Ok(UpperRoman(Some(start.unsigned_abs())));
-                }
-            } else if start_str.chars().next().unwrap().is_ascii_alphabetic() {
+            } else if start_str.len() == 1
+                && start_str.chars().next().unwrap().is_ascii_alphabetic()
+            {
                 let c = start_str.chars().next().unwrap();
                 let order = alpha_to_start(&c);
                 if let Some(start) = order {
@@ -90,28 +94,20 @@ impl FromStr for ItemType {
                         return Ok(UpperAlpha(Some(start)));
                     }
                 }
+            } else if let Some(start) = roman::from(&start_str.to_ascii_uppercase()) {
+                if start_str.chars().next().unwrap().is_ascii_lowercase() {
+                    return Ok(LowerRoman(Some(start.unsigned_abs())));
+                } else {
+                    return Ok(UpperRoman(Some(start.unsigned_abs())));
+                }
             }
         }
 
+        // If we have not already returned it is a bullet item or invalid.
         match s {
             "-" => Ok(Bullet),
             "+" => Ok(Bullet),
             "*" => Ok(Bullet),
-            "1." => Ok(Decimal(None)),
-            "1)" => Ok(Decimal(None)),
-            "(1)" => Ok(Decimal(None)),
-            "a." => Ok(LowerAlpha(None)),
-            "a)" => Ok(LowerAlpha(None)),
-            "(a)" => Ok(LowerAlpha(None)),
-            "A." => Ok(UpperAlpha(None)),
-            "A)" => Ok(UpperAlpha(None)),
-            "(A)" => Ok(UpperAlpha(None)),
-            "i." => Ok(LowerRoman(None)),
-            "i)" => Ok(LowerRoman(None)),
-            "(i)" => Ok(LowerRoman(None)),
-            "I." => Ok(UpperRoman(None)),
-            "I)" => Ok(UpperRoman(None)),
-            "(I)" => Ok(UpperRoman(None)),
             _ => Err(InvalidItem),
         }
     }
@@ -140,10 +136,8 @@ impl List {
             |(mut json_arr, mut tag_stack), item| {
                 // new_level is used to check if the start preference
                 // of a item can be used
-                let mut new_level = false;
                 while item.level != tag_stack.len() {
                     if item.level > tag_stack.len() {
-                        new_level = true;
                         tag_stack.push(item.item_type);
                         let opening_tag = item.item_type.opening_tag(counters[item.level]);
                         json_arr.push(json!({"name": "raw", "data": opening_tag}));
@@ -156,7 +150,7 @@ impl List {
                 }
                 let closing_tag = tag_stack.pop().unwrap().closing_tag();
                 tag_stack.push(item.item_type);
-                if new_level {
+                if counters[item.level] == 1 {
                     if let Some(start) = item.item_type.get_start_preference() {
                         *counters.get_mut(item.level).unwrap() = start;
                     }
