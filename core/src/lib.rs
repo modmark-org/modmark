@@ -83,6 +83,33 @@ pub fn eval(
     res.map(|s| (s, ctx.take_state()))
 }
 
+/// Evaluates a document using the given context without a document element
+pub fn eval_no_document(
+    source: &str,
+    ctx: &mut Context,
+    format: &OutputFormat,
+) -> Result<(String, CompilationState), CoreError> {
+    ctx.clear_state();
+
+    // TODO: Move this out so that we have a flag in the CLI and a switch in the playground to
+    //   do verbose errors or "debug mode" or similar
+    ctx.state.verbose_errors = true;
+    let document = parser::parse(source)?.try_into()?;
+    let no_doc = if let Element::Parent {
+        name: _,
+        args: _,
+        children,
+    } = document
+    {
+        Ok(Element::Compound(children))
+    } else {
+        Err(CoreError::RootElementNotParent)
+    }?;
+    let res = eval_elem(no_doc, ctx, format);
+
+    res.map(|s| (s, ctx.take_state()))
+}
+
 pub fn eval_elem(
     root: Element,
     ctx: &mut Context,

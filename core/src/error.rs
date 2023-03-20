@@ -53,6 +53,8 @@ pub enum CoreError {
     Parsing(#[from] ParseError),
     #[error("Native call error: Non-module given to package {0} named {1}")]
     NonModuleToNative(String, String),
+    #[error("Root element is not a parent, cannot remove __document for playground")]
+    RootElementNotParent,
 }
 
 impl From<WasiError> for CoreError {
