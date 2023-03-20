@@ -1,5 +1,5 @@
 use std::fmt::Debug;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::Path;
 use std::sync::Arc;
 use wasmer_vfs::mem_fs::FileSystem as MemoryFileSystem;
@@ -47,9 +47,9 @@ impl MemFS {
         }
     }
 
-    pub fn list_dir(&self, path: &str) -> Vec<(String, bool)> {
+    pub fn list_dir(&self, path: &Path) -> Vec<(String, bool)> {
         let mut v = vec![];
-        match self.inner.read_dir(Path::new(path)) {
+        match self.inner.read_dir(path) {
             Ok(entries) => {
                 // fine to unwrap the results in DirEntry here, source code always gives Ok()
                 for entry in entries.map(|res| res.unwrap()) {
@@ -63,13 +63,22 @@ impl MemFS {
         v
     }
 
-    pub fn create_file(&self, path: &str, data: &[u8]) -> std::io::Result<()> {
+    pub fn create_file(&self, path: &Path, data: &[u8]) -> std::io::Result<()> {
         let mut options = self.new_open_options();
         options.write(true);
         options.create(true);
         options.create_new(true); // TODO: what is the difference between this and create?
-        let mut f = options.open(Path::new(path)).unwrap();
+        let mut f = options.open(path).unwrap();
         f.write(data)?;
         Ok(())
+    }
+
+    pub fn read_file(&self, path: &Path) -> std::io::Result<Vec<u8>> {
+        let mut options = self.new_open_options();
+        options.read(true);
+        let mut f = options.open(path).unwrap();
+        let mut buf = vec![];
+        f.read_to_end(&mut buf)?;
+        Ok(buf)
     }
 }
