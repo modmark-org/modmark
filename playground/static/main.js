@@ -270,7 +270,7 @@ function toggleFileMenu() {
     if (fileMenuVisible) {
         fileMenu.style.width = "0";
     } else {
-        fileMenu.style.width = "24rem";
+        fileMenu.style.width = getComputedStyle(fileMenu).maxWidth;
     }
     fileMenuVisible = !fileMenuVisible;
 }
@@ -280,7 +280,6 @@ function addFileMenuError(msg) {
     fileMenuError.style.display = "block";
     setTimeout(() => {
         fileMenuError.style.display = "none";
-
     }, 5000);
 }
 
