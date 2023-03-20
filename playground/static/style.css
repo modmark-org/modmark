@@ -363,6 +363,8 @@ select:hover,
     flex-direction: column;
     overflow-x: hidden;
     transition: 0.3s width;
+    max-width: 20rem;
+    flex: 0 0 auto;
 }
 
 #file-navigation {
@@ -465,4 +467,22 @@ select:hover,
         gap: 1rem;
     }
 
+    #file-menu {
+        max-width: 100%;
+    }
+
+    .dir-entry {
+        justify-content: center;
+        gap: 1.2rem;
+    }
+
+    #file-navigation {
+        justify-content: space-between;
+    }
+
+    .rename-button,
+    .remove-button,
+    .download-button {
+        display: block;
+    }
 }
