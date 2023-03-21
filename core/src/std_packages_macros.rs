@@ -108,7 +108,7 @@ macro_rules! define_standard_package_loader {
         #[cfg(all(feature = "bundle_std_packages", not(all(feature = "native", feature = "precompile_wasm"))))]
         pub fn load_standard_packages<T>(ctx: &mut Context<T>) -> Result<(), CoreError> {
             $(
-                ctx.load_package_from_wasm(
+                ctx.load_standard_package(
                     include_bytes!(
                         concat!(
                             env!("OUT_DIR"),

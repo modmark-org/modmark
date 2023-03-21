@@ -116,10 +116,21 @@ impl TransformVariant {
 
 impl Context<DenyAllResolver> {
     pub fn new_without_resolver() -> Self {
+        Self::new_with_resolver(DenyAllResolver)
+    }
+}
+
+impl<T> Context<T> {
+    pub fn new_with_resolver(resolver: T) -> Self
+    where
+        T: Resolve,
+    {
         Context {
-            packages: HashMap::new(),
+            native_packages: HashMap::new(),
+            standard_packages: HashMap::new(),
+            external_packages: HashMap::new(),
             transforms: HashMap::new(),
-            resolver: DenyAllResolver,
+            resolver,
             #[cfg(feature = "native")]
             engine: EngineBuilder::new(Cranelift::new()).engine(),
             state: CompilationState::default(),
@@ -145,7 +156,7 @@ impl<T> Context<T> {
     /// standard packages by passing this Context to `std_packages::load_standard_packages()`
     pub fn load_default_packages(&mut self) -> Result<(), CoreError> {
         for pkg in std_packages::native_package_list() {
-            self.load_package(Package::new_native(pkg)?)?
+            self.load_native_package(Package::new_native(pkg)?)?
         }
         std_packages::load_standard_packages(self)?;
         Ok(())
@@ -159,81 +170,62 @@ impl<T> Context<T> {
         self.packages
             .insert(pkg.info.as_ref().name.to_string(), pkg.clone());
 
-        // Go through all transforms that the package supports and add them
-        // to the Context.
-        for transform in &pkg.info.transforms {
-            let Transform {
-                from,
-                to,
-                arguments: _,
-                description: _,
-            } = transform;
+    pub fn load_native_package(&mut self, pkg: Package) -> Result<(), CoreError> {
+        debug_assert_eq!(pkg.implementation, PackageImplementation::Native);
+        let name = &pkg.info.as_ref().name;
+        let entry = self.native_packages.entry(name.to_string());
 
-            // Check if the package is implemented natively or if it is an external package
-            if pkg.implementation == PackageImplementation::Native {
-                // If native => we don't have an output format, so map the key (mod/parent name) to
-                // a `TransformVariant::Native`
-
-                // First, assert that no transformations are registered for that key
-                if self.transforms.contains_key(from) {
-                    return Err(CoreError::OccupiedNativeTransform(
-                        from.clone(),
-                        pkg.info.name.clone(),
-                    ));
-                }
-
-                // Insert the new `TransformVariant::Native` into the map
-                self.transforms
-                    .insert(from.clone(), Native((transform.clone(), pkg.clone())));
-            } else {
-                // We have an external package, loop though all output formats and register
-                for output_format in to {
-                    // Ensure that there are no other packages responsible for transforming to the
-                    // same output format. Note that `find_transform_to` returns a native module
-                    // if present, so this will fail if a native module is registered for that key
-                    if self
-                        .transforms
-                        .get(from)
-                        .and_then(|t| t.find_transform_to(output_format))
-                        .is_some()
-                    {
-                        return Err(CoreError::OccupiedTransform(
-                            from.clone(),
-                            output_format.to_string(),
-                            pkg.info.name.clone(),
-                        ));
-                    }
-
-                    // Remove the target key from the map (which is either `External` or `None`)
-                    // and then insert the new entry into the `external`
-                    let mut target = self
-                        .transforms
-                        .remove(from)
-                        .unwrap_or_else(|| External(HashMap::new()));
-                    target.insert_into_external(
-                        output_format.clone(),
-                        (transform.clone(), pkg.clone()),
-                    );
-                    // Add the modified entry back to the map
-                    self.transforms.insert(from.clone(), target);
-                }
-            }
-        }
-
+        match entry {
+            Entry::Occupied(_) => return Err(CoreError::OccupiedName(name.to_string())),
+            Entry::Vacant(entry) => entry.insert(pkg),
+        };
         Ok(())
     }
 
-    //noinspection RsLiveness
     /// This is a helper function to load a package directly from its wasm source. It will be
     /// compiled using `Package::new` to become a `Package` and then loaded using `load_package`
-    pub fn load_package_from_wasm(&mut self, wasm_source: &[u8]) -> Result<(), CoreError> {
+    pub fn load_external_package(
+        &mut self,
+        external_name: &str,
+        wasm_source: &[u8],
+    ) -> Result<&mut Package, CoreError> {
+        let pkg = self.package_from_wasm(wasm_source)?;
+        debug_assert_ne!(pkg.implementation, PackageImplementation::Native);
+        let entry = self.external_packages.entry(external_name.to_string());
+
+        match entry {
+            Entry::Occupied(_) => Err(CoreError::OccupiedName(external_name.to_string())),
+            Entry::Vacant(entry) => Ok(entry.insert(pkg)),
+        }
+    }
+
+    /// This is a helper function to load a package directly from its wasm source. It will be
+    /// compiled using `Package::new` to become a `Package` and then loaded using `load_package`
+    pub(crate) fn load_standard_package(
+        &mut self,
+        wasm_source: &[u8],
+    ) -> Result<&mut Package, CoreError> {
+        let pkg = self.package_from_wasm(wasm_source)?;
+
+        let name = pkg.info.name.as_str();
+        let entry = self.standard_packages.entry(name.to_string());
+
+        match entry {
+            Entry::Occupied(_) => Err(CoreError::OccupiedName(name.to_string())),
+            Entry::Vacant(entry) => Ok(entry.insert(pkg)),
+        }
+    }
+
+    #[allow(unreachable_code)]
+    fn package_from_wasm(&mut self, wasm_source: &[u8]) -> Result<Package, CoreError> {
         #[cfg(feature = "native")]
-        let pkg = Package::new(wasm_source, &self.engine)?;
+        return Package::new(wasm_source, &self.engine);
 
         #[cfg(feature = "web")]
-        let pkg = Package::new(wasm_source)?;
+        return Package::new(wasm_source);
 
-        self.load_package(pkg)
+        #[cfg(not(any(feature = "native", feature = "web")))]
+        compile_error!("'native' and 'web' features are both disabled")
     }
 
     /// This function loads a package from the serialized format retrieved from Module::serialize.
