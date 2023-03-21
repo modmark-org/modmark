@@ -301,7 +301,13 @@ impl<T> Context<T> {
             )?;
         }
 
-        Ok(())
+        if config.0.is_empty() {
+            Ok(())
+        } else {
+            Err(CoreError::UnusedConfigs(
+                config.0.drain().map(|(k, _)| k).collect(),
+            ))
+        }
     }
 
     // This function was introduced to avoid repeated code. It takes a map and a package, and adds

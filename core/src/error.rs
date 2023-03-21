@@ -68,6 +68,8 @@ pub enum CoreError {
     Resolve(String, Box<dyn Error>),
     #[error("Duplicate configurations for packages: '{0:?}'")]
     DuplicateConfigs(Vec<String>),
+    #[error("Unused configurations for packages: '{0:?}'")]
+    UnusedConfigs(Vec<String>),
 }
 
 impl From<WasiError> for CoreError {
