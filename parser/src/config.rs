@@ -152,39 +152,39 @@ fn import_config(input: &str) -> IResult<&str, ImportConfig, ConfigError> {
     )(input)
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Hash)]
 pub struct Config {
     pub imports: Vec<Import>,
     pub hides: Vec<Hide>,
     pub sets: Vec<Set>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct Import {
     pub name: String,
     pub importing: ImportConfig,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub enum ImportConfig {
     ImportAll,
     Include(Vec<String>),
     Exclude(Vec<String>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct Hide {
     pub name: String,
     pub hiding: HideConfig,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct Set {
     pub key: String,
     pub value: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub enum HideConfig {
     HideAll,
 }
