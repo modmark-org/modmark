@@ -101,14 +101,7 @@ where
     //   do verbose errors or "debug mode" or similar
     ctx.state.verbose_errors = true;
     let (doc_ast, config) = parser::parse_with_config(source)?;
-    let document = (TryInto::<Element>::try_into(doc_ast))?;
-
-    // prepare context, todo: hash config and check if it actually has changed
-    if let Some(cfg) = config.as_ref() {
-        println!("Config: {:#?}", cfg);
-        ctx.import_missing_packages(cfg)?;
-    }
-    //Fixme: fix this stuff?????
+    let document = doc_ast.try_into()?;
     ctx.configure(config)?;
 
     let res = eval_elem(document, ctx, format);
@@ -121,13 +114,18 @@ pub fn eval_no_document<T>(
     source: &str,
     ctx: &mut Context<T>,
     format: &OutputFormat,
-) -> Result<(String, CompilationState), CoreError> {
+) -> Result<(String, CompilationState), CoreError>
+where
+    T: Resolve,
+    <T as Resolve>::Error: Error + 'static,
+{
     ctx.clear_state();
 
     // TODO: Move this out so that we have a flag in the CLI and a switch in the playground to
     //   do verbose errors or "debug mode" or similar
     ctx.state.verbose_errors = true;
-    let document = parser::parse(source)?.try_into()?;
+    let (doc_ast, config) = parser::parse_with_config(source)?;
+    let document: Element = doc_ast.try_into()?;
     let no_doc = if let Element::Parent {
         name: _,
         args: _,
@@ -138,6 +136,7 @@ pub fn eval_no_document<T>(
     } else {
         Err(CoreError::RootElementNotParent)
     }?;
+    ctx.configure(config)?;
     let res = eval_elem(no_doc, ctx, format);
 
     res.map(|s| (s, ctx.take_state()))
