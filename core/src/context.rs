@@ -184,6 +184,15 @@ where
             .collect();
         res.map(|_| ())
     }
+
+    // This function configures the context with the given config, so that it is appropriate to
+    // evaluate a document having that configuration with it. It also resolves packages if needed
+    pub(crate) fn configure(&mut self, config: Option<Config>) -> Result<(), CoreError> {
+        let config = config.unwrap_or_default();
+        self.import_missing_packages(&config)?;
+        self.expose_transforms(config.into())?;
+        Ok(())
+    }
 }
 
 impl<T> Context<T> {
@@ -191,6 +200,14 @@ impl<T> Context<T> {
     /// specific to previous compilations, such as errors and warnings, gets cleared.
     pub fn clear_state(&mut self) {
         self.state.clear();
+    }
+
+    /// Clears the loaded external packages and transforms, possibly saving memory, forcing the
+    /// Resolve to fetch any external packages again, essentially clearing the internal package
+    /// cache of the Context
+    pub fn clear_packages(&mut self) {
+        self.transforms = Default::default();
+        self.external_packages = Default::default();
     }
 
     /// Takes the internal `CompilationState` of this Context, and replacing it with
@@ -201,19 +218,14 @@ impl<T> Context<T> {
 
     /// This function loads the default packages to the Context. First, it loads all native
     /// packages, retrieved from `std_packages::native_package_list()`, and then it loads all
-    /// standard packages by passing this Context to `std_packages::load_standard_packages()`
+    /// standard packages by passing this Context to `std_packages::load_standard_packages()`. This
+    /// should be run once and only once after constructing the Context.
     pub fn load_default_packages(&mut self) -> Result<(), CoreError> {
         for pkg in std_packages::native_package_list() {
             self.load_native_package(Package::new_native(pkg)?)?
         }
         std_packages::load_standard_packages(self)?;
         Ok(())
-    }
-
-    // This function configures the context with the given config, so that it is appropriate to
-    // evaluate a document having that configuration with it.
-    pub(crate) fn configure(&mut self, config: Option<Config>) -> Result<(), CoreError> {
-        self.expose_transforms(config.map(Into::into).unwrap_or_default())
     }
 
     // This function makes sure the transforms that should be exposed according to the given
