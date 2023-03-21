@@ -1,5 +1,5 @@
-use std::error::Error;
 use parser::ParseError;
+use std::error::Error;
 use thiserror::Error;
 #[cfg(feature = "native")]
 #[allow(unused_imports)]
@@ -67,7 +67,7 @@ pub enum CoreError {
     #[error("Error resolving {0}: {1:?}")]
     Resolve(String, Box<dyn Error>),
     #[error("An error occurred: '{0}'")]
-    Other(String)
+    Other(String),
 }
 
 impl From<WasiError> for CoreError {
