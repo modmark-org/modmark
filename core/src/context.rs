@@ -123,17 +123,17 @@ impl TransformVariant {
 }
 
 impl Context<DenyAllResolver> {
-    pub fn new_without_resolver() -> Self {
+    pub fn new_without_resolver() -> Result<Self, CoreError> {
         Self::new_with_resolver(DenyAllResolver)
     }
 }
 
 impl<T> Context<T> {
-    pub fn new_with_resolver(resolver: T) -> Self
+    pub fn new_with_resolver(resolver: T) -> Result<Self, CoreError>
     where
         T: Resolve,
     {
-        Context {
+        let mut ctx = Context {
             native_packages: HashMap::new(),
             standard_packages: HashMap::new(),
             external_packages: HashMap::new(),
@@ -142,7 +142,9 @@ impl<T> Context<T> {
             #[cfg(feature = "native")]
             engine: EngineBuilder::new(Cranelift::new()).engine(),
             state: CompilationState::default(),
-        }
+        };
+        ctx.load_default_packages()?;
+        Ok(ctx)
     }
 }
 
@@ -220,8 +222,8 @@ impl<T> Context<T> {
     /// This function loads the default packages to the Context. First, it loads all native
     /// packages, retrieved from `std_packages::native_package_list()`, and then it loads all
     /// standard packages by passing this Context to `std_packages::load_standard_packages()`. This
-    /// should be run once and only once after constructing the Context.
-    pub fn load_default_packages(&mut self) -> Result<(), CoreError> {
+    /// will be run when constructing the Context, and may only be run once.
+    fn load_default_packages(&mut self) -> Result<(), CoreError> {
         for pkg in std_packages::native_package_list() {
             self.load_native_package(Package::new_native(pkg)?)?
         }

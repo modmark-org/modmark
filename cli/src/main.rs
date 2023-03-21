@@ -43,13 +43,8 @@ struct Args {
     dev: bool,
 }
 
-static CTX: Lazy<Mutex<Context<PackageManager>>> = Lazy::new(|| {
-    Mutex::new({
-        let mut ctx = Context::new_with_resolver(PackageManager {});
-        ctx.load_default_packages().unwrap();
-        ctx
-    })
-});
+static CTX: Lazy<Mutex<Context<PackageManager>>> =
+    Lazy::new(|| Mutex::new(Context::new_with_resolver(PackageManager {}).unwrap()));
 
 // Infer the output format based on the file extension of the output format
 fn infer_output_format(output: &Path) -> Option<OutputFormat> {
