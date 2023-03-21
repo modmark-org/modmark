@@ -2,8 +2,8 @@ use nom::bytes::complete::{is_not, take_while, take_while1};
 use nom::character::complete::{char, line_ending, space0};
 use nom::combinator::{all_consuming, cut, eof, map, map_res, opt, peek, verify};
 use nom::error::{ErrorKind, FromExternalError, ParseError};
-use nom::multi::{separated_list0, separated_list1};
-use nom::sequence::{delimited, pair, separated_pair, terminated};
+use nom::multi::{many0, separated_list0, separated_list1};
+use nom::sequence::{delimited, pair, preceded, separated_pair, terminated};
 use nom::{IResult, Parser};
 use thiserror::Error;
 
@@ -17,9 +17,10 @@ pub fn parse_config_module(input: &str) -> IResult<&str, Option<Config>, ConfigE
     // Okay, this is kind of complicated since we want our result to have the same lifetime
     // as the input, even though we have an IR of Module which doesn't have a lifetime
     // First: try to parse the "config" module
-    let module = verify(parse_multiline_module, |module| {
-        module.name.to_ascii_lowercase().as_str() == "config"
-    })(input);
+    let module = verify(
+        preceded(many0(line_ending), parse_multiline_module),
+        |module| module.name.to_ascii_lowercase().as_str() == "config",
+    )(input);
 
     // Check if it was successful
     match module {
