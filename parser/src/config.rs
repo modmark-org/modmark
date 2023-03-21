@@ -130,7 +130,7 @@ fn import_config(input: &str) -> IResult<&str, ImportConfig, ConfigError> {
     map_res(
         opt(pair(
             delimited(space0, take_while1(|c: char| !c.is_whitespace()), space0),
-            separated_list0(pair(char(','), space0), alphanumeric1),
+            separated_list0(pair(char(','), space0), take_while1(|c: char| !c.is_whitespace() && c != ',')),
         )),
         |res: Option<(&str, Vec<&str>)>| {
             if let Some((option, imports)) = res {

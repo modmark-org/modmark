@@ -18,7 +18,7 @@ use crate::punct::smart_punctuate;
 use crate::tag::CompoundAST;
 use crate::Ast::Text;
 
-mod config;
+pub mod config;
 mod module;
 mod or;
 mod punct;
