@@ -24,7 +24,7 @@ compile_error!("feature \"native\" and feature \"web\" cannot be enabled at the 
 pub trait Resolve {
     type Error;
     fn resolve(&self, path: &str) -> Result<Vec<u8>, Self::Error>;
-    fn resolve_all(&self, paths: Vec<&str>) -> Vec<Result<Vec<u8>, Self::Error>>;
+    fn resolve_all(&self, paths: &[&str]) -> Vec<Result<Vec<u8>, Self::Error>>;
 }
 
 pub struct DenyAllResolver;
@@ -36,8 +36,11 @@ impl Resolve for DenyAllResolver {
         Err(CoreError::DenyAllResolver)
     }
 
-    fn resolve_all(&self, paths: Vec<&str>) -> Vec<Result<Vec<u8>, Self::Error>> {
-        paths.iter().map(|_| Err(CoreError::DenyAllResolver)).collect()
+    fn resolve_all(&self, paths: &[&str]) -> Vec<Result<Vec<u8>, Self::Error>> {
+        paths
+            .iter()
+            .map(|_| Err(CoreError::DenyAllResolver))
+            .collect()
     }
 }
 
