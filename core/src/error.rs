@@ -1,3 +1,5 @@
+use std::error::Error;
+use parser::ParseError;
 use thiserror::Error;
 #[cfg(feature = "native")]
 #[allow(unused_imports)]
@@ -61,7 +63,11 @@ pub enum CoreError {
     #[error("Root element is not a parent, cannot remove __document for playground")]
     RootElementNotParent,
     #[error("DenyAllResolver is used; resolving of packages disallowed")]
-    DenyAllResolver
+    DenyAllResolver,
+    #[error("Error resolving {0}: {1:?}")]
+    Resolve(String, Box<dyn Error>),
+    #[error("An error occurred: '{0}'")]
+    Other(String)
 }
 
 impl From<WasiError> for CoreError {

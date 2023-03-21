@@ -1,4 +1,6 @@
+use std::collections::hash_map::{DefaultHasher, Entry};
 use std::fmt::Formatter;
+use std::hash::Hash;
 use std::iter::once;
 use std::{
     collections::HashMap,
@@ -6,6 +8,7 @@ use std::{
     fmt::Debug,
     io::{Read, Write},
 };
+use std::error::Error;
 
 use either::{Either, Left};
 use serde::{Deserialize, Serialize};
@@ -14,14 +17,17 @@ use wasmer::{Cranelift, Engine, EngineBuilder};
 use wasmer::{Instance, Module, Store};
 use wasmer_wasi::{Pipe, WasiState};
 
+use parser::config::{Config, HideConfig, ImportConfig};
 use parser::ModuleArguments;
 
 use crate::package::PackageImplementation;
-use crate::{std_packages, Element, DenyAllResolver};
+use crate::{std_packages, DenyAllResolver, Element, Resolve};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
 
 pub struct Context<T> {
-    pub(crate) packages: HashMap<String, Package>,
+    pub(crate) native_packages: HashMap<String, Package>,
+    pub(crate) standard_packages: HashMap<String, Package>,
+    pub(crate) external_packages: HashMap<String, Package>,
     pub(crate) transforms: HashMap<String, TransformVariant>,
     pub(crate) resolver: T,
     #[cfg(feature = "native")]
@@ -72,7 +78,9 @@ impl CompilationState {
 impl<T> Debug for Context<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("Context")
-            .field("packages", &self.packages)
+            .field("native packages", &self.native_packages)
+            .field("standard packages", &self.standard_packages)
+            .field("external packages", &self.external_packages)
             .field("transforms", &self.transforms)
             .finish()
     }
@@ -138,6 +146,38 @@ impl<T> Context<T> {
     }
 }
 
+impl<T> Context<T>
+where
+    T: Resolve,
+    <T as Resolve>::Error : Error + 'static
+{
+    pub(crate) fn import_missing_packages(&mut self, config: &Config) -> Result<(), CoreError> {
+        let missing: Vec<&str> = config
+            .imports
+            .iter()
+            .map(|i| i.name.as_str())
+            .chain(config.hides.iter().map(|h| h.name.as_str()))
+            .filter(|&name| {
+                !self.standard_packages.contains_key(name)
+                    && !self.external_packages.contains_key(name)
+            })
+            .collect();
+
+        let resolves: Vec<Vec<u8>> = self.resolver.resolve_all(&missing).into_iter().collect::<Result<Vec<_>,_>>()
+            .map_err(|e| CoreError::Resolve("abc".to_string(), Box::new(e)))?;
+
+        let res: Result<Vec<()>, CoreError> = missing
+            .into_iter()
+            .zip(resolves.into_iter())
+            .map(|(name, data)| {
+                self.load_external_package(name, data.as_slice())
+                    .map(|_| ())
+            })
+            .collect();
+        res.map(|_| ())
+    }
+}
+
 impl<T> Context<T> {
     /// Clears the internal `CompilationState` of this Context. This ensures that any information
     /// specific to previous compilations, such as errors and warnings, gets cleared.
@@ -162,13 +202,198 @@ impl<T> Context<T> {
         Ok(())
     }
 
+    pub(crate) fn expose_transforms2(&mut self, config: Option<Config>) -> Result<(), CoreError> {
+        self.expose_transforms(config.map(Into::into).unwrap_or_default())
+    }
+
+    fn expose_transforms(&mut self, mut config: ModuleImport) -> Result<(), CoreError> {
+        self.transforms.clear();
+
+        // First, expose all native packages
+        for (name, pkg) in &self.native_packages {
+            for transform in &pkg.info.transforms {
+                let Transform {
+                    from,
+                    to: _,
+                    arguments: _,
+                } = transform;
+                if self.transforms.contains_key(from) {
+                    return Err(CoreError::OccupiedNativeTransform(
+                        from.clone(),
+                        name.clone(),
+                    ));
+                }
+                self.transforms.insert(
+                    from.to_string(),
+                    TransformVariant::Native((transform.clone(), pkg.clone())),
+                );
+            }
+        }
+
+        // Then, loop through all standard packages and expose the ones needed
+        for (name, pkg) in &self.standard_packages {
+            let import_option = config.0.remove(name);
+            let (include_some, include_list) = match import_option {
+                Some(ModuleImportConfig::HideAll) => continue,
+                Some(ModuleImportConfig::ImportAll) => (false, vec![]),
+                Some(ModuleImportConfig::Exclude(vec)) => (false, vec),
+                Some(ModuleImportConfig::Include(vec)) => (true, vec),
+                None => (false, vec![]),
+            };
+
+            for transform @ Transform {
+                from,
+                to,
+                arguments,
+            } in &pkg.info.transforms
+            {
+                if include_some == include_list.contains(&from) {
+                    for output_format in to {
+                        if self
+                            .transforms
+                            .get(from)
+                            .and_then(|t| t.find_transform_to(output_format))
+                            .is_some()
+                        {
+                            return Err(CoreError::OccupiedTransform(
+                                from.clone(),
+                                output_format.to_string(),
+                                pkg.info.name.clone(),
+                            ));
+                        }
+                        let mut target = self
+                            .transforms
+                            .remove(from)
+                            .unwrap_or_else(|| TransformVariant::External(HashMap::new()));
+                        target.insert_into_external(
+                            output_format.clone(),
+                            (transform.clone(), pkg.clone()),
+                        );
+                        // Add the modified entry back to the map
+                        self.transforms.insert(from.clone(), target);
+                    }
+                }
+            }
+        }
+
+        for (name, pkg) in &self.external_packages {
+            let import_option = config.0.remove(name);
+            let (include_some, include_list) = match import_option {
+                Some(ModuleImportConfig::HideAll) => continue,
+                Some(ModuleImportConfig::ImportAll) => (false, vec![]),
+                Some(ModuleImportConfig::Exclude(vec)) => (false, vec),
+                Some(ModuleImportConfig::Include(vec)) => (true, vec),
+                None => (true, vec![]),
+            };
+
+            for transform @ Transform {
+                from,
+                to,
+                arguments,
+            } in &pkg.info.transforms
+            {
+                if include_some == include_list.contains(&from) {
+                    for output_format in to {
+                        if self
+                            .transforms
+                            .get(from)
+                            .and_then(|t| t.find_transform_to(output_format))
+                            .is_some()
+                        {
+                            return Err(CoreError::OccupiedTransform(
+                                from.clone(),
+                                output_format.to_string(),
+                                pkg.info.name.clone(),
+                            ));
+                        }
+                        let mut target = self
+                            .transforms
+                            .remove(from)
+                            .unwrap_or_else(|| TransformVariant::External(HashMap::new()));
+                        target.insert_into_external(
+                            output_format.clone(),
+                            (transform.clone(), pkg.clone()),
+                        );
+                        // Add the modified entry back to the map
+                        self.transforms.insert(from.clone(), target);
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// This function loads the given package to this `Context`. It supports both native
     /// and external packages.
-    pub fn load_package(&mut self, pkg: Package) -> Result<(), CoreError> {
-        use crate::context::TransformVariant::{External, Native};
-
-        self.packages
-            .insert(pkg.info.as_ref().name.to_string(), pkg.clone());
+    // pub fn load_package(&mut self, pkg: Package) -> Result<(), CoreError> {
+    //     use crate::context::TransformVariant::{External, Native};
+    //
+    //     self.native_packages
+    //         .insert(pkg.info.as_ref().name.to_string(), pkg.clone());
+    //
+    //     // Go through all transforms that the package supports and add them
+    //     // to the Context.
+    //     for transform in &pkg.info.transforms {
+    //         let Transform {
+    //             from,
+    //             to,
+    //             arguments: _,
+    //         } = transform;
+    //
+    //         // Check if the package is implemented natively or if it is an external package
+    //         if pkg.implementation == PackageImplementation::Native {
+    //             // If native => we don't have an output format, so map the key (mod/parent name) to
+    //             // a `TransformVariant::Native`
+    //
+    //             // First, assert that no transformations are registered for that key
+    //             if self.transforms.contains_key(from) {
+    //                 return Err(CoreError::OccupiedNativeTransform(
+    //                     from.clone(),
+    //                     pkg.info.name.clone(),
+    //                 ));
+    //             }
+    //
+    //             // Insert the new `TransformVariant::Native` into the map
+    //             self.transforms
+    //                 .insert(from.clone(), Native((transform.clone(), pkg.clone())));
+    //         } else {
+    //             // We have an external package, loop though all output formats and register
+    //             for output_format in to {
+    //                 // Ensure that there are no other packages responsible for transforming to the
+    //                 // same output format. Note that `find_transform_to` returns a native module
+    //                 // if present, so this will fail if a native module is registered for that key
+    //                 if self
+    //                     .transforms
+    //                     .get(from)
+    //                     .and_then(|t| t.find_transform_to(output_format))
+    //                     .is_some()
+    //                 {
+    //                     return Err(CoreError::OccupiedTransform(
+    //                         from.clone(),
+    //                         output_format.to_string(),
+    //                         pkg.info.name.clone(),
+    //                     ));
+    //                 }
+    //
+    //                 // Remove the target key from the map (which is either `External` or `None`)
+    //                 // and then insert the new entry into the `external`
+    //                 let mut target = self
+    //                     .transforms
+    //                     .remove(from)
+    //                     .unwrap_or_else(|| External(HashMap::new()));
+    //                 target.insert_into_external(
+    //                     output_format.clone(),
+    //                     (transform.clone(), pkg.clone()),
+    //                 );
+    //                 // Add the modified entry back to the map
+    //                 self.transforms.insert(from.clone(), target);
+    //             }
+    //         }
+    //     }
+    //
+    //     Ok(())
+    // }
 
     pub fn load_native_package(&mut self, pkg: Package) -> Result<(), CoreError> {
         debug_assert_eq!(pkg.implementation, PackageImplementation::Native);
@@ -458,13 +683,18 @@ impl<T> Context<T> {
 
     /// Borrow information about a package with a given name
     pub fn get_package_info(&self, name: &str) -> Option<&PackageInfo> {
-        self.packages.get(name).map(|pkg| pkg.info.as_ref())
+        self.native_packages
+            .get(name)
+            .or(self.standard_packages.get(name))
+            .map(|pkg| pkg.info.as_ref())
     }
 
     /// Borrow a vector with PackageInfo from every loaded package
     pub fn get_all_package_info(&self) -> Vec<&PackageInfo> {
-        self.packages
+        self.native_packages
             .values()
+            .chain(self.standard_packages.values())
+            .chain(self.external_packages.values())
             .map(|pkg| pkg.info.as_ref())
             .collect()
     }
@@ -694,15 +924,6 @@ impl<T> Context<T> {
             ));
         }
         Ok(collected_args)
-    }
-}
-
-impl Default for Context<DenyAllResolver> {
-    /// A Context with all default packages loaded
-    fn default() -> Self {
-        let mut ctx = Self::new_without_resolver();
-        ctx.load_default_packages().unwrap();
-        ctx
     }
 }
 
