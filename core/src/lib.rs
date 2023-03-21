@@ -90,7 +90,7 @@ pub fn eval<T>(
 ) -> Result<(String, CompilationState), CoreError>
 where
     T: Resolve,
-    <T as Resolve>::Error : Error + 'static,
+    <T as Resolve>::Error: Error + 'static,
 {
     // Note: this isn't actually needed, since take_state clears state, but it
     // is still called to ensure that it is cleared, if someone uses any context mutating functions
@@ -109,7 +109,7 @@ where
         ctx.import_missing_packages(cfg)?;
     }
     //Fixme: fix this stuff?????
-    ctx.expose_transforms2(config)?;
+    ctx.configure(config)?;
 
     let res = eval_elem(document, ctx, format);
 

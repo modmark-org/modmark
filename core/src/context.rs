@@ -1,6 +1,6 @@
-use std::collections::hash_map::{DefaultHasher, Entry};
+use std::collections::hash_map::Entry;
+use std::error::Error;
 use std::fmt::Formatter;
-use std::hash::Hash;
 use std::iter::once;
 use std::{
     collections::HashMap,
@@ -8,7 +8,6 @@ use std::{
     fmt::Debug,
     io::{Read, Write},
 };
-use std::error::Error;
 
 use either::{Either, Left};
 use serde::{Deserialize, Serialize};
@@ -149,7 +148,7 @@ impl<T> Context<T> {
 impl<T> Context<T>
 where
     T: Resolve,
-    <T as Resolve>::Error : Error + 'static
+    <T as Resolve>::Error: Error + 'static,
 {
     pub(crate) fn import_missing_packages(&mut self, config: &Config) -> Result<(), CoreError> {
         let missing: Vec<&str> = config
@@ -163,7 +162,11 @@ where
             })
             .collect();
 
-        let resolves: Vec<Vec<u8>> = self.resolver.resolve_all(&missing).into_iter().collect::<Result<Vec<_>,_>>()
+        let resolves: Vec<Vec<u8>> = self
+            .resolver
+            .resolve_all(&missing)
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()
             .map_err(|e| CoreError::Resolve("abc".to_string(), Box::new(e)))?;
 
         let res: Result<Vec<()>, CoreError> = missing
@@ -202,10 +205,14 @@ impl<T> Context<T> {
         Ok(())
     }
 
-    pub(crate) fn expose_transforms2(&mut self, config: Option<Config>) -> Result<(), CoreError> {
+    // This function configures the context with the given config, so that it is appropriate to
+    // evaluate a document having that configuration with it.
+    pub(crate) fn configure(&mut self, config: Option<Config>) -> Result<(), CoreError> {
         self.expose_transforms(config.map(Into::into).unwrap_or_default())
     }
 
+    // This function makes sure the transforms that should be exposed according to the given
+    // ModuleImport is exposed, and that no other transforms are exposed.
     fn expose_transforms(&mut self, mut config: ModuleImport) -> Result<(), CoreError> {
         self.transforms.clear();
 
@@ -233,167 +240,95 @@ impl<T> Context<T> {
         // Then, loop through all standard packages and expose the ones needed
         for (name, pkg) in &self.standard_packages {
             let import_option = config.0.remove(name);
-            let (include_some, include_list) = match import_option {
+            // This match encodes the behaviour for import and hide statements for standard
+            // packages, such as default values. include_entries is true if the entries in the vec
+            // are the only entries to be included and false if they are the only entries to be
+            // excluded. We have None => (false, vec![]) which means that if no import option is
+            // chosen, the entries of the list is excluded (which is none, so all entries are
+            // imported)
+            let (include_entries, include_list) = match import_option {
                 Some(ModuleImportConfig::HideAll) => continue,
                 Some(ModuleImportConfig::ImportAll) => (false, vec![]),
                 Some(ModuleImportConfig::Exclude(vec)) => (false, vec),
                 Some(ModuleImportConfig::Include(vec)) => (true, vec),
                 None => (false, vec![]),
             };
-
-            for transform @ Transform {
-                from,
-                to,
-                arguments,
-            } in &pkg.info.transforms
-            {
-                if include_some == include_list.contains(&from) {
-                    for output_format in to {
-                        if self
-                            .transforms
-                            .get(from)
-                            .and_then(|t| t.find_transform_to(output_format))
-                            .is_some()
-                        {
-                            return Err(CoreError::OccupiedTransform(
-                                from.clone(),
-                                output_format.to_string(),
-                                pkg.info.name.clone(),
-                            ));
-                        }
-                        let mut target = self
-                            .transforms
-                            .remove(from)
-                            .unwrap_or_else(|| TransformVariant::External(HashMap::new()));
-                        target.insert_into_external(
-                            output_format.clone(),
-                            (transform.clone(), pkg.clone()),
-                        );
-                        // Add the modified entry back to the map
-                        self.transforms.insert(from.clone(), target);
-                    }
-                }
-            }
+            Self::insert_transforms(
+                &mut self.transforms,
+                pkg,
+                include_entries,
+                include_list.as_slice(),
+            )?;
         }
 
         for (name, pkg) in &self.external_packages {
             let import_option = config.0.remove(name);
-            let (include_some, include_list) = match import_option {
+            // This match encodes the behaviour for import and hide statements for external
+            // packages, such as default values. include_entries is true if the entries in the vec
+            // are the only entries to be included and false if they are the only entries to be
+            // excluded. We have None => (true, vec![]) which means that if no import option is
+            // chosen, only the entries of the list is included (which is none)
+            let (include_entries, include_list) = match import_option {
                 Some(ModuleImportConfig::HideAll) => continue,
                 Some(ModuleImportConfig::ImportAll) => (false, vec![]),
                 Some(ModuleImportConfig::Exclude(vec)) => (false, vec),
                 Some(ModuleImportConfig::Include(vec)) => (true, vec),
                 None => (true, vec![]),
             };
+            Self::insert_transforms(
+                &mut self.transforms,
+                pkg,
+                include_entries,
+                include_list.as_slice(),
+            )?;
+        }
 
-            for transform @ Transform {
-                from,
-                to,
-                arguments,
-            } in &pkg.info.transforms
-            {
-                if include_some == include_list.contains(&from) {
-                    for output_format in to {
-                        if self
-                            .transforms
-                            .get(from)
-                            .and_then(|t| t.find_transform_to(output_format))
-                            .is_some()
-                        {
-                            return Err(CoreError::OccupiedTransform(
-                                from.clone(),
-                                output_format.to_string(),
-                                pkg.info.name.clone(),
-                            ));
-                        }
-                        let mut target = self
-                            .transforms
-                            .remove(from)
-                            .unwrap_or_else(|| TransformVariant::External(HashMap::new()));
-                        target.insert_into_external(
-                            output_format.clone(),
-                            (transform.clone(), pkg.clone()),
-                        );
-                        // Add the modified entry back to the map
-                        self.transforms.insert(from.clone(), target);
+        Ok(())
+    }
+
+    // This function was introduced to avoid repeated code. It takes a map and a package, and adds
+    // all transforms in that package which either exists in the list (include_entries=true) or
+    // doesn't exist in the list (include_entries=false) into the map
+    fn insert_transforms(
+        map: &mut HashMap<String, TransformVariant>,
+        pkg: &Package,
+        include_entries: bool,
+        include_list: &[String],
+    ) -> Result<(), CoreError> {
+        for transform @ Transform {
+            from,
+            to,
+            arguments: _,
+        } in &pkg.info.transforms
+        {
+            if include_entries == include_list.contains(from) {
+                for output_format in to {
+                    if map
+                        .get(from)
+                        .and_then(|t| t.find_transform_to(output_format))
+                        .is_some()
+                    {
+                        return Err(CoreError::OccupiedTransform(
+                            from.clone(),
+                            output_format.to_string(),
+                            pkg.info.name.clone(),
+                        ));
                     }
+                    let mut target = map
+                        .remove(from)
+                        .unwrap_or_else(|| TransformVariant::External(HashMap::new()));
+                    target.insert_into_external(
+                        output_format.clone(),
+                        (transform.clone(), pkg.clone()),
+                    );
+                    // Add the modified entry back to the map
+                    map.insert(from.clone(), target);
                 }
             }
         }
 
         Ok(())
     }
-
-    /// This function loads the given package to this `Context`. It supports both native
-    /// and external packages.
-    // pub fn load_package(&mut self, pkg: Package) -> Result<(), CoreError> {
-    //     use crate::context::TransformVariant::{External, Native};
-    //
-    //     self.native_packages
-    //         .insert(pkg.info.as_ref().name.to_string(), pkg.clone());
-    //
-    //     // Go through all transforms that the package supports and add them
-    //     // to the Context.
-    //     for transform in &pkg.info.transforms {
-    //         let Transform {
-    //             from,
-    //             to,
-    //             arguments: _,
-    //         } = transform;
-    //
-    //         // Check if the package is implemented natively or if it is an external package
-    //         if pkg.implementation == PackageImplementation::Native {
-    //             // If native => we don't have an output format, so map the key (mod/parent name) to
-    //             // a `TransformVariant::Native`
-    //
-    //             // First, assert that no transformations are registered for that key
-    //             if self.transforms.contains_key(from) {
-    //                 return Err(CoreError::OccupiedNativeTransform(
-    //                     from.clone(),
-    //                     pkg.info.name.clone(),
-    //                 ));
-    //             }
-    //
-    //             // Insert the new `TransformVariant::Native` into the map
-    //             self.transforms
-    //                 .insert(from.clone(), Native((transform.clone(), pkg.clone())));
-    //         } else {
-    //             // We have an external package, loop though all output formats and register
-    //             for output_format in to {
-    //                 // Ensure that there are no other packages responsible for transforming to the
-    //                 // same output format. Note that `find_transform_to` returns a native module
-    //                 // if present, so this will fail if a native module is registered for that key
-    //                 if self
-    //                     .transforms
-    //                     .get(from)
-    //                     .and_then(|t| t.find_transform_to(output_format))
-    //                     .is_some()
-    //                 {
-    //                     return Err(CoreError::OccupiedTransform(
-    //                         from.clone(),
-    //                         output_format.to_string(),
-    //                         pkg.info.name.clone(),
-    //                     ));
-    //                 }
-    //
-    //                 // Remove the target key from the map (which is either `External` or `None`)
-    //                 // and then insert the new entry into the `external`
-    //                 let mut target = self
-    //                     .transforms
-    //                     .remove(from)
-    //                     .unwrap_or_else(|| External(HashMap::new()));
-    //                 target.insert_into_external(
-    //                     output_format.clone(),
-    //                     (transform.clone(), pkg.clone()),
-    //                 );
-    //                 // Add the modified entry back to the map
-    //                 self.transforms.insert(from.clone(), target);
-    //             }
-    //         }
-    //     }
-    //
-    //     Ok(())
-    // }
 
     pub fn load_native_package(&mut self, pkg: Package) -> Result<(), CoreError> {
         debug_assert_eq!(pkg.implementation, PackageImplementation::Native);
@@ -983,7 +918,7 @@ impl From<Config> for ModuleImport {
         let Config {
             imports,
             hides,
-            sets,
+            sets: _,
         } = value;
         let map = imports
             .into_iter()
