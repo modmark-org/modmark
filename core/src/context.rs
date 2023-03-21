@@ -735,6 +735,56 @@ enum JsonEntry {
     },
 }
 
+#[derive(Default)]
+#[repr(transparent)]
+struct ModuleImport(HashMap<String, ModuleImportConfig>);
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum ModuleImportConfig {
+    ImportAll,
+    Include(Vec<String>),
+    Exclude(Vec<String>),
+    HideAll,
+}
+
+impl From<HideConfig> for ModuleImportConfig {
+    fn from(value: HideConfig) -> Self {
+        match value {
+            HideConfig::HideAll => ModuleImportConfig::HideAll,
+        }
+    }
+}
+
+impl From<ImportConfig> for ModuleImportConfig {
+    fn from(value: ImportConfig) -> Self {
+        match value {
+            ImportConfig::ImportAll => Self::ImportAll,
+            ImportConfig::Include(vec) => Self::Include(vec),
+            ImportConfig::Exclude(vec) => Self::Exclude(vec),
+        }
+    }
+}
+
+impl From<Config> for ModuleImport {
+    fn from(value: Config) -> Self {
+        let Config {
+            imports,
+            hides,
+            sets,
+        } = value;
+        let map = imports
+            .into_iter()
+            .map(|import| (import.name, import.importing.into()))
+            .chain(
+                hides
+                    .into_iter()
+                    .map(|hide| (hide.name, hide.hiding.into())),
+            )
+            .collect();
+        ModuleImport(map)
+    }
+}
+
 /// This is just a helper to ensure that omitted "inline" fields
 /// default to true.
 fn default_inline() -> bool {
