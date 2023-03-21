@@ -183,7 +183,8 @@ mod tests {
 
     #[test]
     fn table_manifest_test() {
-        let ctx = Context::default();
+        let mut ctx = Context::new_without_resolver();
+        ctx.load_default_packages().unwrap();
         let info = ctx.get_package_info("table").unwrap().clone();
 
         let foo = PackageInfo {
