@@ -956,11 +956,10 @@ impl TryFrom<Config> for ModuleImport {
                     .into_iter()
                     .map(|hide| (hide.name, hide.hiding.into())),
             )
-            .map(|(name, value)| {
+            .inspect(|(name, _)| {
                 if !found.insert(name.clone()) {
                     duplicates.push(name.clone());
                 }
-                (name, value)
             })
             .collect();
 
