@@ -1,5 +1,5 @@
-mod error;
-mod package;
+use std::io::{stdout, Write};
+use std::{env, fs, fs::File, path::Path, path::PathBuf, sync::Mutex, time::Duration};
 
 use clap::Parser;
 use crossterm::{
@@ -7,15 +7,18 @@ use crossterm::{
     style::{self, Stylize},
     terminal, ExecutableCommand,
 };
-use error::CliError;
-use modmark_core::{context::CompilationState, OutputFormat};
-use modmark_core::{eval, Context};
 use notify::{Config, Event, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher, WatcherKind};
 use once_cell::sync::Lazy;
-use std::io::{stdout, Write};
-use std::{env, fs, fs::File, path::Path, path::PathBuf, sync::Mutex, time::Duration};
 
+use error::CliError;
+use modmark_core::{context::CompilationState, CoreError, OutputFormat};
+use modmark_core::{eval, Context};
 use parser::{parse, Ast};
+
+use crate::package::PackageManager;
+
+mod error;
+mod package;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
@@ -40,7 +43,13 @@ struct Args {
     dev: bool,
 }
 
-static CTX: Lazy<Mutex<Context>> = Lazy::new(|| Mutex::new(Context::default()));
+static CTX: Lazy<Mutex<Context<PackageManager>>> = Lazy::new(|| {
+    Mutex::new({
+        let mut ctx = Context::new_with_resolver(PackageManager {});
+        ctx.load_default_packages().unwrap();
+        ctx
+    })
+});
 
 // Infer the output format based on the file extension of the output format
 fn infer_output_format(output: &Path) -> Option<OutputFormat> {

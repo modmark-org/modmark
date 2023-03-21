@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
@@ -8,6 +9,7 @@ pub use context::Context;
 pub use element::Element;
 pub use error::CoreError;
 pub use package::{ArgInfo, Package, PackageInfo, Transform};
+use parser::ParseError;
 
 use crate::context::CompilationState;
 
@@ -85,7 +87,11 @@ pub fn eval<T>(
     source: &str,
     ctx: &mut Context<T>,
     format: &OutputFormat,
-) -> Result<(String, CompilationState), CoreError> {
+) -> Result<(String, CompilationState), CoreError>
+where
+    T: Resolve,
+    <T as Resolve>::Error : Error + 'static,
+{
     // Note: this isn't actually needed, since take_state clears state, but it
     // is still called to ensure that it is cleared, if someone uses any context mutating functions
     // outside of here which doesn't take state afterwards
@@ -94,13 +100,16 @@ pub fn eval<T>(
     // TODO: Move this out so that we have a flag in the CLI and a switch in the playground to
     //   do verbose errors or "debug mode" or similar
     ctx.state.verbose_errors = true;
-    //let document = parser::parse(source)?.try_into()?;
     let (doc_ast, config) = parser::parse_with_config(source)?;
-    let document = doc_ast.try_into()?;
+    let document = (TryInto::<Element>::try_into(doc_ast))?;
 
-    if let Some(cfg) = config {
+    // prepare context, todo: hash config and check if it actually has changed
+    if let Some(cfg) = config.as_ref() {
         println!("Config: {:#?}", cfg);
+        ctx.import_missing_packages(cfg)?;
     }
+    //Fixme: fix this stuff?????
+    ctx.expose_transforms2(config)?;
 
     let res = eval_elem(document, ctx, format);
 
