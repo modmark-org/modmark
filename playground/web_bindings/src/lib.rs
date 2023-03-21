@@ -1,4 +1,4 @@
-use modmark_core::{eval, eval_no_document, Context, CoreError, OutputFormat};
+use modmark_core::{eval, eval_no_document, Context, CoreError, OutputFormat, DenyAllResolver};
 use std::cell::RefCell;
 
 use parser::ParseError;
@@ -7,7 +7,11 @@ use thiserror::Error;
 use wasm_bindgen::prelude::*;
 
 thread_local! {
-    static CONTEXT: RefCell<Context> = RefCell::new(Context::default());
+    static CONTEXT: RefCell<Context<DenyAllResolver>> = RefCell::new({
+        let mut ctx = Context::new_without_resolver();
+        ctx.load_default_packages().unwrap();
+        ctx
+    });
 }
 
 #[derive(Error, Debug)]
