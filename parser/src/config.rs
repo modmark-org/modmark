@@ -37,9 +37,6 @@ pub fn parse_config_module(input: &str) -> IResult<&str, Option<Config>, ConfigE
 }
 
 fn parse_config_body(input: &str) -> IResult<&str, Config, ConfigError> {
-    // FIXME: The best way to do this is probably by just running .lines(), I think, and maybe
-    //   regex? This is kinda complicated and doesn't provide good diagnostics
-
     // Our config body contains of newline-separated import statements
     map_res(
         separated_list1(line_ending, cut(terminated(config_statement, space0))),

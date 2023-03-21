@@ -66,8 +66,8 @@ pub enum CoreError {
     DenyAllResolver,
     #[error("Error resolving {0}: {1:?}")]
     Resolve(String, Box<dyn Error>),
-    #[error("An error occurred: '{0}'")]
-    Other(String),
+    #[error("Duplicate configurations for packages: '{0:?}'")]
+    DuplicateConfigs(Vec<String>)
 }
 
 impl From<WasiError> for CoreError {

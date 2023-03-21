@@ -8,6 +8,7 @@ use std::{
     fmt::Debug,
     io::{Read, Write},
 };
+use std::collections::HashSet;
 
 use either::{Either, Left};
 use serde::{Deserialize, Serialize};
@@ -190,7 +191,7 @@ where
     pub(crate) fn configure(&mut self, config: Option<Config>) -> Result<(), CoreError> {
         let config = config.unwrap_or_default();
         self.import_missing_packages(&config)?;
-        self.expose_transforms(config.into())?;
+        self.expose_transforms(config.try_into()?)?;
         Ok(())
     }
 }
@@ -930,23 +931,40 @@ impl From<ImportConfig> for ModuleImportConfig {
     }
 }
 
-impl From<Config> for ModuleImport {
-    fn from(value: Config) -> Self {
+impl TryFrom<Config> for ModuleImport {
+    type Error = CoreError;
+
+    fn try_from(value: Config) -> Result<Self, Self::Error> {
         let Config {
             imports,
             hides,
             sets: _,
         } = value;
-        let map = imports
+        let mut found = HashSet::new();
+        let mut duplicates = vec![];
+        let entries = imports
             .into_iter()
             .map(|import| (import.name, import.importing.into()))
             .chain(
                 hides
                     .into_iter()
-                    .map(|hide| (hide.name, hide.hiding.into())),
+                    .map(|hide| (hide.name, hide.hiding.into()))
+            )
+            .map(|(name, value)|
+                {
+                    if !found.insert(name.clone()) {
+                        duplicates.push(name.clone());
+                    }
+                    (name, value)
+                }
             )
             .collect();
-        ModuleImport(map)
+
+        if !duplicates.is_empty() {
+            Err(CoreError::DuplicateConfigs(duplicates))
+        } else {
+            Ok(ModuleImport(entries))
+        }
     }
 }
 
