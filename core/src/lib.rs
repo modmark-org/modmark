@@ -9,7 +9,6 @@ pub use context::Context;
 pub use element::Element;
 pub use error::CoreError;
 pub use package::{ArgInfo, Package, PackageInfo, Transform};
-use parser::ParseError;
 
 use crate::context::CompilationState;
 

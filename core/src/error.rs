@@ -67,7 +67,7 @@ pub enum CoreError {
     #[error("Error resolving {0}: {1:?}")]
     Resolve(String, Box<dyn Error>),
     #[error("Duplicate configurations for packages: '{0:?}'")]
-    DuplicateConfigs(Vec<String>)
+    DuplicateConfigs(Vec<String>),
 }
 
 impl From<WasiError> for CoreError {
