@@ -24,14 +24,13 @@ impl Resolve for PackageManager {
     fn resolve(&self, path: &str) -> Result<Vec<u8>, Self::Error> {
         RUNTIME.block_on(resolve_package(path))
     }
-    fn resolve_all(&self, paths: Vec<&str>) -> Vec<Result<Vec<u8>, Self::Error>> {
+    fn resolve_all(&self, paths: &[&str]) -> Vec<Result<Vec<u8>, Self::Error>> {
         RUNTIME.block_on(resolve_packages(paths))
     }
 }
 
-async fn resolve_packages(paths: Vec<&str>) -> Vec<Result<Vec<u8>, CliError>> {
-    let futures = paths.iter().map(|path| resolve_package(path));
-
+async fn resolve_packages(paths: &[&str]) -> Vec<Result<Vec<u8>, CliError>> {
+    let futures = paths.into_iter().map(|&path| resolve_package(path));
     return join_all(futures).await;
 }
 
