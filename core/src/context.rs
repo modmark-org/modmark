@@ -162,12 +162,17 @@ where
             })
             .collect();
 
+        // The .enumerate()-.map() may seem ugly but it is needed to be able to retrieve the
+        // package which errored (first). Essentially, instead of having just an dyn Error, we have
+        // (idx, dyn Error) where idx is the idx to the package (in missing) that errored
         let resolves: Vec<Vec<u8>> = self
             .resolver
             .resolve_all(&missing)
             .into_iter()
+            .enumerate()
+            .map(|(idx, pkg)| pkg.map_err(|e| (idx, e)))
             .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| CoreError::Resolve("abc".to_string(), Box::new(e)))?;
+            .map_err(|(idx, e)| CoreError::Resolve(missing[idx].to_string(), Box::new(e)))?;
 
         let res: Result<Vec<()>, CoreError> = missing
             .into_iter()
