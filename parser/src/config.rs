@@ -1,5 +1,5 @@
 use nom::bytes::complete::{is_not, take_while, take_while1};
-use nom::character::complete::{alphanumeric1, char, line_ending, space0};
+use nom::character::complete::{char, line_ending, space0};
 use nom::combinator::{all_consuming, cut, eof, map, map_res, opt, peek, verify};
 use nom::error::{ErrorKind, FromExternalError, ParseError};
 use nom::multi::{separated_list0, separated_list1};
@@ -127,7 +127,10 @@ fn import_config(input: &str) -> IResult<&str, ImportConfig, ConfigError> {
     map_res(
         opt(pair(
             delimited(space0, take_while1(|c: char| !c.is_whitespace()), space0),
-            separated_list0(pair(char(','), space0), take_while1(|c: char| !c.is_whitespace() && c != ',')),
+            separated_list0(
+                pair(char(','), space0),
+                take_while1(|c: char| !c.is_whitespace() && c != ','),
+            ),
         )),
         |res: Option<(&str, Vec<&str>)>| {
             if let Some((option, imports)) = res {

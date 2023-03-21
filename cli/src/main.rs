@@ -11,7 +11,7 @@ use notify::{Config, Event, PollWatcher, RecommendedWatcher, RecursiveMode, Watc
 use once_cell::sync::Lazy;
 
 use error::CliError;
-use modmark_core::{context::CompilationState, CoreError, OutputFormat};
+use modmark_core::{context::CompilationState, OutputFormat};
 use modmark_core::{eval, Context};
 use parser::{parse, Ast};
 

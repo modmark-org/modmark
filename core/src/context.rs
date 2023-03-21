@@ -1,4 +1,5 @@
 use std::collections::hash_map::Entry;
+use std::collections::HashSet;
 use std::error::Error;
 use std::fmt::Formatter;
 use std::iter::once;
@@ -8,7 +9,6 @@ use std::{
     fmt::Debug,
     io::{Read, Write},
 };
-use std::collections::HashSet;
 
 use either::{Either, Left};
 use serde::{Deserialize, Serialize};
@@ -778,7 +778,7 @@ impl<T> Context<T> {
         let mut given_args = args.clone();
 
         // Get info about what args this parent node
-        let args_info = self.get_args_info(parent_name, &output_format)?;
+        let args_info = self.get_args_info(parent_name, output_format)?;
 
         for arg_info in args_info {
             let ArgInfo {
@@ -822,7 +822,7 @@ impl<T> Context<T> {
         let mut collected_args = HashMap::new();
 
         // Get info about what args this parent node supports
-        let args_info = self.get_args_info(module_name, &output_format)?;
+        let args_info = self.get_args_info(module_name, output_format)?;
 
         for arg_info in args_info {
             let ArgInfo {
@@ -948,16 +948,14 @@ impl TryFrom<Config> for ModuleImport {
             .chain(
                 hides
                     .into_iter()
-                    .map(|hide| (hide.name, hide.hiding.into()))
+                    .map(|hide| (hide.name, hide.hiding.into())),
             )
-            .map(|(name, value)|
-                {
-                    if !found.insert(name.clone()) {
-                        duplicates.push(name.clone());
-                    }
-                    (name, value)
+            .map(|(name, value)| {
+                if !found.insert(name.clone()) {
+                    duplicates.push(name.clone());
                 }
-            )
+                (name, value)
+            })
             .collect();
 
         if !duplicates.is_empty() {
