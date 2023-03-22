@@ -1,9 +1,11 @@
-use parser::ParseError;
 use thiserror::Error;
 #[cfg(feature = "native")]
-use wasmer::CompileError;
+#[allow(unused_imports)]
+use wasmer::{CompileError, DeserializeError};
 use wasmer::{ExportError, InstantiationError, RuntimeError};
 use wasmer_wasi::{WasiError, WasiStateCreationError};
+
+use parser::ParseError;
 
 #[derive(Error, Debug)]
 pub enum CoreError {
@@ -18,6 +20,9 @@ pub enum CoreError {
     #[cfg(feature = "native")]
     #[error("Compiler error")]
     WasmerCompiler(Box<CompileError>),
+    #[cfg(all(feature = "native", feature = "precompile_wasm"))]
+    #[error("Error deserializing pre-compiled module")]
+    Deserialize(#[from] DeserializeError),
     #[error("No package for transforming node '{0}' to '{1}'.")]
     MissingTransform(String, String),
     #[error("Wasi error '{0}'.")]

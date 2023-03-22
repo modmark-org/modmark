@@ -86,7 +86,25 @@ macro_rules! define_native_packages {
 /// that the standard package cargo name is the same as the containing folder name.
 macro_rules! define_standard_package_loader {
     ($($name:expr),* $(,)?) => {
-        #[cfg(feature = "bundle_std_packages")]
+        #[cfg(all(feature = "bundle_std_packages", feature = "native", feature = "precompile_wasm"))]
+        pub fn load_standard_packages(ctx: &mut Context) -> Result<(), CoreError> {
+            $(
+                ctx.load_precompiled_package_from_wasm(
+                    include_bytes!(
+                        concat!(
+                            env!("OUT_DIR"),
+                            "/",
+                            $name,
+                            "/wasm32-wasi/release/",
+                            $name,
+                            "-precompiled.wir"
+                        )
+                    )
+                )?;
+            )*
+            Ok(())
+        }
+        #[cfg(all(feature = "bundle_std_packages", not(all(feature = "native", feature = "precompile_wasm"))))]
         pub fn load_standard_packages(ctx: &mut Context) -> Result<(), CoreError> {
             $(
                 ctx.load_package_from_wasm(

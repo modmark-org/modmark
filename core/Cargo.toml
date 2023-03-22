@@ -15,11 +15,29 @@ serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.93"
 either = "1.8.1"
 
+# We need wasmer as a build dependency since we may want to pre-compile the bundled packages. However, we can't bring
+# it in since the build script is always built for the host, and Cargo enables the JS flags when targeting the web,
+# making a compile_error!() occur from wasmer. We can't conditionally enable/disable the dependency either since that
+# does only work when enabling/disabling it based on the host system, not the target system, for build-dependencies.
+# We can't bring in another version of the crate under the same name since Cargo only allows one version per major
+# patch (and 2.0 is a bit old to use). We only ever need the dependency when targeting native (and when that flag isn't
+# enabled, the dependency isn't even imported), but to get it to build I had to get into the source code, find the
+# actual implementation of the function I needed, bring in the crates implementing that and use them. So, thank you so
+# much Wasmer for not having additive features :'(
+[build-dependencies]
+wasmer-compiler-cranelift = "3.1.1"
+wasmer-compiler = "3.1.1"
 
-# Use the "web" feature to support web builds with:
+# native feature configures wasmer to target desktop platform
+# web feature configures wasmer to target web/js
+# bundle_std_packages bundles the standard packages into core/std_packages, making them availible without additional
+# files
+# precompile_wasm is an addition to bundle_std_packages, which also pre-compiles the wasm files using wasmer/cranelift,
+# so startup times are reduced by ≈98%
+# default is native, bundle_std_packages and precompile_wasm
 [features]
-# `wasm-pack build --target web`
-default = ["native", "bundle_std_packages"]
+default = ["native", "bundle_std_packages", "precompile_wasm"]
 native = ["wasmer/sys-default", "wasmer-wasi/sys-default"]
 web = ["wasmer/js-default", "wasmer-wasi/js"]
 bundle_std_packages = []
+precompile_wasm = []
