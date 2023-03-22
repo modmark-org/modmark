@@ -21,12 +21,12 @@ fn manifest() {
         serde_json::to_string(&json!(
             {
             "name": "link",
-            "version": "0.1",
+            "version": "0.2",
             "description": "This package supports [link] modules",
             "transforms": [
                 {
                     "from": "link",
-                    "to": ["html"],
+                    "to": ["html", "latex"],
                     "arguments": [
                         {"name": "label", "default": "", "description": "Label for link"}
                     ],
@@ -74,8 +74,29 @@ fn transform_link(to: &str) {
             ]);
             print!("{output}");
         }
+        "latex" => {
+            let input: Value = {
+                let mut buffer = String::new();
+                io::stdin().read_to_string(&mut buffer).unwrap();
+                serde_json::from_str(&buffer).unwrap()
+            };
+
+            let label = input["arguments"]
+                .get("label")
+                .map(|val| val.as_str().unwrap())
+                .unwrap_or_else(|| "");
+            let link = input["data"].as_str().unwrap();
+
+            let text = if label.is_empty() { link } else { label };
+            let data = format!(r#"\href{{{}}}{{{}}}"#, link, text);
+
+            let output = json!([
+                {"name": "raw", "data": data},
+            ]);
+            print!("{output}");
+        }
         other => {
-            eprintln!("Cannot convert table to {other}");
+            eprintln!("Cannot convert link to {other}");
         }
     }
 }
