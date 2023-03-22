@@ -5,6 +5,19 @@ use std::{
     process::Command,
 };
 
+#[cfg(all(
+    feature = "bundle_std_packages",
+    feature = "native",
+    feature = "precompile_wasm"
+))]
+use wasmer_compiler::{ArtifactCreate, Engine, EngineBuilder};
+#[cfg(all(
+    feature = "bundle_std_packages",
+    feature = "native",
+    feature = "precompile_wasm"
+))]
+use wasmer_compiler_cranelift::Cranelift;
+
 fn main() {
     // build packages if we want to bundle them
     #[cfg(feature = "bundle_std_packages")]
@@ -16,6 +29,14 @@ fn main() {
 // env!("OUT_DIR")/out/<name_of_module>/wasm32_wasi/release/<name_of_module>.wasm
 fn build_packages() {
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+
+    // If we want to pre-compile, we make a cranelift engine
+    #[cfg(all(
+        feature = "bundle_std_packages",
+        feature = "native",
+        feature = "precompile_wasm"
+    ))]
+    let engine = EngineBuilder::new(Cranelift::new()).engine();
 
     let workspace_path = {
         let mut path = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
@@ -45,8 +66,45 @@ fn build_packages() {
             let exit = f.wait().expect("failed to launch wasm build");
             if !exit.success() {
                 println!("cargo:warning=failed to build package: {name}")
+            } else {
+                #[cfg(all(
+                    feature = "bundle_std_packages",
+                    feature = "native",
+                    feature = "precompile_wasm"
+                ))]
+                precompile_wasm(&name, &out_path, &engine);
             }
         });
+}
+
+#[cfg(all(
+    feature = "bundle_std_packages",
+    feature = "native",
+    feature = "precompile_wasm"
+))]
+/// This function pre-compiles a wasm file for a package with the given name, and makes a new file
+/// `{name}-precompiled.wasm` which holds the serialized data for the precompiled package.
+fn precompile_wasm(name: &str, output_path: &Path, engine: &Engine) {
+    let in_path = output_path
+        .join(name)
+        .join("wasm32-wasi")
+        .join("release")
+        .join(name.to_string() + ".wasm");
+
+    let out_path = output_path
+        .join(name)
+        .join("wasm32-wasi")
+        .join("release")
+        .join(name.to_string() + "-precompiled.wir");
+
+    // Much of this code is taken from Module::serialize and by following what it does, function
+    // calls etc
+    let wasm_source = fs::read(in_path).expect("Read wasm module");
+    let artifact = engine
+        .compile(wasm_source.as_slice())
+        .expect("Compile wasm module");
+    let compiled = artifact.serialize().expect("Serialize wasm module");
+    fs::write(out_path, compiled.as_slice()).expect("Write wasm module");
 }
 
 fn build_wasm_package(name: &str, packages_path: &Path, output_path: &Path) -> (Child, String) {

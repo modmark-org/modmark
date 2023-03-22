@@ -1,12 +1,13 @@
-use crate::package::PackageImplementation::Native;
-use crate::{error::CoreError, OutputFormat};
-use serde::{Deserialize, Serialize};
 use std::{io::Read, sync::Arc};
 
+use serde::{Deserialize, Serialize};
 #[cfg(feature = "native")]
 use wasmer::Engine;
 use wasmer::{Instance, Module, Store};
 use wasmer_wasi::{Pipe, WasiState};
+
+use crate::package::PackageImplementation::Native;
+use crate::{error::CoreError, OutputFormat};
 
 /// Transform from a node into another node
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
@@ -59,6 +60,29 @@ impl PartialEq for PackageImplementation {
 }
 
 impl Package {
+    /// This function gets a package from its precompiled source. It is similar to Package::new,
+    /// but replaces the compilation step by Module::deserialize.
+    /// Safety: Notice that the precompiled source bytes
+    /// 1. Are going to be deserialized directly into Rust objects.
+    /// 2. Contains the function assembly bodies and, if intercepted,
+    ///    a malicious actor could inject code into executable
+    ///    memory.
+    #[cfg(all(feature = "native", feature = "precompile_wasm"))]
+    pub(crate) fn new_precompiled(
+        precompiled_source: &[u8],
+        engine: &Engine,
+    ) -> Result<Self, CoreError> {
+        let mut store = Store::new(engine);
+        // SAFETY: This is safe since we have compiled the sources ourself and has not been
+        // tampered with
+        let module = unsafe { Module::deserialize(&store, precompiled_source) }?;
+        let package_info = Self::read_manifest(&module, &mut store)?;
+        Ok(Package {
+            info: Arc::new(package_info),
+            implementation: PackageImplementation::Wasm(module),
+        })
+    }
+
     /// Read the binary data from a `.wasm` file and create a Package
     /// containing info about the package as well as the compiled wasm source module.
     #[cfg(feature = "native")]

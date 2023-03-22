@@ -232,6 +232,17 @@ impl Context {
         self.load_package(pkg)
     }
 
+    /// This function loads a package from the serialized format retrieved from Module::serialize.
+    /// This is only available on native when using the precompile_wasm feature.
+    #[cfg(all(feature = "native", feature = "precompile_wasm"))]
+    pub(crate) fn load_precompiled_package_from_wasm(
+        &mut self,
+        wasm_source: &[u8],
+    ) -> Result<(), CoreError> {
+        let pkg = Package::new_precompiled(wasm_source, &self.engine)?;
+        self.load_package(pkg)
+    }
+
     /// Gets the transform and package the transform is in, for a transform from a specific element
     /// to a specific output format. Returns None if no such transform exists
     pub fn get_transform_to(
