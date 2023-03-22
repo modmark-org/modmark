@@ -61,7 +61,7 @@ pub enum CoreError {
     NonModuleToNative(String, String),
     #[error("Root element is not a parent, cannot remove __document for playground")]
     RootElementNotParent,
-    #[error("DenyAllResolver is used; resolving of packages disallowed")]
+    #[error("Importing external packages is not allowed")]
     DenyAllResolver,
     #[error("Error resolving {0}: {1:?}")]
     Resolve(String, Box<dyn Error>),
