@@ -242,6 +242,7 @@ impl<T> Context<T> {
                 let Transform {
                     from,
                     to: _,
+                    description: _,
                     arguments: _,
                 } = transform;
                 if self.transforms.contains_key(from) {
@@ -324,6 +325,7 @@ impl<T> Context<T> {
         for transform @ Transform {
             from,
             to,
+            description: _,
             arguments: _,
         } in &pkg.info.transforms
         {
@@ -387,6 +389,7 @@ impl<T> Context<T> {
 
     /// This is a helper function to load a package directly from its wasm source. It will be
     /// compiled using `Package::new` to become a `Package` and then loaded using `load_package`
+    #[allow(dead_code)]
     pub(crate) fn load_standard_package(
         &mut self,
         wasm_source: &[u8],
@@ -420,9 +423,16 @@ impl<T> Context<T> {
     pub(crate) fn load_precompiled_package_from_wasm(
         &mut self,
         wasm_source: &[u8],
-    ) -> Result<(), CoreError> {
+    ) -> Result<&mut Package, CoreError> {
         let pkg = Package::new_precompiled(wasm_source, &self.engine)?;
-        self.load_package(pkg)
+
+        let name = pkg.info.name.as_str();
+        let entry = self.standard_packages.entry(name.to_string());
+
+        match entry {
+            Entry::Occupied(_) => Err(CoreError::OccupiedName(name.to_string())),
+            Entry::Vacant(entry) => Ok(entry.insert(pkg)),
+        }
     }
 
     /// Gets the transform and package the transform is in, for a transform from a specific element

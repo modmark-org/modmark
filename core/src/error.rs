@@ -1,4 +1,3 @@
-use parser::ParseError;
 use std::error::Error;
 use thiserror::Error;
 #[cfg(feature = "native")]
