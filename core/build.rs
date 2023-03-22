@@ -89,13 +89,13 @@ fn precompile_wasm(name: &str, output_path: &Path, engine: &Engine) {
         .join(name)
         .join("wasm32-wasi")
         .join("release")
-        .join(name.to_string() + ".wasm");
+        .join(format!("{name}.wasm"));
 
     let out_path = output_path
         .join(name)
         .join("wasm32-wasi")
         .join("release")
-        .join(name.to_string() + "-precompiled.wir");
+        .join(format!("{name}-precompiled.wir"));
 
     // Much of this code is taken from Module::serialize and by following what it does, function
     // calls etc
