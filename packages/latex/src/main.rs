@@ -53,8 +53,6 @@ fn transform(from: &str) -> String {
     }
 }
 
-
-
 fn transform_paragraph(paragraph: Value) -> String {
     let mut result = String::new();
     result.push('[');
@@ -74,7 +72,11 @@ fn transform_paragraph(paragraph: Value) -> String {
 fn transform_tag(node: Value, latex_function: &str) -> String {
     let mut result = String::new();
     result.push('[');
-    write!(result, r#"{{"name": "raw", "data": "\\{latex_function}{{"}},"#,).unwrap();
+    write!(
+        result,
+        r#"{{"name": "raw", "data": "\\{latex_function}{{"}},"#,
+    )
+    .unwrap();
     if let Value::Array(children) = &node["children"] {
         for child in children {
             result.push_str(&serde_json::to_string(child).unwrap());
@@ -119,9 +121,12 @@ fn transform_heading(heading: Value) -> String {
     if clamped_level > 1 {
         subs.push_str(&"sub".repeat((clamped_level - 1) as usize));
     }
-    
 
-    write!(result, r#"{{"name": "raw", "data": "\n\\{subs}section{{"}},"#,).unwrap();
+    write!(
+        result,
+        r#"{{"name": "raw", "data": "\n\\{subs}section{{"}},"#,
+    )
+    .unwrap();
     if let Value::Array(children) = &heading["children"] {
         for child in children {
             result.push_str(&serde_json::to_string(child).unwrap());
@@ -137,23 +142,30 @@ fn transform_heading(heading: Value) -> String {
 fn transform_document(doc: Value) -> String {
     let mut result = String::new();
     result.push('[');
-    write!(result, r#"{{"name": "raw", "data": "\\documentclass{{article}}\n\\usepackage{{ulem}}\n\n\\begin{{document}}\n"}},"#,).unwrap();
+    write!(result, r#"{{"name": "raw", "data": "\\documentclass{{article}}\n\\usepackage{{ulem}}\n\\usepackage[hidelinks]{{hyperref}}\n\n\\begin{{document}}\n"}},"#,).unwrap();
     if let Value::Array(children) = &doc["children"] {
         for child in children {
             result.push_str(&serde_json::to_string(child).unwrap());
             result.push(',');
         }
     }
-    write!(result, r#"{{"name": "raw", "data": "\n\\end{{document}}"}}"#,).unwrap();
+    write!(
+        result,
+        r#"{{"name": "raw", "data": "\n\\end{{document}}"}}"#,
+    )
+    .unwrap();
     result.push(']');
 
     result
 }
 
-
 fn escape_text(module: Value) -> String {
     if let Value::String(s) = &module["data"] {
-        let s = s.split('\\').map(|t| t.replace('{', r"\{").replace('}', r"\}")).collect::<Vec<String>>().join(r"\textbacklash{}")
+        let s = s
+            .split('\\')
+            .map(|t| t.replace('{', r"\{").replace('}', r"\}"))
+            .collect::<Vec<String>>()
+            .join(r"\textbacklash{}")
             .replace('#', r"\#")
             .replace('$', r"\$")
             .replace('%', r"\%")
@@ -163,7 +175,7 @@ fn escape_text(module: Value) -> String {
             .replace('>', r"\textgreater{}")
             .replace('~', r"\textasciitilde{}")
             .replace('^', r"\textasciicircum{}");
-        format!("{}", json!{[{"name":"raw","data":s}]})
+        format!("{}", json! {[{"name":"raw","data":s}]})
     } else {
         panic!("Malformed text module");
     }

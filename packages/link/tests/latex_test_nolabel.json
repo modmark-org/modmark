@@ -1,0 +1,15 @@
+{
+  "name": "link",
+  "data": "https://google.com",
+  "arguments": {
+    "label": ""
+  },
+  "inline": true,
+  "__test_transform_to": "latex",
+  "__test_expected_result": [
+    {
+      "data": "\\href{https://google.com}{https://google.com}",
+      "name": "raw"
+    }
+  ]
+}
