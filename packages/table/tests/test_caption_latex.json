@@ -1,0 +1,85 @@
+{
+    "name": "table",
+    "arguments": {
+        "caption": "Test caption",
+        "label": "",
+        "delimiter": "|",
+        "header": "none",
+        "alignment": "left",
+        "borders": "all",
+        "strip_whitespace": "true"
+    },
+    "data": "a |   b      \n c|d",
+    "inline": false,
+    "__test_transform_to": "latex",
+    "__test_expected_result": [
+        {
+            "data": "\\begin{table}[H]\n",
+            "name": "raw"
+        },
+        {
+            "data": "\\centering\n",
+            "name": "raw"
+        },
+        {
+            "data": "\\begin{tabular} { |l|l| }\n",
+            "name": "raw"
+        },
+        {
+            "data": "\\hline\n",
+            "name": "raw"
+        },
+        {
+            "data": "a",
+            "name": "inline_content"
+        },
+        {
+            "data": " & ",
+            "name": "raw"
+        },
+        {
+            "data": "b",
+            "name": "inline_content"
+        },
+        {
+            "data": " \\\\\n",
+            "name": "raw"
+        },
+        {
+            "data": "\\hline\n",
+            "name": "raw"
+        },
+        {
+            "data": "c",
+            "name": "inline_content"
+        },
+        {
+            "data": " & ",
+            "name": "raw"
+        },
+        {
+            "data": "d",
+            "name": "inline_content"
+        },
+        {
+            "data": " \\\\\n",
+            "name": "raw"
+        },
+        {
+            "data": "\\hline\n",
+            "name": "raw"
+        },
+        {
+            "data": "\\end{tabular}\n",
+            "name": "raw"
+        },
+        {
+            "data": "\\caption{Test caption}\n",
+            "name": "raw"
+        },
+        {
+            "data": "\\end{table}",
+            "name": "raw"
+        }
+    ]
+}
