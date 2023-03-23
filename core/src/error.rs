@@ -69,6 +69,8 @@ pub enum CoreError {
     DuplicateConfigs(Vec<String>),
     #[error("Unused configurations for packages: '{0:?}'")]
     UnusedConfigs(Vec<String>),
+    #[error("Config modules are only allowed once at the very top of the document")]
+    UnexpectedConfigModule,
 }
 
 impl From<WasiError> for CoreError {

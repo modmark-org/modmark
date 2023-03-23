@@ -1,5 +1,8 @@
-use parser::{Ast, MaybeArgs, ModuleArguments, ParseError};
 use std::collections::HashMap;
+
+use parser::{Ast, MaybeArgs, ModuleArguments};
+
+use crate::CoreError;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Element {
@@ -18,7 +21,7 @@ pub enum Element {
 }
 
 impl TryFrom<Ast> for Element {
-    type Error = ParseError;
+    type Error = CoreError;
 
     fn try_from(value: Ast) -> Result<Self, Self::Error> {
         match value {
@@ -38,7 +41,7 @@ impl TryFrom<Ast> for Element {
                     .elements
                     .into_iter()
                     .map(TryInto::try_into)
-                    .collect::<Result<Vec<Element>, ParseError>>()?,
+                    .collect::<Result<Vec<Element>, CoreError>>()?,
             }),
             Ast::Paragraph(paragraph) => Ok(Element::Parent {
                 name: "__paragraph".to_string(),
@@ -47,7 +50,7 @@ impl TryFrom<Ast> for Element {
                     .elements
                     .into_iter()
                     .map(TryInto::try_into)
-                    .collect::<Result<Vec<Element>, ParseError>>()?,
+                    .collect::<Result<Vec<Element>, CoreError>>()?,
             }),
             Ast::Tag(tag) => Ok(Element::Parent {
                 name: format!("__{}", tag.tag_name.to_lowercase()),
@@ -56,17 +59,23 @@ impl TryFrom<Ast> for Element {
                     .elements
                     .into_iter()
                     .map(TryInto::try_into)
-                    .collect::<Result<Vec<Element>, ParseError>>()?,
+                    .collect::<Result<Vec<Element>, CoreError>>()?,
             }),
-            Ast::Module(module) => match module.args {
-                MaybeArgs::ModuleArguments(args) => Ok(Element::Module {
-                    name: module.name,
-                    args,
-                    body: module.body,
-                    inline: module.one_line,
-                }),
-                MaybeArgs::Error(error) => Err(error),
-            },
+            Ast::Module(module) => {
+                if &module.name.to_ascii_lowercase() == "config" {
+                    Err(CoreError::UnexpectedConfigModule)
+                } else {
+                    match module.args {
+                        MaybeArgs::ModuleArguments(args) => Ok(Element::Module {
+                            name: module.name,
+                            args,
+                            body: module.body,
+                            inline: module.one_line,
+                        }),
+                        MaybeArgs::Error(error) => Err(error.into()),
+                    }
+                }
+            }
             Ast::Heading(heading) => Ok(Element::Parent {
                 name: "__heading".to_string(),
                 args: {
@@ -78,7 +87,7 @@ impl TryFrom<Ast> for Element {
                     .elements
                     .into_iter()
                     .map(TryInto::try_into)
-                    .collect::<Result<Vec<Element>, ParseError>>()?,
+                    .collect::<Result<Vec<Element>, CoreError>>()?,
             }),
         }
     }
