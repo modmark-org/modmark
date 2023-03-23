@@ -1,6 +1,8 @@
 {
     "name": "table",
     "arguments": {
+        "caption": "",
+        "label": "",
         "delimiter": "|",
         "header": "none",
         "alignment": "left",
@@ -12,7 +14,11 @@
     "__test_transform_to": "latex",
     "__test_expected_result": [
         {
-            "data": "\\begin{center}\n",
+            "data": "\\begin{table}[H]\n",
+            "name": "raw"
+        },
+        {
+            "data": "\\centering\n",
             "name": "raw"
         },
         {
@@ -68,7 +74,7 @@
             "name": "raw"
         },
         {
-            "data": "\\end{center}",
+            "data": "\\end{table}",
             "name": "raw"
         }
     ]
