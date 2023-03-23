@@ -12,6 +12,7 @@ use std::{
 
 use either::{Either, Left};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 #[cfg(feature = "native")]
 use wasmer::{Cranelift, Engine, EngineBuilder};
 use wasmer::{Instance, Module, Store};
@@ -20,7 +21,7 @@ use wasmer_wasi::{Pipe, WasiState};
 use parser::config::{Config, HideConfig, ImportConfig};
 use parser::ModuleArguments;
 
-use crate::package::PackageImplementation;
+use crate::package::{HashMapExt, PackageImplementation};
 use crate::{std_packages, DenyAllResolver, Element, Resolve};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
 
@@ -702,7 +703,7 @@ impl<T> Context<T> {
                 children,
             } => Element::Parent {
                 name,
-                args: arguments,
+                args: arguments.map_map(),
                 children: children.into_iter().map(Self::entry_to_element).collect(),
             },
             JsonEntry::Module {
@@ -714,7 +715,7 @@ impl<T> Context<T> {
                 name,
                 args: ModuleArguments {
                     positioned: None,
-                    named: Some(arguments),
+                    named: Some(arguments.map_map()),
                 },
                 body: data,
                 inline,
@@ -790,7 +791,7 @@ impl<T> Context<T> {
         args: &HashMap<String, String>,
         parent_name: &str,
         output_format: &OutputFormat,
-    ) -> Result<HashMap<String, String>, CoreError> {
+    ) -> Result<HashMap<String, Value>, CoreError> {
         // Collect the arguments and add default values for unspecified arguments
         let mut collected_args = HashMap::new();
         let mut given_args = args.clone();
@@ -803,9 +804,11 @@ impl<T> Context<T> {
                 name,
                 default,
                 description: _,
+                r#type,
             } = arg_info;
 
             if let Some(value) = given_args.remove(name) {
+                let value = r#type.try_to_value(&value)?;
                 collected_args.insert(name.clone(), value);
                 continue;
             }
@@ -833,7 +836,7 @@ impl<T> Context<T> {
         args: &ModuleArguments,
         module_name: &str,
         output_format: &OutputFormat,
-    ) -> Result<HashMap<String, String>, CoreError> {
+    ) -> Result<HashMap<String, Value>, CoreError> {
         let empty_vec = vec![];
         let mut pos_args = args.positioned.as_ref().unwrap_or(&empty_vec).iter();
         let mut named_args = args.named.clone().unwrap_or_default();
@@ -847,6 +850,7 @@ impl<T> Context<T> {
                 name,
                 default,
                 description: _,
+                r#type,
             } = arg_info;
 
             // First empty the positional arguments
@@ -858,13 +862,15 @@ impl<T> Context<T> {
                         module_name.to_string(),
                     ));
                 }
-                collected_args.insert(name.to_string(), value.clone());
+                let value = r#type.try_to_value(value)?;
+                collected_args.insert(name.to_string(), value);
                 continue;
             }
 
             // Check if it was specified as a named key=value pair
             if let Some(value) = named_args.remove(name) {
-                collected_args.insert(name.to_string(), value.clone());
+                let value = r#type.try_to_value(&value)?;
+                collected_args.insert(name.to_string(), value);
                 continue;
             }
 
@@ -905,7 +911,7 @@ impl<T> Context<T> {
 enum JsonEntry {
     ParentNode {
         name: String,
-        arguments: HashMap<String, String>,
+        arguments: HashMap<String, Value>,
         children: Vec<Self>,
     },
     Module {
@@ -913,7 +919,7 @@ enum JsonEntry {
         #[serde(default)]
         data: String,
         #[serde(default)]
-        arguments: HashMap<String, String>,
+        arguments: HashMap<String, Value>,
         #[serde(default = "default_inline")]
         inline: bool,
     },

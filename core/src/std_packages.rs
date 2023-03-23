@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 
 use either::Either::{self, Left, Right};
+use serde_json::Value;
 
 use parser::ModuleArguments;
 
 use crate::context::Issue;
+use crate::package::{ArgType, HashMapExt};
 use crate::std_packages_macros::{define_native_packages, define_standard_package_loader};
 use crate::{ArgInfo, Context, CoreError, Element, OutputFormat, PackageInfo, Transform};
 
@@ -32,35 +34,41 @@ define_native_packages! {
         "warning", vec![
             ArgInfo {
                 name: "source".to_string(),
-                default: Some("<unknown>".to_string()),
-                description: "The source module/parent responsible for the warning".to_string()
+                default: Some(Value::String("<unknown>".to_string())),
+                description: "The source module/parent responsible for the warning".to_string(),
+                r#type: ArgType::String
             },
             ArgInfo {
                 name: "target".to_string(),
-                default: Some("<unknown>".to_string()),
-                description: "The target output format when the warning was generated".to_string()
+                default: Some(Value::String("<unknown>".to_string())),
+                description: "The target output format when the warning was generated".to_string(),
+                r#type: ArgType::String
             },
             ArgInfo {
                 name: "input".to_string(),
-                default: Some("<unknown>".to_string()),
-                description: "The input given to the module when it failed".to_string()
+                default: Some(Value::String("<unknown>".to_string())),
+                description: "The input given to the module when it failed".to_string(),
+                r#type: ArgType::String
             },
         ] => native_warn,
         "error", vec![
             ArgInfo {
                 name: "source".to_string(),
-                default: Some("<unknown>".to_string()),
-                description: "The source module/parent responsible for the error".to_string()
+                default: Some(Value::String("<unknown>".to_string())),
+                description: "The source module/parent responsible for the error".to_string(),
+                r#type: ArgType::String
             },
             ArgInfo {
                 name: "target".to_string(),
-                default: Some("<unknown>".to_string()),
-                description: "The target output format when the error was generated".to_string()
+                default: Some(Value::String("<unknown>".to_string())),
+                description: "The target output format when the error was generated".to_string(),
+                r#type: ArgType::String
             },
             ArgInfo {
                 name: "input".to_string(),
-                default: Some("<unknown>".to_string()),
-                description: "The input given to the module when it failed".to_string()
+                default: Some(Value::String("<unknown>".to_string())),
+                description: "The input given to the module when it failed".to_string(),
+                r#type: ArgType::String
             },
         ] => native_err
     };
@@ -73,7 +81,8 @@ define_native_packages! {
             ArgInfo {
                 name: "key".to_string(),
                 default: None,
-                description: "The key to set".to_string()
+                description: "The key to set".to_string(),
+                r#type: ArgType::String
             }
         ] => native_set_env,
     };
@@ -84,7 +93,7 @@ define_native_packages! {
 pub fn native_raw<T>(
     _ctx: &mut Context<T>,
     body: &str,
-    _args: HashMap<String, String>,
+    _args: HashMap<String, Value>,
     _inline: bool,
     _output_format: &OutputFormat,
 ) -> Result<Either<Element, String>, CoreError> {
@@ -96,7 +105,7 @@ pub fn native_raw<T>(
 pub fn native_inline_content<T>(
     _ctx: &mut Context<T>,
     body: &str,
-    _args: HashMap<String, String>,
+    _args: HashMap<String, Value>,
     _inline: bool,
     _output_format: &OutputFormat,
 ) -> Result<Either<Element, String>, CoreError> {
@@ -113,7 +122,7 @@ pub fn native_inline_content<T>(
 pub fn native_block_content<T>(
     _ctx: &mut Context<T>,
     body: &str,
-    _args: HashMap<String, String>,
+    _args: HashMap<String, Value>,
     _inline: bool,
     _output_format: &OutputFormat,
 ) -> Result<Either<Element, String>, CoreError> {
@@ -129,7 +138,7 @@ pub fn native_block_content<T>(
 pub fn native_set_env<T>(
     _ctx: &mut Context<T>,
     _body: &str,
-    _args: HashMap<String, String>,
+    _args: HashMap<String, Value>,
     _inline: bool,
     _output_format: &OutputFormat,
 ) -> Result<Either<Element, String>, CoreError> {
@@ -139,17 +148,18 @@ pub fn native_set_env<T>(
 pub fn native_warn<T>(
     ctx: &mut Context<T>,
     body: &str,
-    mut args: HashMap<String, String>,
+    mut args: HashMap<String, Value>,
     _inline: bool,
     _output_format: &OutputFormat,
 ) -> Result<Either<Element, String>, CoreError> {
     // Push the issue to warnings
     ctx.state.warnings.push(Issue {
-        source: args.remove("source").unwrap(),
-        target: args.remove("target").unwrap(),
+        source: args.remove("source").unwrap().as_str().unwrap().to_string(),
+        target: args.remove("target").unwrap().as_str().unwrap().to_string(),
         description: body.to_string(),
         input: args
             .remove("input")
+            .map(|v| v.as_str().unwrap().to_string())
             .and_then(|s| (s != "<unknown>").then_some(s)),
     });
 
@@ -160,14 +170,15 @@ pub fn native_warn<T>(
 pub fn native_err<T>(
     ctx: &mut Context<T>,
     body: &str,
-    args: HashMap<String, String>,
+    args: HashMap<String, Value>,
     inline: bool,
     output_format: &OutputFormat,
 ) -> Result<Either<Element, String>, CoreError> {
-    let source = args.get("source").unwrap();
-    let target = args.get("target").unwrap();
-    let input: Option<&String> = args
+    let source = args.get("source").unwrap().as_str().unwrap();
+    let target = args.get("target").unwrap().as_str().unwrap();
+    let input = args
         .get("input")
+        .map(|v| v.as_str().unwrap())
         .and_then(|s| (s != "<unknown>").then_some(s));
 
     // Push the issue to errors
@@ -191,6 +202,8 @@ pub fn native_err<T>(
         // crash
         Ok(Left(Element::Compound(vec![])))
     } else {
+        let args = args.map_map();
+
         // If we do, add an __error parent since our output format should
         Ok(Left(Element::Module {
             name: "__error".to_string(),
