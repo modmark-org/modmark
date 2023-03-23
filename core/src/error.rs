@@ -1,4 +1,5 @@
 use std::error::Error;
+
 use thiserror::Error;
 #[cfg(feature = "native")]
 #[allow(unused_imports)]
@@ -71,6 +72,10 @@ pub enum CoreError {
     UnusedConfigs(Vec<String>),
     #[error("Config modules are only allowed once at the very top of the document")]
     UnexpectedConfigModule,
+    #[error("Invalid data type: expected {0} but got '{1}'")]
+    ArgumentType(&'static str, String),
+    #[error("Invalid data type for default argument '{0}' for transform '{1}' in package '{2}', expected type '{3}' but got the value '{4}'")]
+    DefaultArgumentType(String, String, String, String, String),
 }
 
 impl From<WasiError> for CoreError {

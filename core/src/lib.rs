@@ -178,6 +178,10 @@ pub fn eval_elem<T>(
 
 #[cfg(test)]
 mod tests {
+    use serde_json::Value;
+
+    use crate::package::ArgType;
+
     use super::*;
 
     #[test]
@@ -196,32 +200,39 @@ mod tests {
                 arguments: vec![
                     ArgInfo {
                         name: "caption".to_string(),
-                        default: Some("".to_string()),
+                        default: Some(Value::String("".to_string())),
                         description: "The caption for the table".to_string(),
+                        r#type: ArgType::String
                     }, ArgInfo {
                         name: "label".to_string(),
-                        default: Some("".to_string()),
+                        default: Some(Value::String("".to_string())),
                         description: "The label to use for the table, to be able to refer to it from the document".to_string(),
+                        r#type: ArgType::String
                     }, ArgInfo {
                         name: "header".to_string(),
-                        default: Some("none".to_string()),
+                        default: Some(Value::String("none".to_string())),
                         description: "Style to apply to heading, none/bold".to_string(),
+                        r#type: ArgType::String
                     }, ArgInfo {
                         name: "alignment".to_string(),
-                        default: Some("left".to_string()),
+                        default: Some(Value::String("left".to_string())),
                         description: "Horizontal alignment in cells, left/center/right or l/c/r for each column".to_string(),
+                        r#type: ArgType::String
                     }, ArgInfo {
                         name: "borders".to_string(),
-                        default: Some("all".to_string()),
+                        default: Some(Value::String("all".to_string())),
                         description: "Which borders to draw, all/horizontal/vertical/outer/none".to_string(),
+                        r#type: ArgType::String
                     }, ArgInfo {
                         name: "delimiter".to_string(),
-                        default: Some("|".to_string()),
+                        default: Some(Value::String("|".to_string())),
                         description: "The delimiter between cells".to_string(),
+                        r#type: ArgType::String
                     }, ArgInfo {
                         name: "strip_whitespace".to_string(),
-                        default: Some("true".to_string()),
+                        default: Some(Value::String("true".to_string())),
                         description: "true/false to strip/don't strip whitespace in cells".to_string(),
+                        r#type: ArgType::String
                     },
                 ],
             }],

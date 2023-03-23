@@ -163,7 +163,7 @@ async function loadPackageInfo() {
     const createTransformList = (transform) => {
         let args = transform.arguments.map((arg) => `<li><div>
             <strong class="name">${arg.name}</strong>
-            <span class="default">${arg.default !== null ? 'default = \"' + arg.default + "\"" : 'required'}</span>
+            <span class="default">${arg.type}, ${arg.default !== null ? 'default = ' + JSON.stringify(arg.default) : 'required'}</span>
             <span class="description" > ${arg.description}</span>
         </div></li> `).join("\n");
 

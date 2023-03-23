@@ -285,6 +285,16 @@ fn check_transform(transform: &Transform) {
         "Argument names should start with lowercase letter, and must only contain lowercase letters, digits and underscores (transform from {} failed)",
         transform.from
     );
+
+    // Check argument types
+    assert!(
+        transform.arguments.iter().all(|arg| arg
+            .default
+            .as_ref()
+            .map(|d| arg.r#type.is_same_type(d))
+            .unwrap_or(true)),
+        "Argument default values should be of the same type as the specified type"
+    )
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -295,18 +305,48 @@ struct Manifest {
     pub transforms: Vec<Transform>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 struct Transform {
     pub from: String,
     pub to: Vec<String>,
+    pub description: Option<String>,
     pub arguments: Vec<ArgInfo>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
-struct ArgInfo {
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+pub struct ArgInfo {
     pub name: String,
-    pub default: Option<String>,
+    pub default: Option<Value>,
     pub description: String,
+    #[serde(default = "default_arg_type")]
+    pub r#type: ArgType,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ArgType {
+    #[serde(alias = "string")]
+    String,
+    #[serde(alias = "int", alias = "integer", alias = "i64")]
+    Integer,
+    #[serde(alias = "uint", alias = "unsigned_integer", alias = "u64")]
+    UnsignedInteger,
+    #[serde(alias = "float", alias = "number", alias = "f64")]
+    Float,
+}
+
+fn default_arg_type() -> ArgType {
+    ArgType::String
+}
+
+impl ArgType {
+    pub(crate) fn is_same_type(&self, value: &Value) -> bool {
+        match self {
+            ArgType::String => value.is_string(),
+            ArgType::Integer => value.is_i64(),
+            ArgType::UnsignedInteger => value.is_u64(),
+            ArgType::Float => value.is_f64(),
+        }
+    }
 }
 
 datatest_stable::harness!(
