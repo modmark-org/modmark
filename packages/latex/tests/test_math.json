@@ -1,0 +1,21 @@
+{
+    "name": "__math",
+    "arguments": {},
+    "children": [
+        {
+            "name": "__text",
+            "data": "x^2",
+            "arguments": {},
+            "inline": true
+        }
+    ],
+    "__test_transform_to": "latex",
+    "__test_expected_result": [
+        {
+            "name": "math",
+            "data": "x^2",
+            "arguments": {},
+            "inline": true
+        }
+    ]
+}
