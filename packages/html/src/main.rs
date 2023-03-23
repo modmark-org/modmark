@@ -55,6 +55,7 @@ fn transform(from: &str) -> String {
         "__underlined" => transform_tag(input, "u"),
         "__strikethrough" => transform_tag(input, "del"),
         "__paragraph" => transform_tag(input, "p"),
+        "__math" => transform_math(input),
         "__document" => transform_document(input),
         "__text" => escape_text(input),
         "__heading" => transform_heading(input),
@@ -177,6 +178,40 @@ fn transform_tag(node: Value, html_tag: &str) -> String {
     result
 }
 
+fn transform_math(node: Value) -> String {
+    // We know that the math tag is a non-recursively parsed tag, which means that it may only
+    // contain __text and modules. For now, we collect all __text nodes and
+    if let Value::Array(children) = &node["children"] {
+        let mut content = String::new();
+        for child in children {
+            let name = child["name"].as_str().unwrap();
+            if name == "__text" {
+                content.push_str(child["data"].as_str().unwrap());
+            } else {
+                eprintln!("Modules are not allowed in math tags; found module {name}");
+            }
+        }
+        if content.is_empty() {
+            format!("{}", json!([]))
+        } else {
+            format!(
+                "{}",
+                json!([
+                    {
+                      "name": "math",
+                      "data": content,
+                      "arguments": {},
+                      "inline": true
+                    }
+                ])
+            )
+        }
+    } else {
+        eprintln!("Unexpected __math structure");
+        "".to_string()
+    }
+}
+
 fn manifest() -> String {
     serde_json::to_string(&json!(
         {
@@ -221,6 +256,11 @@ fn manifest() -> String {
                 },
                 {
                     "from": "__text",
+                    "to": ["html"],
+                    "arguments": [],
+                },
+                {
+                    "from": "__math",
                     "to": ["html"],
                     "arguments": [],
                 },
