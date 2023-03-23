@@ -1,0 +1,67 @@
+Testing parsing of modules with only named arguments
+
+```mdm
+[mod1 a="" b=😀--] abc
+
+[mod2 "" 😀??] abc
+
+[mod3 a="" b=😀!!]
+abc
+
+[mod4 "" 😀&&]
+abc
+```
+
+```json
+{
+    "name": "Document",
+    "children": [
+        {
+            "name": "Paragraph",
+            "children": [
+                {
+                    "name": "mod1",
+                    "args": {
+                        "a": "",
+                        "b": "😀--"
+                    },
+                    "body": "abc",
+                    "one_line": true
+                }
+            ]
+        },
+        {
+            "name": "Paragraph",
+            "children": [
+                {
+                    "name": "mod2",
+                    "args": {
+                        "0": "",
+                        "1": "😀??"
+                    },
+                    "body": "abc",
+                    "one_line": true
+                }
+            ]
+        },
+        {
+            "name": "mod3",
+            "args": {
+                "a": "",
+                "b": "😀!!"
+            },
+            "body": "abc",
+            "one_line": false
+        },
+        {
+            "name": "mod4",
+            "args": {
+                "0": "",
+                "1": "😀&&"
+            },
+            "body": "abc",
+            "one_line": false
+        }
+    ]
+}
+```
