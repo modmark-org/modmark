@@ -21,7 +21,7 @@ fn manifest() {
         {
         "name": "files",
         "version": "0.1",
-        "description": "This package tests file access",
+        "description": "This package provides file access",
         "transforms": [
             {
                 "from": "textfile",
@@ -32,6 +32,11 @@ fn manifest() {
                 "from": "image",
                 "to": ["html"],
                 "arguments": [],
+            },
+            {
+                "from": "include",
+                "to": ["html"],
+                "arguments": [],
             }
         ]
         }
@@ -40,25 +45,24 @@ fn manifest() {
 }
 
 fn transform(from: &str, to: &str) {
+    let input: Value = {
+                let mut buffer = String::new();
+                io::stdin().read_to_string(&mut buffer).unwrap();
+                serde_json::from_str(&buffer).unwrap()
+    };
     match from {
-        "textfile" => transform_text(to),
-        "image" => transform_image(to),
+        "textfile" => transform_text(input, to),
+        "image" => transform_image(input, to),
+        "include" => transform_include(input, to),
         other => {
             eprintln!("Package does not support {other}");
         }
     }
 }
 
-fn transform_text(to: &str) {
+fn transform_text(input: Value, to: &str) {
     match to {
         "html" => {
-
-            let input: Value = {
-                let mut buffer = String::new();
-                io::stdin().read_to_string(&mut buffer).unwrap();
-                serde_json::from_str(&buffer).unwrap()
-            };
-
             let path = input["data"].as_str().unwrap();
             match fs::read_to_string(path) {
                 Ok(contents) => {
@@ -69,7 +73,7 @@ fn transform_text(to: &str) {
                 _ => {
                     let json = json!({"name": "raw", "data": ""}).to_string();
                     print!("[{json}]");
-                    eprintln!("No file was found at {path}")
+                    eprintln!("File could not be accessed at {path}")
                 }
             }
         }
@@ -79,16 +83,9 @@ fn transform_text(to: &str) {
     }
 }
 
-fn transform_image(to: &str) {
+fn transform_image(input: Value, to: &str) {
     match to {
         "html" => {
-
-            let input: Value = {
-                let mut buffer = String::new();
-                io::stdin().read_to_string(&mut buffer).unwrap();
-                serde_json::from_str(&buffer).unwrap()
-            };
-
             let path = input["data"].as_str().unwrap();
             match fs::read(path) {
                 Ok(contents) => {
@@ -100,7 +97,29 @@ fn transform_image(to: &str) {
                 _ => {
                     let json = json!({"name": "raw", "data": ""}).to_string();
                     print!("[{json}]");
-                    eprintln!("No file was found at {path}")
+                    eprintln!("File could not be accessed at {path}")
+                }
+            }
+        }
+        other => {
+            eprintln!("Cannot convert file to {other}");
+        }
+    }
+}
+
+fn transform_include(input: Value, to: &str) {
+    match to {
+        "html" => {
+            let path = input["data"].as_str().unwrap();
+            match fs::read_to_string(path) {
+                Ok(contents) => {
+                    let json = json!({"name": "block_content", "data": contents}).to_string();
+                    print!("[{json}]");
+                }
+                _ => {
+                    let json = json!({"name": "raw", "data": ""}).to_string();
+                    print!("[{json}]");
+                    eprintln!("File could not be accessed at {path}")
                 }
             }
         }
