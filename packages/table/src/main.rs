@@ -48,6 +48,8 @@ fn manifest() {
                     "from": "table",
                     "to": ["html", "latex"],
                     "arguments": [
+                        {"name": "caption", "default": "", "description": "The caption for the table"},
+                        {"name": "label", "default":"", "description": "The label to use for the table, to be able to refer to it from the document"},
                         {"name": "header", "default": "none", "description": "Style to apply to heading, none/bold"},
                         {"name": "alignment", "default": "left", "description": "Horizontal alignment in cells, left/center/right or l/c/r for each column"},
                         {"name": "borders", "default": "all", "description": "Which borders to draw, all/horizontal/vertical/outer/none"},
@@ -248,6 +250,8 @@ struct Table<'a> {
     alignment: Alignment,
     borders: Borders,
     header: bool,
+    caption: Option<&'a str>,
+    label: Option<&'a str>,
 }
 
 impl Table<'_> {
@@ -267,7 +271,8 @@ impl Table<'_> {
             format!("|{}|", self.alignment.latex_str(self.width, false))
         };
 
-        vec.push(raw!("\\begin{center}\n"));
+        vec.push(raw!("\\begin{table}[H]\n"));
+        vec.push(raw!("\\centering\n"));
         vec.push(raw!(format!("\\begin{{tabular}} {{ {} }}\n", col_key)));
 
         // Only "None" borders should not have top row
@@ -310,7 +315,13 @@ impl Table<'_> {
             vec.push(raw!("\\hline\n"))
         }
         vec.push(raw!("\\end{tabular}\n"));
-        vec.push(raw!(r"\end{center}"));
+        if let Some(caption) = self.caption {
+            vec.push(raw!(format!("\\caption{{{caption}}}\n")));
+        }
+        if let Some(label) = self.label {
+            vec.push(raw!(format!("\\label{{{label}}}\n")));
+        }
+        vec.push(raw!(r"\end{table}"));
         json!(vec)
     }
 
@@ -318,12 +329,21 @@ impl Table<'_> {
     fn to_html(&self) -> Value {
         let mut vec: Vec<Value> = vec![];
         // Push opening tag, border style on table if outer borders
-        if self.borders == Borders::None {
-            vec.push(raw!("<table>"));
-        } else {
-            vec.push(raw!(
-                r#"<table style="border: 1px solid black; border-collapse: collapse;">"#
-            ));
+        let tag = {
+            let mut str = "<table".to_string();
+            if let Some(label) = self.label {
+                str.push_str(&format!(r#" id="{label}""#));
+            }
+            if self.borders != Borders::None {
+                str.push_str(r#" style="border: 1px solid black; border-collapse: collapse;""#);
+            }
+            str + ">"
+        };
+
+        vec.push(raw!(tag));
+
+        if let Some(caption) = self.caption {
+            vec.push(raw!(format!("<caption>{caption}</caption>")));
         }
 
         // Here is the style for all th/td elements
@@ -397,6 +417,16 @@ fn parse_table(input: &Value) -> Option<Table> {
         }
     };
 
+    let caption = match input["arguments"]["caption"].as_str().unwrap() {
+        "" => None,
+        s => Some(s),
+    };
+
+    let label = match input["arguments"]["label"].as_str().unwrap() {
+        "" => None,
+        s => Some(s),
+    };
+
     let strip_whitespace = match input["arguments"]["strip_whitespace"]
         .as_str()
         .unwrap()
@@ -440,6 +470,8 @@ fn parse_table(input: &Value) -> Option<Table> {
             alignment,
             borders,
             header,
+            caption: None,
+            label: None,
         });
     }
 
@@ -467,6 +499,8 @@ fn parse_table(input: &Value) -> Option<Table> {
         alignment,
         borders,
         header,
+        caption,
+        label,
     })
 }
 

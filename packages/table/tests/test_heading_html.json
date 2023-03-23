@@ -1,6 +1,8 @@
 {
     "name": "table",
     "arguments": {
+        "caption": "",
+        "label": "",
         "delimiter": "|",
         "header": "bold",
         "alignment": "left",

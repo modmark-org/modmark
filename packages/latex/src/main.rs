@@ -142,7 +142,7 @@ fn transform_heading(heading: Value) -> String {
 fn transform_document(doc: Value) -> String {
     let mut result = String::new();
     result.push('[');
-    write!(result, r#"{{"name": "raw", "data": "\\documentclass{{article}}\n\\usepackage{{ulem}}\n\\usepackage[hidelinks]{{hyperref}}\n\n\\begin{{document}}\n"}},"#,).unwrap();
+    write!(result, r#"{{"name": "raw", "data": "\\documentclass{{article}}\n\n\\usepackage{{ulem}}\n\\usepackage[hidelinks]{{hyperref}}\n\\usepackage{{float}}\n\n\\begin{{document}}\n"}},"#,).unwrap();
     if let Value::Array(children) = &doc["children"] {
         for child in children {
             result.push_str(&serde_json::to_string(child).unwrap());

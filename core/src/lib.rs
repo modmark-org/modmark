@@ -195,6 +195,14 @@ mod tests {
                 description: None,
                 arguments: vec![
                     ArgInfo {
+                        name: "caption".to_string(),
+                        default: Some("".to_string()),
+                        description: "The caption for the table".to_string(),
+                    }, ArgInfo {
+                        name: "label".to_string(),
+                        default: Some("".to_string()),
+                        description: "The label to use for the table, to be able to refer to it from the document".to_string(),
+                    }, ArgInfo {
                         name: "header".to_string(),
                         default: Some("none".to_string()),
                         description: "Style to apply to heading, none/bold".to_string(),
