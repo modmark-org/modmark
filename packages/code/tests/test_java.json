@@ -2,8 +2,8 @@
     "name": "code",
     "arguments": {
         "lang": "java",
-        "font_size": "16",
-        "tab_size": "4",
+        "font_size": 16,
+        "tab_size": 4,
         "theme": "mocha",
         "bg": "06080A"
     },

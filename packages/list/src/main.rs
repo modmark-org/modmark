@@ -29,7 +29,12 @@ fn manifest() {
                     "from": "list",
                     "to": ["html"],
                     "arguments": [
-                        {"name": "indent", "default": "4", "description": "Number of spaces needed for each level of indent when writing the list."}
+                        {
+                            "name": "indent",
+                            "default": 4,
+                            "description": "Number of spaces needed for each level of indent when writing the list.",
+                            "type": "unsigned_integer"
+                        }
                     ],
                 },
             ]
@@ -58,11 +63,7 @@ fn transform_list(to: &str) {
             };
 
             let body = input["data"].as_str().unwrap();
-            let indent = input["arguments"]["indent"]
-                .as_str()
-                .unwrap_or("4")
-                .parse()
-                .unwrap_or(4);
+            let indent = input["arguments"]["indent"].as_u64().unwrap_or(4);
 
             if let Ok(list) = List::from_str(body, indent) {
                 print!("{}", list.to_html())

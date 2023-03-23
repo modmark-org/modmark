@@ -182,7 +182,7 @@ impl List {
         json!(json_vec).to_string()
     }
 
-    pub fn from_str(s: &str, indent: u32) -> Result<Self, NoListError> {
+    pub fn from_str(s: &str, indent: u64) -> Result<Self, NoListError> {
         // If the first nonempty line is not a list item, return err
         s.lines()
             .find(|&l| !l.is_empty())

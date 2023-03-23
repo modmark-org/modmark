@@ -2,8 +2,8 @@
     "name": "code",
     "arguments": {
         "lang": "txt",
-        "font_size": "12",
-        "tab_size": "4",
+        "font_size": 12,
+        "tab_size": 4,
         "theme": "mocha",
         "bg": "default"
     },
