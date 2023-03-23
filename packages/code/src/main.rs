@@ -34,8 +34,8 @@ fn manifest() {
                     {"name": "lang", "default": "txt", "description":
                         "The language to be highlighted. For available languages, see \
                         https://github.com/sublimehq/Packages"},
-                    {"name": "font_size", "default": "12", "description": "The size of the font"},
-                    {"name": "tab_size", "default": "4", "description": "The size tabs will be adjusted to"},
+                    {"name": "font_size", "default": 12, "description": "The size of the font", "type": "uint"},
+                    {"name": "tab_size", "default": 4, "description": "The size tabs will be adjusted to", "type": "uint"},
                     {"name": "theme", "default": "mocha", "description":
                         "Theme of the code section. For available themes, see \
                         https://docs.rs/syntect/latest/syntect/highlighting/struct.ThemeSet.html#method.load_defaults"},
@@ -77,8 +77,8 @@ fn transform_code(to: &str) {
 
             let code = input["data"].as_str().unwrap();
             let lang = get_arg!(input, "lang");
-            let font_size = get_arg!(input, "font_size");
-            let tab_size = get_arg!(input, "tab_size");
+            let font_size = input["arguments"]["font_size"].as_u64().unwrap();
+            let tab_size = input["arguments"]["tab_size"].as_u64().unwrap();
             let theme = get_arg!(input, "theme");
             let bg = get_arg!(input, "bg");
 
@@ -102,8 +102,8 @@ fn transform_code(to: &str) {
 
 fn get_style(
     inline: &bool,
-    font_size: &String,
-    tab_size: &String,
+    font_size: u64,
+    tab_size: u64,
     bg: &String,
     default_bg: Option<Color>,
 ) -> String {
