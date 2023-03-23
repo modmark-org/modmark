@@ -8,7 +8,7 @@ use crossterm::{
     terminal, ExecutableCommand,
 };
 use notify::{Config, Event, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher, WatcherKind};
-use once_cell::sync::Lazy;
+use once_cell::sync::OnceCell;
 
 use error::CliError;
 use modmark_core::{context::CompilationState, OutputFormat};
@@ -32,6 +32,9 @@ struct Args {
     #[arg(short = 'f', long = "format", help = "The output format of the file")]
     format: Option<String>,
 
+    #[arg(short = 'r', long = "registry", help = "A URL to the registry to use")]
+    registry: Option<String>,
+
     #[arg(
         short = 'w',
         long = "watch",
@@ -43,8 +46,10 @@ struct Args {
     dev: bool,
 }
 
-static CTX: Lazy<Mutex<Context<PackageManager>>> =
-    Lazy::new(|| Mutex::new(Context::new_with_resolver(PackageManager {}).unwrap()));
+static DEFAULT_REGISTRY: &str =
+    "https://raw.githubusercontent.com/modmark-org/package-registry/main/package-registry.json";
+
+static CTX: OnceCell<Mutex<Context<PackageManager>>> = OnceCell::new();
 
 // Infer the output format based on the file extension of the output format
 fn infer_output_format(output: &Path) -> Option<OutputFormat> {
@@ -66,7 +71,7 @@ fn compile_file(args: &Args) -> Result<(Ast, CompilationState), CliError> {
         return Err(CliError::UnknownOutputFormat);
     };
 
-    let (output, state) = eval(&source, &mut CTX.lock().unwrap(), &format)?;
+    let (output, state) = eval(&source, &mut CTX.get().unwrap().lock().unwrap(), &format)?;
 
     let mut output_file = File::create(&args.output)?;
     output_file.write_all(output.as_bytes())?;
@@ -99,7 +104,7 @@ fn watch(args: &Args, target: &String) -> Result<(), CliError> {
                 stdout.execute(terminal::Clear(terminal::ClearType::All))?;
                 stdout.execute(cursor::MoveTo(0, 0))?;
                 stdout.execute(style::PrintStyledContent(
-                    format!("Compilation error:\n{}\n\n", error.to_string()).red(),
+                    format!("Compilation error:\n{}\n\n", error).red(),
                 ))?;
                 return Ok(());
             }
@@ -165,6 +170,15 @@ fn main() -> Result<(), CliError> {
     let args = Args::parse();
     let current_path = env::current_dir()?;
     let target = current_path.into_os_string().into_string().unwrap();
+    let registry = args
+        .registry
+        .as_deref()
+        .unwrap_or(DEFAULT_REGISTRY)
+        .to_string();
+    CTX.set(Mutex::new(
+        Context::new_with_resolver(PackageManager { registry }).unwrap(),
+    ))
+    .unwrap();
 
     if args.watch {
         watch(&args, &target)?;
