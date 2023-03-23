@@ -48,4 +48,7 @@ pub enum CliError {
 
     #[error("There are no free ports for the live preview to use")]
     NoFreePorts,
+
+    #[error("Second argument OUTPUT_FILE missing. You may only omit this when compiling to html and using the live preview.")]
+    MissingOutputFile,
 }
