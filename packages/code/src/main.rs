@@ -29,7 +29,7 @@ fn manifest() {
         "transforms": [
             {
                 "from": "code",
-                "to": ["html"],
+                "to": ["html", "latex"],
                 "arguments": [
                     {"name": "lang", "default": "txt", "description":
                         "The language to be highlighted. For available languages, see \
@@ -67,6 +67,19 @@ fn transform_code(to: &str) {
             }
         };
     }
+    let input: Value = {
+        let mut buffer = String::new();
+        io::stdin().read_to_string(&mut buffer).unwrap();
+        serde_json::from_str(&buffer).unwrap()
+    };
+
+    let code = input["data"].as_str().unwrap();
+    let lang = get_arg!(input, "lang");
+    let font_size = get_arg!(input, "font_size");
+    let tab_size = get_arg!(input, "tab_size");
+    let theme = get_arg!(input, "theme");
+    let bg = get_arg!(input, "bg");
+
     match to {
         "html" => {
             let input: Value = {
@@ -85,7 +98,7 @@ fn transform_code(to: &str) {
             let (highlighted, default_bg) = get_highlighted(code, lang, theme);
 
             if let Value::Bool(inline) = &input["inline"] {
-                let style = get_style(inline, font_size, tab_size, bg, default_bg);
+                let style = get_style_html(inline, font_size, tab_size, bg, default_bg);
                 let html = if *inline {
                     format!(r#"<code {style}>{highlighted}</code>"#)
                 } else {
@@ -94,13 +107,61 @@ fn transform_code(to: &str) {
                 print!("[{}]", json!({"name": "raw", "data": html}));
             }
         }
+        "latex" => {
+            let (highlighted, default_bg) = highlight_latex(code, lang, theme);
+            print!("[{}]", json!({"name": "raw", "data": highlighted}));
+        }
         other => {
             eprintln!("Cannot convert code to {other}");
         }
     }
 }
 
-fn get_style(
+fn highlight_latex(code: &str, lang: &String, tm: &str) -> (String, Option<Color>){
+    let ss = SyntaxSet::load_defaults_newlines();
+    let ts = ThemeSet::load_defaults();
+    let theme = match tm {
+        "ocean_dark" => &ts.themes["base16-ocean.dark"],
+        "ocean_light" => &ts.themes["base16-ocean.light"],
+        "mocha" => &ts.themes["base16-mocha.dark"],
+        "eighties" => &ts.themes["base16-eighties.dark"],
+        "github" => &ts.themes["InspiredGitHub"],
+        "solar_dark" => &ts.themes["Solarized (dark)"],
+        "solar_light" => &ts.themes["Solarized (light)"],
+        _ => &ts.themes["InspiredGitHub"],
+    };
+
+    if let Some(syntax) = ss.find_syntax_by_token(lang) {
+        let mut h = HighlightLines::new(syntax, theme);
+        let incl_bg = IncludeBackground::No;
+        let mut regions = Vec::new();
+        // avoiding lines() here because we want to include the final newline
+        for line in code.split('\n').map(|s| s.trim_end_matches('\r')) {
+            regions = h.highlight_line(line, &ss).unwrap();
+            
+        }
+        let (x, y): (Vec<_>, Vec<_>) = regions.into_iter().map(|(a, b)| (a, b)).unzip();
+        (y.join(r" "), theme.settings.background)
+    } else {
+        eprintln!("Invalid language: {lang}");
+        let html = code
+            .split('\n')
+            .map(|s| s.trim_end_matches('\r'))
+            .collect::<Vec<&str>>();
+        (
+            html.join("<br>"),
+            Some(Color {
+                r: 200,
+                g: 200,
+                b: 200,
+                a: 255,
+            }),
+        )
+    }
+}
+
+
+fn get_style_html(
     inline: &bool,
     font_size: u64,
     tab_size: u64,
@@ -126,7 +187,7 @@ fn get_style(
     style
 }
 
-fn get_highlighted(code: &str, lang: &String, tm: &str) -> (String, Option<Color>) {
+fn get_highlighted_html(code: &str, lang: &String, tm: &str) -> (String, Option<Color>) {
     let ss = SyntaxSet::load_defaults_newlines();
     let ts = ThemeSet::load_defaults();
     let theme = match tm {
