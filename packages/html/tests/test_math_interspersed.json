@@ -1,0 +1,33 @@
+{
+    "name": "__math",
+    "arguments": {},
+    "children": [
+        {
+            "name": "__text",
+            "data": "x^2",
+            "arguments": {},
+            "inline": true
+        },
+        {
+            "name": "code",
+            "data": "abc",
+            "arguments": {},
+            "inline": true
+        },
+        {
+            "name": "__text",
+            "data": " y^2",
+            "arguments": {},
+            "inline": true
+        }
+    ],
+    "__test_transform_to": "html",
+    "__test_expected_result": [
+        {
+            "name": "math",
+            "data": "x^2 y^2",
+            "arguments": {},
+            "inline": true
+        }
+    ]
+}
