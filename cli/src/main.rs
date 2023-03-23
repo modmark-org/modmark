@@ -92,10 +92,14 @@ impl Args {
 
     /// Check if a html live preview should be used
     fn use_html_preview(&self) -> bool {
-        // If no output file was provided we assume they want
-        // a html preview
+        // If no output file was provided and the output format is "html" (or left unspecified)
+        // we know that the user wants to use the live preview.
         if self.output.is_none() {
-            return true;
+            return self.format.is_none()
+                || self
+                    .get_output_format()
+                    .map(|format| format == OutputFormat::new("html"))
+                    .unwrap_or(false);
         }
 
         // When using the --watch flag and the output format is html
@@ -282,12 +286,16 @@ async fn main() -> Result<(), CliError> {
         return watch_files(None, None, &args, &current_path).await;
     }
 
-    // Otherwise, if they are using the watcher or live preview
-    // just compile the file once and save it.
-    print_compiling_message()?;
-    let compilation_result = compile_file(&args.input, &args.get_output_format()?);
-    save_result(&compilation_result, &args)?;
-    print_result(&compilation_result, &args)?;
+    // Otherwise, if they are not using the watcher or live preview
+    // just compile the file once, assuming that they actually provided a output file
+    if args.output.is_some() {
+        print_compiling_message()?;
+        let compilation_result = compile_file(&args.input, &args.get_output_format()?);
+        save_result(&compilation_result, &args)?;
+        print_result(&compilation_result, &args)?;
+    } else {
+        return Err(CliError::MissingOutputFile);
+    }
 
     Ok(())
 }
