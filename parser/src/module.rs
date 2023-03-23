@@ -2,7 +2,7 @@
 //! [parse_inline_module] and [parse_multiline_module], which parses inline modules and multiline
 //! modules respectively.
 use nom::branch::alt;
-use nom::bytes::complete::{tag, take, take_till, take_until, take_until1, take_while1};
+use nom::bytes::complete::{tag, take, take_till, take_until, take_while1};
 use nom::character::complete::{char, line_ending, multispace0, multispace1, space0, space1};
 use nom::combinator::{fail, flat_map, map, not, opt, peek, rest, verify};
 use nom::error::Error;
@@ -74,6 +74,7 @@ fn get_inline_body_parser<'a>(
 ///
 /// # Examples
 /// For the tag `eof`:
+///
 /// | Input                           | Match         |
 /// |---------------------------------|---------------|
 /// | `hello, world!eof`              |`hello, world!`|
@@ -442,8 +443,8 @@ fn arg_key_parser(input: &str) -> IResult<&str, &str> {
 ///
 fn arg_value_parser(input: &str) -> IResult<&str, &str> {
     alt((
-        delimited(char('"'), take_until1(r#"""#), char('"')),
-        take_while1(|c: char| c.is_ascii_alphanumeric() || c == '_'),
+        delimited(char('"'), take_until(r#"""#), char('"')),
+        take_while1(|c: char| !c.is_whitespace() && c != '=' && c != ']'),
     ))(input)
 }
 
