@@ -5,10 +5,13 @@ use crossterm::{
     terminal, ExecutableCommand,
 };
 use futures_util::{SinkExt, StreamExt, TryFutureExt};
-use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use notify_debouncer_mini::{
+    new_debouncer,
+    notify::{self, RecommendedWatcher, RecursiveMode},
+    DebounceEventResult, DebouncedEvent, Debouncer,
+};
 use once_cell::sync::{Lazy, OnceCell};
 use portpicker::Port;
-use regex::Regex;
 use std::{
     collections::HashMap,
     env,
@@ -19,6 +22,7 @@ use std::{
         atomic::{AtomicUsize, Ordering},
         Arc, Mutex,
     },
+    time::Duration,
 };
 use tokio::sync::{mpsc, RwLock};
 use tokio_stream::wrappers::UnboundedReceiverStream;
@@ -113,7 +117,6 @@ static DEFAULT_REGISTRY: &str =
 static CTX: OnceCell<Mutex<Context<PackageManager>>> = OnceCell::new();
 static PREVIEW_PORT: OnceCell<Option<Port>> = OnceCell::new();
 static ABSOLUTE_OUTPUT_PATH: OnceCell<PathBuf> = OnceCell::new();
-static RE_INJECTION: Lazy<Regex> = Lazy::new(|| Regex::new("</body>").unwrap());
 static CONNECTION_ID_COUNTER: AtomicUsize = AtomicUsize::new(1);
 
 type PreviewConnections = Arc<RwLock<HashMap<usize, mpsc::UnboundedSender<Message>>>>;
@@ -170,7 +173,7 @@ fn print_result(result: &CompilationResult, args: &Args) -> Result<(), CliError>
         println!("Live preview available at: http://localhost:{port}");
     }
 
-    println!("");
+    println!();
 
     if !state.warnings.is_empty() {
         stdout.execute(style::PrintStyledContent("Warnings:\n".yellow()))?;
@@ -248,29 +251,26 @@ async fn main() -> Result<(), CliError> {
         let document = PreviewDoc::default();
         let port = get_port()?;
 
-        let run_preview_server = || async {
-            let routes =
-                get_server_config(document.clone(), connections.clone(), current_path.clone());
-            warp::serve(routes).run(([127, 0, 0, 1], port)).await
-        };
-
-        let watch_dir = || async {
-            watch_files(
-                Some(document.clone()),
-                Some(connections.clone()),
-                &args,
-                &current_path,
-            )
-            .await
-        };
-
         println!("started server and watching dir {current_path:?}");
 
-        // TODO LATER: Investigate the performance penality of joining the server with the compiler like this
-        // in comparison to using tokio::task::spawn to create a seperate thread.
-        let (_, watch_result) = tokio::join!(run_preview_server(), watch_dir());
+        // Spawn a seperate task for the preview server
+        {
+            let doc = document.clone();
+            let conn = connections.clone();
+            let path = current_path.clone();
+            tokio::task::spawn(async move {
+                let routes = get_server_config(doc, conn, path);
+                warp::serve(routes).run(([127, 0, 0, 1], port)).await
+            });
+        }
 
-        watch_result?; // Propagate errors from the watcher and compiler
+        watch_files(
+            Some(document.clone()),
+            Some(connections.clone()),
+            &args,
+            &current_path,
+        )
+        .await?;
 
         return Ok(());
     }
@@ -295,7 +295,7 @@ async fn main() -> Result<(), CliError> {
 /// Choose a free port for hosting the html live preview
 fn get_port() -> Result<u16, CliError> {
     PREVIEW_PORT
-        .get_or_init(|| portpicker::pick_unused_port())
+        .get_or_init(portpicker::pick_unused_port)
         .ok_or(CliError::NoFreePorts)
 }
 
@@ -309,15 +309,15 @@ fn get_server_config(
 
     let websocket = warp::path("ws").and(warp::ws()).and(connections).map(
         |ws: warp::ws::Ws, connections: PreviewConnections| {
-            ws.on_upgrade(move |socket| handle_connection(socket, connections.clone()))
+            ws.on_upgrade(move |socket| handle_connection(socket, connections))
         },
     );
 
     let preview = warp::path::end().and(document).map(|document: PreviewDoc| {
         // Inject a JS script after the end of the </body> tg
         let html = document.lock().unwrap();
-        let modified_html = RE_INJECTION.replace(
-            &html,
+        let modified_html = html.replace(
+            "</body>",
             concat!("</body>\n", include_str!("./preview_injection.html")),
         );
         warp::reply::html(modified_html.to_string())
@@ -325,13 +325,11 @@ fn get_server_config(
 
     let working_directory = warp::fs::dir(current_path);
 
-    let routes = working_directory.or(websocket).or(preview);
-
-    routes
+    working_directory.or(websocket).or(preview)
 }
 
 async fn handle_connection(socket: WebSocket, connections: PreviewConnections) {
-    // Transmitter and reciever for the websocket
+    // Transmitter and receiver for the websocket
     let (mut ws_tx, mut ws_rx) = socket.split();
 
     // Transmitter and receiver for communication with the rest of the program
@@ -339,7 +337,7 @@ async fn handle_connection(socket: WebSocket, connections: PreviewConnections) {
     let mut rx = UnboundedReceiverStream::new(rx);
 
     // Get a id and add this connection to HashMap of all connections
-    let id = CONNECTION_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let id = CONNECTION_ID_COUNTER.fetch_add(1, Ordering::Acquire);
     connections.write().await.insert(id, tx);
 
     // Relay any message to the websocket connection
@@ -419,28 +417,25 @@ async fn watch_files<P: AsRef<Path>>(
     // Trigger a first compilation
     compile(document.as_ref(), connections.as_ref(), args).await?;
 
-    let (mut watcher, mut rx) = get_watcher()?;
+    let (mut debounce_watcher, mut rx) = get_debounce_watcher()?;
 
     // Add a path to be watched. All files and directories at that path and
     // below will be monitored for changes.
-    watcher.watch(watch_dir.as_ref(), RecursiveMode::Recursive)?;
+    debounce_watcher
+        .watcher()
+        .watch(watch_dir.as_ref(), RecursiveMode::Recursive)?;
 
     while let Some(res) = rx.next().await {
         match res {
-            Ok(event) => {
+            Ok(events) => {
                 // If we also generate a output file, discard any changes from that file
                 if let Some(output_path) = ABSOLUTE_OUTPUT_PATH.get() {
-                    if event.paths.contains(output_path) {
+                    if events.iter().any(|event| event.path == *output_path) {
                         continue;
                     }
                 }
 
-                // We only care about changes from when files are created, removed or modified
-                if let EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) =
-                    event.kind
-                {
-                    compile(document.as_ref(), connections.as_ref(), args).await?;
-                }
+                compile(document.as_ref(), connections.as_ref(), args).await?;
             }
             Err(e) => eprintln!("watch error: {:?}", e),
         }
@@ -449,19 +444,23 @@ async fn watch_files<P: AsRef<Path>>(
     Ok(())
 }
 
-/// Get the file watcher using a async api
-fn get_watcher() -> notify::Result<(
-    RecommendedWatcher,
-    UnboundedReceiverStream<notify::Result<Event>>,
-)> {
+/// Get a debouncing file watcher using a async api
+fn get_debounce_watcher() -> Result<
+    (
+        Debouncer<RecommendedWatcher>,
+        UnboundedReceiverStream<Result<Vec<DebouncedEvent>, Vec<notify::Error>>>,
+    ),
+    notify::Error,
+> {
     let (tx, rx) = mpsc::unbounded_channel();
     let rx = UnboundedReceiverStream::new(rx);
 
-    let watcher = RecommendedWatcher::new(
-        move |res| {
+    let watcher = new_debouncer(
+        Duration::from_millis(50),
+        None,
+        move |res: DebounceEventResult| {
             tx.send(res).unwrap();
         },
-        Config::default(),
     )?;
 
     Ok((watcher, rx))
