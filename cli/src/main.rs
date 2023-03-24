@@ -10,7 +10,7 @@ use notify_debouncer_mini::{
     notify::{self, RecommendedWatcher, RecursiveMode},
     DebounceEventResult, DebouncedEvent, Debouncer,
 };
-use once_cell::sync::{Lazy, OnceCell};
+use once_cell::sync::OnceCell;
 use portpicker::Port;
 use std::{
     collections::HashMap,
@@ -84,8 +84,7 @@ impl Args {
         } else {
             self.output
                 .as_ref()
-                .map(infer_output_format)
-                .flatten()
+                .and_then(infer_output_format)
                 .ok_or_else(|| CliError::UnknownOutputFormat)
         }
     }
@@ -140,7 +139,7 @@ fn compile_file(input_file: &Path, output_format: &OutputFormat) -> CompilationR
     let (output, state) = eval(
         &source,
         &mut CTX.get().unwrap().lock().unwrap(),
-        &output_format,
+        output_format,
     )?;
 
     Ok((output, state, ast))
@@ -164,7 +163,7 @@ fn print_result(result: &CompilationResult, args: &Args) -> Result<(), CliError>
             stdout.execute(terminal::Clear(terminal::ClearType::All))?;
             stdout.execute(cursor::MoveTo(0, 0))?;
             stdout.execute(style::PrintStyledContent(
-                format!("Compilation error:\n{}\n\n", error.to_string()).red(),
+                format!("Compilation error:\n{error}\n\n").red(),
             ))?;
             return Ok(());
         }
@@ -346,7 +345,7 @@ fn get_server_config(
             "</body>",
             concat!("</body>\n", include_str!("./preview_injection.html")),
         );
-        warp::reply::html(modified_html.to_string())
+        warp::reply::html(modified_html)
     });
 
     let working_directory = warp::fs::dir(current_path);
@@ -372,7 +371,7 @@ async fn handle_connection(socket: WebSocket, connections: PreviewConnections) {
             ws_tx
                 .send(message)
                 .unwrap_or_else(|e| {
-                    eprintln!("Websocket send error: {}", e);
+                    eprintln!("Websocket send error: {e}");
                 })
                 .await;
         }
@@ -385,7 +384,7 @@ async fn handle_connection(socket: WebSocket, connections: PreviewConnections) {
         match result {
             Ok(_) => (),
             Err(e) => {
-                eprintln!("websocket error: {}", e);
+                eprintln!("websocket error: {e}");
                 break;
             }
         };
@@ -418,10 +417,10 @@ async fn watch_files<P: AsRef<Path>>(
         );
 
         // Write to the output file (if there was one)
-        save_result(&compilation_result, &args)?;
+        save_result(&compilation_result, args)?;
 
         // Print the result to the terminal
-        print_result(&compilation_result, &args)?;
+        print_result(&compilation_result, args)?;
 
         // Also save the result to the live preview document
         if let Some(document) = &document {
@@ -463,7 +462,7 @@ async fn watch_files<P: AsRef<Path>>(
 
                 compile(document.as_ref(), connections.as_ref(), args).await?;
             }
-            Err(e) => eprintln!("watch error: {:?}", e),
+            Err(e) => eprintln!("watch error: {e:?}"),
         }
     }
 
