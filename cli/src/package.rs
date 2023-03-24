@@ -1,23 +1,14 @@
+use crate::error::CliError;
+use directories::ProjectDirs;
+use futures::{executor::block_on, future::join_all};
+use modmark_core::Resolve;
+use serde_json;
 use std::{
     env::current_dir,
     fs::{self, create_dir_all, File},
     io::copy,
     path::PathBuf,
 };
-
-use directories::ProjectDirs;
-use futures::future::join_all;
-
-use modmark_core::Resolve;
-
-use crate::error::CliError;
-
-static RUNTIME: once_cell::sync::Lazy<tokio::runtime::Runtime> = once_cell::sync::Lazy::new(|| {
-    tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .unwrap()
-});
 
 pub struct PackageManager {
     pub(crate) registry: String,
@@ -26,10 +17,14 @@ pub struct PackageManager {
 impl Resolve for PackageManager {
     type Error = CliError;
     fn resolve(&self, path: &str) -> Result<Vec<u8>, Self::Error> {
-        RUNTIME.block_on(self.resolve_package(path))
+        // Hmm, it does not seem like the best idea to block the thread like this
+        // but it should work good enough for our needs
+        // https://github.com/tokio-rs/tokio/issues/2289
+        tokio::task::block_in_place(move || block_on(async { self.resolve_package(path).await }))
     }
+
     fn resolve_all(&self, paths: &[&str]) -> Vec<Result<Vec<u8>, Self::Error>> {
-        RUNTIME.block_on(self.resolve_packages(paths))
+        tokio::task::block_in_place(move || block_on(async { self.resolve_packages(paths).await }))
     }
 }
 
