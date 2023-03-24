@@ -92,6 +92,11 @@ impl Args {
 
     /// Check if a html live preview should be used
     fn use_html_preview(&self) -> bool {
+        // Check if there is a free port
+        if get_port().is_err() {
+            return false;
+        }
+
         // If no output file was provided and the output format is "html" (or left unspecified)
         // we know that the user wants to use the live preview.
         if self.output.is_none() {
