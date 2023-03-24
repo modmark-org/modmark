@@ -233,8 +233,21 @@ fn save_result(result: &CompilationResult, args: &Args) -> Result<(), CliError> 
 }
 
 #[tokio::main]
-async fn main() -> Result<(), CliError> {
+async fn main() {
     let args = Args::parse();
+
+    match run_cli(args).await {
+        Ok(_) => (),
+        Err(error) => {
+            let mut stdout = stdout();
+            stdout
+                .execute(style::PrintStyledContent(format!("{error}").red()))
+                .unwrap();
+        }
+    }
+}
+
+async fn run_cli(args: Args) -> Result<(), CliError> {
     let current_path = env::current_dir()?;
 
     let registry = args
