@@ -51,7 +51,7 @@ macro_rules! define_native_packages {
             package_name: &str,
             node_name: &str, // name of module or parent
             element: &Element,
-            args: HashMap<String, Value>,
+            args: HashMap<String, ArgValue>,
             output_format: &OutputFormat
         ) -> Result<Either<Element, String>, CoreError> {
             match package_name {

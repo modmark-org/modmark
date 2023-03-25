@@ -74,8 +74,14 @@ pub enum CoreError {
     UnexpectedConfigModule,
     #[error("Invalid data type: expected {0} but got '{1}'")]
     ArgumentType(&'static str, String),
-    #[error("Invalid data type for default argument '{0}' for transform '{1}' in package '{2}', expected type '{3}' but got the value '{4}'")]
-    DefaultArgumentType(String, String, String, String, String),
+    #[error("Invalid data type for default argument '{argument_name}' for transform '{transform}' in package '{package}', expected type '{expected_type}' but got the value '{given_value}'")]
+    DefaultArgumentType {
+        argument_name: String,
+        transform: String,
+        package: String,
+        expected_type: String,
+        given_value: String,
+    },
 }
 
 impl From<WasiError> for CoreError {

@@ -1,8 +1,6 @@
-use std::collections::HashMap;
 use std::{io::Read, sync::Arc};
 
-use serde::{Deserialize, Serialize, Serializer};
-use serde_json::value::Serializer as JsonSerializer;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 #[cfg(feature = "native")]
 use wasmer::Engine;
@@ -30,12 +28,45 @@ pub struct ArgInfo {
     pub r#type: ArgType,
 }
 
+impl ArgInfo {
+    fn verify_default(&self) -> bool {
+        self.default
+            .as_ref()
+            .map(|d| self.r#type.can_be_parsed_from(d))
+            .unwrap_or(true)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct PackageInfo {
     pub name: String,
     pub version: String,
     pub description: String,
     pub transforms: Vec<Transform>,
+}
+
+impl PackageInfo {
+    fn verify(&self) -> Result<(), CoreError> {
+        // Ensure all default values have the correct type
+        for transform in &self.transforms {
+            for argument in &transform.arguments {
+                if !argument.verify_default() {
+                    return Err(CoreError::DefaultArgumentType {
+                        argument_name: argument.name.to_string(),
+                        transform: transform.from.to_string(),
+                        package: self.name.to_string(),
+                        expected_type: serde_json::to_string(&argument.r#type).unwrap(),
+                        given_value: argument
+                            .default
+                            .as_ref()
+                            .map(ToString::to_string)
+                            .unwrap_or_default(),
+                    });
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -72,7 +103,7 @@ fn default_arg_type() -> ArgType {
 }
 
 impl ArgType {
-    pub(crate) fn is_same_type(&self, value: &Value) -> bool {
+    pub(crate) fn can_be_parsed_from(&self, value: &Value) -> bool {
         match self {
             ArgType::String => value.is_string(),
             ArgType::Integer => value.is_i64(),
@@ -81,28 +112,158 @@ impl ArgType {
         }
     }
 
-    pub(crate) fn try_to_value(&self, value: &str) -> Result<Value, CoreError> {
+    pub(crate) fn is_same_type(&self, value: &ArgValue) -> bool {
+        self == &value.get_type()
+    }
+
+    pub(crate) fn try_from_value(&self, value: &Value) -> Result<ArgValue, CoreError> {
         match self {
-            ArgType::String => Ok(JsonSerializer.serialize_str(value)?),
+            ArgType::String => value
+                .as_str()
+                .map(|s| ArgValue::String(s.to_string()))
+                .ok_or(CoreError::ArgumentType("string", value.to_string())),
+            ArgType::Integer => value
+                .as_i64()
+                .map(ArgValue::Integer)
+                .ok_or(CoreError::ArgumentType("integer", value.to_string())),
+            ArgType::UnsignedInteger => {
+                value
+                    .as_u64()
+                    .map(ArgValue::UnsignedInteger)
+                    .ok_or(CoreError::ArgumentType(
+                        "unsigned integer",
+                        value.to_string(),
+                    ))
+            }
+            ArgType::Float => value
+                .as_f64()
+                .map(ArgValue::Float)
+                .ok_or(CoreError::ArgumentType("float", value.to_string())),
+        }
+    }
+
+    pub(crate) fn try_from_str(&self, value: &str) -> Result<ArgValue, CoreError> {
+        match self {
+            ArgType::String => Ok(ArgValue::String(value.to_string())),
             ArgType::Integer => {
                 let integer = value
                     .parse::<i64>()
                     .map_err(|_| CoreError::ArgumentType("integer", value.to_string()))?;
-                Ok(JsonSerializer.serialize_i64(integer)?)
+                Ok(ArgValue::Integer(integer))
             }
             ArgType::UnsignedInteger => {
                 let integer = value
                     .parse::<u64>()
                     .map_err(|_| CoreError::ArgumentType("unsigned integer", value.to_string()))?;
-                Ok(JsonSerializer.serialize_u64(integer)?)
+                Ok(ArgValue::UnsignedInteger(integer))
             }
             ArgType::Float => {
                 let float = value
                     .parse::<f64>()
                     .map_err(|_| CoreError::ArgumentType("float", value.to_string()))?;
-                Ok(JsonSerializer.serialize_f64(float)?)
+                Ok(ArgValue::Float(float))
             }
         }
+    }
+}
+
+// Note: do NOT deserialize this since we can impossibly know what data type the JSON should be in,
+// and there is a possible loss of information when deserializing
+#[derive(Clone, Debug, PartialEq)]
+pub enum ArgValue {
+    String(String),
+    Integer(i64),
+    UnsignedInteger(u64),
+    Float(f64),
+}
+
+impl From<ArgValue> for Value {
+    fn from(value: ArgValue) -> Self {
+        match value {
+            ArgValue::String(s) => Value::from(s),
+            ArgValue::Integer(i) => Value::from(i),
+            ArgValue::UnsignedInteger(ui) => Value::from(ui),
+            ArgValue::Float(f) => Value::from(f),
+        }
+    }
+}
+
+// We implement Into<String> since we want to consume the value
+impl From<ArgValue> for String {
+    fn from(value: ArgValue) -> Self {
+        match value {
+            ArgValue::String(s) => s,
+            ArgValue::Integer(i) => format!("{i}"),
+            ArgValue::UnsignedInteger(ui) => format!("{ui}"),
+            ArgValue::Float(f) => format!("{f}"),
+        }
+    }
+}
+
+impl ArgValue {
+    pub fn get_type(&self) -> ArgType {
+        match &self {
+            ArgValue::String(_) => ArgType::String,
+            ArgValue::Integer(_) => ArgType::Integer,
+            ArgValue::UnsignedInteger(_) => ArgType::UnsignedInteger,
+            ArgValue::Float(_) => ArgType::Float,
+        }
+    }
+
+    pub fn as_string(&self) -> Option<&str> {
+        if let ArgValue::String(s) = &self {
+            Some(s)
+        } else {
+            None
+        }
+    }
+
+    pub fn get_string(self) -> Option<String> {
+        if let ArgValue::String(s) = self {
+            Some(s)
+        } else {
+            None
+        }
+    }
+
+    pub fn unwrap_string(self) -> String {
+        self.get_string().unwrap()
+    }
+
+    pub fn get_integer(self) -> Option<i64> {
+        if let ArgValue::Integer(i) = self {
+            Some(i)
+        } else {
+            None
+        }
+    }
+
+    pub fn unwrap_integer(self) -> i64 {
+        self.get_integer().unwrap()
+    }
+
+    pub fn get_unsigned_integer(self) -> Option<u64> {
+        if let ArgValue::UnsignedInteger(i) = self {
+            Some(i)
+        } else {
+            None
+        }
+    }
+
+    pub fn unwrap_unsigned_integer(self) -> u64 {
+        self.get_unsigned_integer().unwrap()
+    }
+
+    pub fn get_float(self) -> Option<f64> {
+        if let ArgValue::Float(f) = self {
+            Some(f)
+        } else {
+            None
+        }
+    }
+
+    pub fn unwrap_float(self) -> f64 {
+        self.get_float().unwrap()
     }
 }
 
@@ -207,22 +368,8 @@ impl Package {
             })
         }?;
 
-        // Ensure all default values have the correct type
-        for transform in &manifest.transforms {
-            for argument in &transform.arguments {
-                if let Some(default) = argument.default.as_ref() {
-                    if !argument.r#type.is_same_type(default) {
-                        return Err(CoreError::DefaultArgumentType(
-                            argument.name.to_string(),
-                            transform.from.to_string(),
-                            manifest.name.to_string(),
-                            serde_json::to_string(&argument.r#type).unwrap(),
-                            default.clone().to_rust_string(),
-                        ));
-                    }
-                }
-            }
-        }
+        // Verify that the manifest is valid
+        manifest.verify()?;
 
         Ok(manifest)
     }
@@ -232,30 +379,5 @@ impl Package {
             info: Arc::new(info),
             implementation: Native,
         })
-    }
-}
-
-pub(crate) trait ValueExt {
-    fn to_rust_string(self) -> String;
-}
-
-impl ValueExt for Value {
-    fn to_rust_string(self) -> String {
-        match self {
-            Value::String(s) => s,
-            x => x.to_string(),
-        }
-    }
-}
-
-pub(crate) trait HashMapExt {
-    fn map_map(self) -> HashMap<String, String>;
-}
-
-impl HashMapExt for HashMap<String, Value> {
-    fn map_map(mut self) -> HashMap<String, String> {
-        self.drain()
-            .map(|(k, v)| (k, ValueExt::to_rust_string(v)))
-            .collect()
     }
 }

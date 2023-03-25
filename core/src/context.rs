@@ -21,7 +21,7 @@ use wasmer_wasi::{Pipe, WasiState};
 use parser::config::{Config, HideConfig, ImportConfig};
 use parser::ModuleArguments;
 
-use crate::package::{HashMapExt, PackageImplementation};
+use crate::package::{ArgValue, PackageImplementation};
 use crate::{std_packages, DenyAllResolver, Element, Resolve};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
 
@@ -696,6 +696,21 @@ impl<T> Context<T> {
 
     /// Convert a `JsonEntry` to an `Element`
     fn entry_to_element(entry: JsonEntry) -> Element {
+        let type_erase = |mut map: HashMap<String, Value>| {
+            map.drain()
+                .map(|(k, v)| {
+                    (
+                        k,
+                        if let Value::String(s) = v {
+                            s
+                        } else {
+                            v.to_string()
+                        },
+                    )
+                })
+                .collect::<HashMap<String, String>>()
+        };
+
         match entry {
             JsonEntry::ParentNode {
                 name,
@@ -703,7 +718,7 @@ impl<T> Context<T> {
                 children,
             } => Element::Parent {
                 name,
-                args: arguments.map_map(),
+                args: type_erase(arguments),
                 children: children.into_iter().map(Self::entry_to_element).collect(),
             },
             JsonEntry::Module {
@@ -715,7 +730,7 @@ impl<T> Context<T> {
                 name,
                 args: ModuleArguments {
                     positioned: None,
-                    named: Some(arguments.map_map()),
+                    named: Some(type_erase(arguments)),
                 },
                 body: data,
                 inline,
@@ -743,11 +758,13 @@ impl<T> Context<T> {
                     .map(|child| self.element_to_entry(child, output_format))
                     .collect();
 
-                let collected_args = self.collect_parent_arguments(args, name, output_format)?;
+                let mut collected_args =
+                    self.collect_parent_arguments(args, name, output_format)?;
+                let type_erased_args = collected_args.drain().map(|(k, v)| (k, v.into())).collect();
 
                 Ok(JsonEntry::ParentNode {
                     name: name.clone(),
-                    arguments: collected_args,
+                    arguments: type_erased_args,
                     children: converted_children?,
                 })
             }
@@ -757,12 +774,13 @@ impl<T> Context<T> {
                 body,
                 inline: one_line,
             } => {
-                let collected_args =
+                let mut collected_args =
                     self.collect_module_arguments(args, module_name, output_format)?;
+                let type_erased_args = collected_args.drain().map(|(k, v)| (k, v.into())).collect();
 
                 Ok(JsonEntry::Module {
                     name: module_name.clone(),
-                    arguments: collected_args,
+                    arguments: type_erased_args,
                     data: body.clone(),
                     inline: *one_line,
                 })
@@ -791,7 +809,7 @@ impl<T> Context<T> {
         args: &HashMap<String, String>,
         parent_name: &str,
         output_format: &OutputFormat,
-    ) -> Result<HashMap<String, Value>, CoreError> {
+    ) -> Result<HashMap<String, ArgValue>, CoreError> {
         // Collect the arguments and add default values for unspecified arguments
         let mut collected_args = HashMap::new();
         let mut given_args = args.clone();
@@ -808,13 +826,13 @@ impl<T> Context<T> {
             } = arg_info;
 
             if let Some(value) = given_args.remove(name) {
-                let value = r#type.try_to_value(&value)?;
+                let value = r#type.try_from_str(&value)?;
                 collected_args.insert(name.clone(), value);
                 continue;
             }
 
             if let Some(value) = default {
-                collected_args.insert(name.clone(), value.clone());
+                collected_args.insert(name.clone(), r#type.try_from_value(value)?);
             }
 
             return Err(CoreError::MissingArgument(
@@ -836,7 +854,7 @@ impl<T> Context<T> {
         args: &ModuleArguments,
         module_name: &str,
         output_format: &OutputFormat,
-    ) -> Result<HashMap<String, Value>, CoreError> {
+    ) -> Result<HashMap<String, ArgValue>, CoreError> {
         let empty_vec = vec![];
         let mut pos_args = args.positioned.as_ref().unwrap_or(&empty_vec).iter();
         let mut named_args = args.named.clone().unwrap_or_default();
@@ -862,21 +880,21 @@ impl<T> Context<T> {
                         module_name.to_string(),
                     ));
                 }
-                let value = r#type.try_to_value(value)?;
+                let value = r#type.try_from_str(value)?;
                 collected_args.insert(name.to_string(), value);
                 continue;
             }
 
             // Check if it was specified as a named key=value pair
             if let Some(value) = named_args.remove(name) {
-                let value = r#type.try_to_value(&value)?;
+                let value = r#type.try_from_str(&value)?;
                 collected_args.insert(name.to_string(), value);
                 continue;
             }
 
             // Use the default value as a fallback
             if let Some(value) = default {
-                collected_args.insert(name.to_string(), value.clone());
+                collected_args.insert(name.to_string(), r#type.try_from_value(value)?);
                 continue;
             }
 
