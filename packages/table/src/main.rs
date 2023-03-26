@@ -50,11 +50,11 @@ fn manifest() {
                     "arguments": [
                         {"name": "caption", "default": "", "description": "The caption for the table"},
                         {"name": "label", "default":"", "description": "The label to use for the table, to be able to refer to it from the document"},
-                        {"name": "header", "default": "none", "description": "Style to apply to heading, none/bold"},
+                        {"name": "header", "default": "none", "type": ["none", "bold"], "description": "Style to apply to heading, none/bold"},
                         {"name": "alignment", "default": "left", "description": "Horizontal alignment in cells, left/center/right or l/c/r for each column"},
-                        {"name": "borders", "default": "all", "description": "Which borders to draw, all/horizontal/vertical/outer/none"},
+                        {"name": "borders", "default": "all", "type": ["all", "horizontal", "vertical", "outer", "none"], "description": "Which borders to draw"},
                         {"name": "delimiter", "default": "|", "description": "The delimiter between cells"},
-                        {"name": "strip_whitespace", "default": "true", "description": "true/false to strip/don't strip whitespace in cells"}
+                        {"name": "strip_whitespace", "default": "true", "type": ["true", "false"], "description": "true/false to strip/don't strip whitespace in cells"}
                     ],
                 }
             ]

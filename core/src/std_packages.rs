@@ -6,7 +6,7 @@ use serde_json::Value;
 use parser::ModuleArguments;
 
 use crate::context::Issue;
-use crate::package::{ArgType, ArgValue};
+use crate::package::{ArgValue, PrimitiveArgType};
 use crate::std_packages_macros::{define_native_packages, define_standard_package_loader};
 use crate::{ArgInfo, Context, CoreError, Element, OutputFormat, PackageInfo, Transform};
 
@@ -36,19 +36,19 @@ define_native_packages! {
                 name: "source".to_string(),
                 default: Some(Value::String("<unknown>".to_string())),
                 description: "The source module/parent responsible for the warning".to_string(),
-                r#type: ArgType::String
+                r#type: PrimitiveArgType::String.into()
             },
             ArgInfo {
                 name: "target".to_string(),
                 default: Some(Value::String("<unknown>".to_string())),
                 description: "The target output format when the warning was generated".to_string(),
-                r#type: ArgType::String
+                r#type: PrimitiveArgType::String.into()
             },
             ArgInfo {
                 name: "input".to_string(),
                 default: Some(Value::String("<unknown>".to_string())),
                 description: "The input given to the module when it failed".to_string(),
-                r#type: ArgType::String
+                r#type: PrimitiveArgType::String.into()
             },
         ] => native_warn,
         "error", vec![
@@ -56,19 +56,19 @@ define_native_packages! {
                 name: "source".to_string(),
                 default: Some(Value::String("<unknown>".to_string())),
                 description: "The source module/parent responsible for the error".to_string(),
-                r#type: ArgType::String
+                r#type: PrimitiveArgType::String.into()
             },
             ArgInfo {
                 name: "target".to_string(),
                 default: Some(Value::String("<unknown>".to_string())),
                 description: "The target output format when the error was generated".to_string(),
-                r#type: ArgType::String
+                r#type: PrimitiveArgType::String.into()
             },
             ArgInfo {
                 name: "input".to_string(),
                 default: Some(Value::String("<unknown>".to_string())),
                 description: "The input given to the module when it failed".to_string(),
-                r#type: ArgType::String
+                r#type: PrimitiveArgType::String.into()
             },
         ] => native_err
     };
@@ -82,7 +82,7 @@ define_native_packages! {
                 name: "key".to_string(),
                 default: None,
                 description: "The key to set".to_string(),
-                r#type: ArgType::String
+                r#type: PrimitiveArgType::String.into()
             }
         ] => native_set_env,
     };

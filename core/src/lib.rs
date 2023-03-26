@@ -180,7 +180,7 @@ pub fn eval_elem<T>(
 mod tests {
     use serde_json::Value;
 
-    use crate::package::ArgType;
+    use crate::package::{ArgType, PrimitiveArgType};
 
     use super::*;
 
@@ -202,37 +202,37 @@ mod tests {
                         name: "caption".to_string(),
                         default: Some(Value::String("".to_string())),
                         description: "The caption for the table".to_string(),
-                        r#type: ArgType::String
+                        r#type: PrimitiveArgType::String.into()
                     }, ArgInfo {
                         name: "label".to_string(),
                         default: Some(Value::String("".to_string())),
                         description: "The label to use for the table, to be able to refer to it from the document".to_string(),
-                        r#type: ArgType::String
+                        r#type: PrimitiveArgType::String.into()
                     }, ArgInfo {
                         name: "header".to_string(),
                         default: Some(Value::String("none".to_string())),
                         description: "Style to apply to heading, none/bold".to_string(),
-                        r#type: ArgType::String
+                        r#type: ArgType::Enum(vec!["none".to_string(), "bold".to_string()])
                     }, ArgInfo {
                         name: "alignment".to_string(),
                         default: Some(Value::String("left".to_string())),
                         description: "Horizontal alignment in cells, left/center/right or l/c/r for each column".to_string(),
-                        r#type: ArgType::String
+                        r#type: PrimitiveArgType::String.into()
                     }, ArgInfo {
                         name: "borders".to_string(),
                         default: Some(Value::String("all".to_string())),
-                        description: "Which borders to draw, all/horizontal/vertical/outer/none".to_string(),
-                        r#type: ArgType::String
+                        description: "Which borders to draw".to_string(),
+                        r#type: ArgType::Enum(vec!["all".to_string(), "horizontal".to_string(), "vertical".to_string(), "outer".to_string(), "none".to_string()])
                     }, ArgInfo {
                         name: "delimiter".to_string(),
                         default: Some(Value::String("|".to_string())),
                         description: "The delimiter between cells".to_string(),
-                        r#type: ArgType::String
+                        r#type: PrimitiveArgType::String.into()
                     }, ArgInfo {
                         name: "strip_whitespace".to_string(),
                         default: Some(Value::String("true".to_string())),
                         description: "true/false to strip/don't strip whitespace in cells".to_string(),
-                        r#type: ArgType::String
+                        r#type: ArgType::Enum(vec!["true".to_string(), "false".to_string()])
                     },
                 ],
             }],

@@ -41,6 +41,7 @@ fn manifest() {
                         {
                             "name": "import",
                             "default": "false",
+                            "type": ["true", "false"],
                             "description": r#"If set to "true", a Mathjax import will be added to HTML outputs for maximum compatibility"#
                         }
                     ],

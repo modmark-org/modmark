@@ -291,7 +291,7 @@ fn check_transform(transform: &Transform) {
         transform.arguments.iter().all(|arg| arg
             .default
             .as_ref()
-            .map(|d| arg.r#type.is_same_type(d))
+            .map(|d| arg.r#type.can_be_parsed_from(d))
             .unwrap_or(true)),
         "Argument default values should be of the same type as the specified type"
     )
@@ -323,28 +323,57 @@ pub struct ArgInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
 pub enum ArgType {
+    Enum(Vec<String>),
+    Primitive(PrimitiveArgType),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum PrimitiveArgType {
     #[serde(alias = "string")]
     String,
     #[serde(alias = "int", alias = "integer", alias = "i64")]
     Integer,
-    #[serde(alias = "uint", alias = "unsigned_integer", alias = "u64")]
+    #[serde(
+        rename = "Unsigned integer",
+        alias = "uint",
+        alias = "unsigned_integer",
+        alias = "u64"
+    )]
     UnsignedInteger,
     #[serde(alias = "float", alias = "number", alias = "f64")]
     Float,
 }
 
 fn default_arg_type() -> ArgType {
-    ArgType::String
+    ArgType::Primitive(PrimitiveArgType::String)
+}
+
+impl From<PrimitiveArgType> for ArgType {
+    fn from(value: PrimitiveArgType) -> Self {
+        Self::Primitive(value)
+    }
 }
 
 impl ArgType {
-    pub(crate) fn is_same_type(&self, value: &Value) -> bool {
+    pub(crate) fn can_be_parsed_from(&self, value: &Value) -> bool {
+        match &self {
+            ArgType::Enum(vs) => value
+                .as_str()
+                .map_or(false, |x| vs.contains(&x.to_string())),
+            ArgType::Primitive(t) => t.can_be_parsed_from(value),
+        }
+    }
+}
+
+impl PrimitiveArgType {
+    pub(crate) fn can_be_parsed_from(&self, value: &Value) -> bool {
         match self {
-            ArgType::String => value.is_string(),
-            ArgType::Integer => value.is_i64(),
-            ArgType::UnsignedInteger => value.is_u64(),
-            ArgType::Float => value.is_f64(),
+            PrimitiveArgType::String => value.is_string(),
+            PrimitiveArgType::Integer => value.is_i64(),
+            PrimitiveArgType::UnsignedInteger => value.is_u64(),
+            PrimitiveArgType::Float => value.is_f64(),
         }
     }
 }
