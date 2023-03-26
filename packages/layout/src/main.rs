@@ -52,7 +52,7 @@ fn manifest() {
                             Note that content that is too wide will \
                             be cropped if used without wrapping."
                         },
-                        {"name": "wrap", "default": "false", "description": "true/false - Decides if items will wrap around to new rows."},
+                        {"name": "wrap", "default": "false", "type": ["true", "false"], "description": "Decides if items will wrap around to new rows."},
                     ]
                 },
                 {
@@ -71,7 +71,7 @@ fn manifest() {
                             Note that content that is too wide will \
                             be cropped if used without wrapping."
                         },
-                        {"name": "wrap", "default": "false", "description": "true/false - Decides if items will wrap around to new rows."},
+                        {"name": "wrap", "default": "false", "type": ["true", "false"], "description": "Decides if items will wrap around to new rows."},
                     ]
                 }
             ]

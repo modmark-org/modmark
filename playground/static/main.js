@@ -24,7 +24,7 @@ async function compilerAction(action) {
         compiler_callback = res;
         compiler_failure = rej;
     });
-    compiler.postMessage({ seq: ++seq, ...action });
+    compiler.postMessage({seq: ++seq, ...action});
     return promise;
 }
 
@@ -158,12 +158,20 @@ function toggleView() {
 }
 
 async function loadPackageInfo() {
-    const info = JSON.parse(await compilerAction({ type: "package_info" }));
+    const info = JSON.parse(await compilerAction({type: "package_info"}));
+
+    const type_str = (type) => {
+        if (Array.isArray(type)) {
+            return type.join("/");
+        } else {
+            return type;
+        }
+    }
 
     const createTransformList = (transform) => {
         let args = transform.arguments.map((arg) => `<li><div>
             <strong class="name">${arg.name}</strong>
-            <span class="default">${arg.type}, ${arg.default !== null ? 'default = ' + JSON.stringify(arg.default) : 'required'}</span>
+            <span class="default">${type_str(arg.type)}, ${arg.default !== null ? 'default = ' + JSON.stringify(arg.default) : 'required'}</span>
             <span class="description" > ${arg.description}</span>
         </div></li> `).join("\n");
 
@@ -175,7 +183,7 @@ async function loadPackageInfo() {
         </div> `
     };
 
-    const createElem = ({ name, version, description, transforms }) => {
+    const createElem = ({name, version, description, transforms}) => {
         let expanded = false;
 
         let container = document.createElement("div");
@@ -241,7 +249,7 @@ async function updateOutput(input) {
                 overleafButton.style.display = "none";
 
                 debugEditor.session.setMode("");
-                debugEditor.setValue(await compilerAction({ type: "ast", source: input }));
+                debugEditor.setValue(await compilerAction({type: "ast", source: input}));
                 debugEditor.getSession().selection.clearSelection()
                 break;
             case "ast-debug":
@@ -251,7 +259,7 @@ async function updateOutput(input) {
                 overleafButton.style.display = "none";
 
                 debugEditor.session.setMode("");
-                debugEditor.setValue(await compilerAction({ type: "ast_debug", source: input }));
+                debugEditor.setValue(await compilerAction({type: "ast_debug", source: input}));
                 debugEditor.getSession().selection.clearSelection();
                 break;
             case "json-output":
@@ -261,11 +269,15 @@ async function updateOutput(input) {
                 overleafButton.style.display = "none";
 
                 debugEditor.session.setMode("ace/mode/json");
-                debugEditor.setValue(await compilerAction({ type: "json_output", source: input }));
+                debugEditor.setValue(await compilerAction({type: "json_output", source: input}));
                 debugEditor.getSession().selection.clearSelection();
                 break;
             case "transpile-other": {
-                let { content, warnings, errors } = JSON.parse(await compilerAction({ type: "transpile", source: input, format: formatInput.value }));
+                let {content, warnings, errors} = JSON.parse(await compilerAction({
+                    type: "transpile",
+                    source: input,
+                    format: formatInput.value
+                }));
                 errors.forEach(addError);
                 warnings.forEach(addWarning);
 
@@ -275,14 +287,17 @@ async function updateOutput(input) {
                 render.style.display = "none";
 
 
-
                 debugEditor.session.setMode("");
                 debugEditor.setValue(content);
                 debugEditor.getSession().selection.clearSelection();
             }
                 break;
             case "latex":
-                let { content, warnings, errors } = JSON.parse(await compilerAction({ type: "transpile", source: input, format: "latex" }));
+                let {content, warnings, errors} = JSON.parse(await compilerAction({
+                    type: "transpile",
+                    source: input,
+                    format: "latex"
+                }));
                 errors.forEach(addError);
                 warnings.forEach(addWarning);
 
@@ -290,7 +305,7 @@ async function updateOutput(input) {
                 debugEditor.container.style.display = "block";
                 renderIframe.style.display = "none";
                 render.style.display = "none";
-                
+
                 debugEditor.session.setMode("ace/mode/latex");
                 debugEditor.setValue(content);
                 debugEditor.getSession().selection.clearSelection();
@@ -299,7 +314,11 @@ async function updateOutput(input) {
             case "render-iframe":
             case "render": {
                 let type = selector.value == "render" ? "transpile_no_document" : "transpile";
-                let { content, warnings, errors } = JSON.parse(await compilerAction({ type, source: input, format: "html" }));
+                let {content, warnings, errors} = JSON.parse(await compilerAction({
+                    type,
+                    source: input,
+                    format: "html"
+                }));
                 errors.forEach(addError);
                 warnings.forEach(addWarning);
 

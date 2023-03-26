@@ -81,8 +81,19 @@ pub enum PackageImplementation {
     Native,
 }
 
+// This is more or less just a wrapper to simplify writing enums like `type: [true, false]` without
+// needing to tag it. The distinction between "ArgType" and "PrimitiveArgType" is that a
+// primitive arg type is one rust type, as simple as that, while an ArgType may be an enum which
+// requires additional validation
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
 pub enum ArgType {
+    Enum(Vec<String>),
+    Primitive(PrimitiveArgType),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum PrimitiveArgType {
     #[serde(alias = "string")]
     String,
     #[serde(alias = "int", alias = "integer", alias = "i64")]
@@ -99,16 +110,22 @@ pub enum ArgType {
 }
 
 fn default_arg_type() -> ArgType {
-    ArgType::String
+    ArgType::Primitive(PrimitiveArgType::String)
+}
+
+impl From<PrimitiveArgType> for ArgType {
+    fn from(value: PrimitiveArgType) -> Self {
+        Self::Primitive(value)
+    }
 }
 
 impl ArgType {
     pub(crate) fn can_be_parsed_from(&self, value: &Value) -> bool {
-        match self {
-            ArgType::String => value.is_string(),
-            ArgType::Integer => value.is_i64(),
-            ArgType::UnsignedInteger => value.is_u64(),
-            ArgType::Float => value.is_f64(),
+        match &self {
+            ArgType::Enum(vs) => value
+                .as_str()
+                .map_or(false, |x| vs.contains(&x.to_string())),
+            ArgType::Primitive(t) => t.can_be_parsed_from(value),
         }
     }
 
@@ -118,24 +135,59 @@ impl ArgType {
 
     pub(crate) fn try_from_value(&self, value: &Value) -> Result<ArgValue, CoreError> {
         match self {
-            ArgType::String => value
+            ArgType::Enum(values) => value
+                .as_str()
+                .map(ToString::to_string)
+                .filter(|s| values.contains(&s))
+                .map(ArgValue::EnumVariant)
+                .ok_or(CoreError::EnumVariant(values.clone(), value.to_string())),
+            ArgType::Primitive(t) => t.try_from_value(value),
+        }
+    }
+
+    pub(crate) fn try_from_str(&self, value: &str) -> Result<ArgValue, CoreError> {
+        match self {
+            ArgType::Enum(values) => {
+                let string = value.to_string();
+                if values.contains(&string) {
+                    Ok(ArgValue::EnumVariant(string))
+                } else {
+                    Err(CoreError::EnumVariant(values.clone(), value.to_string()))
+                }
+            }
+            ArgType::Primitive(t) => t.try_from_str(value),
+        }
+    }
+}
+
+impl PrimitiveArgType {
+    pub(crate) fn can_be_parsed_from(&self, value: &Value) -> bool {
+        match self {
+            PrimitiveArgType::String => value.is_string(),
+            PrimitiveArgType::Integer => value.is_i64(),
+            PrimitiveArgType::UnsignedInteger => value.is_u64(),
+            PrimitiveArgType::Float => value.is_f64(),
+        }
+    }
+
+    pub(crate) fn try_from_value(&self, value: &Value) -> Result<ArgValue, CoreError> {
+        match self {
+            PrimitiveArgType::String => value
                 .as_str()
                 .map(|s| ArgValue::String(s.to_string()))
                 .ok_or(CoreError::ArgumentType("string", value.to_string())),
-            ArgType::Integer => value
+            PrimitiveArgType::Integer => value
                 .as_i64()
                 .map(ArgValue::Integer)
                 .ok_or(CoreError::ArgumentType("integer", value.to_string())),
-            ArgType::UnsignedInteger => {
-                value
-                    .as_u64()
-                    .map(ArgValue::UnsignedInteger)
-                    .ok_or(CoreError::ArgumentType(
-                        "unsigned integer",
-                        value.to_string(),
-                    ))
-            }
-            ArgType::Float => value
+            PrimitiveArgType::UnsignedInteger => value
+                .as_u64()
+                .map(ArgValue::UnsignedInteger)
+                .ok_or(CoreError::ArgumentType(
+                    "unsigned integer",
+                    value.to_string(),
+                )),
+            PrimitiveArgType::Float => value
                 .as_f64()
                 .map(ArgValue::Float)
                 .ok_or(CoreError::ArgumentType("float", value.to_string())),
@@ -144,20 +196,20 @@ impl ArgType {
 
     pub(crate) fn try_from_str(&self, value: &str) -> Result<ArgValue, CoreError> {
         match self {
-            ArgType::String => Ok(ArgValue::String(value.to_string())),
-            ArgType::Integer => {
+            PrimitiveArgType::String => Ok(ArgValue::String(value.to_string())),
+            PrimitiveArgType::Integer => {
                 let integer = value
                     .parse::<i64>()
                     .map_err(|_| CoreError::ArgumentType("integer", value.to_string()))?;
                 Ok(ArgValue::Integer(integer))
             }
-            ArgType::UnsignedInteger => {
+            PrimitiveArgType::UnsignedInteger => {
                 let integer = value
                     .parse::<u64>()
                     .map_err(|_| CoreError::ArgumentType("unsigned integer", value.to_string()))?;
                 Ok(ArgValue::UnsignedInteger(integer))
             }
-            ArgType::Float => {
+            PrimitiveArgType::Float => {
                 let float = value
                     .parse::<f64>()
                     .map_err(|_| CoreError::ArgumentType("float", value.to_string()))?;
@@ -175,12 +227,13 @@ pub enum ArgValue {
     Integer(i64),
     UnsignedInteger(u64),
     Float(f64),
+    EnumVariant(String),
 }
 
 impl From<ArgValue> for Value {
     fn from(value: ArgValue) -> Self {
         match value {
-            ArgValue::String(s) => Value::from(s),
+            ArgValue::String(s) | ArgValue::EnumVariant(s) => Value::from(s),
             ArgValue::Integer(i) => Value::from(i),
             ArgValue::UnsignedInteger(ui) => Value::from(ui),
             ArgValue::Float(f) => Value::from(f),
@@ -192,7 +245,7 @@ impl From<ArgValue> for Value {
 impl From<ArgValue> for String {
     fn from(value: ArgValue) -> Self {
         match value {
-            ArgValue::String(s) => s,
+            ArgValue::String(s) | ArgValue::EnumVariant(s) => s,
             ArgValue::Integer(i) => format!("{i}"),
             ArgValue::UnsignedInteger(ui) => format!("{ui}"),
             ArgValue::Float(f) => format!("{f}"),
@@ -203,11 +256,25 @@ impl From<ArgValue> for String {
 impl ArgValue {
     pub fn get_type(&self) -> ArgType {
         match &self {
-            ArgValue::String(_) => ArgType::String,
-            ArgValue::Integer(_) => ArgType::Integer,
-            ArgValue::UnsignedInteger(_) => ArgType::UnsignedInteger,
-            ArgValue::Float(_) => ArgType::Float,
+            ArgValue::String(_) => PrimitiveArgType::String.into(),
+            ArgValue::Integer(_) => PrimitiveArgType::Integer.into(),
+            ArgValue::UnsignedInteger(_) => PrimitiveArgType::UnsignedInteger.into(),
+            ArgValue::Float(_) => PrimitiveArgType::Float.into(),
+            // We have variant-erasure but I think that's OK
+            ArgValue::EnumVariant(_) => ArgType::Enum(vec![]),
         }
+    }
+
+    pub fn get_enum_variant(self) -> Option<String> {
+        if let ArgValue::EnumVariant(s) = self {
+            Some(s)
+        } else {
+            None
+        }
+    }
+
+    pub fn unwrap_enum_variant(self) -> String {
+        self.get_enum_variant().unwrap()
     }
 
     pub fn as_string(&self) -> Option<&str> {
