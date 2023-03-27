@@ -49,7 +49,8 @@ code {
 
 button,
 input,
-select {
+select,
+#upload-button {
     display: flex;
     align-items: center;
     gap: 0.2rem;
@@ -60,6 +61,8 @@ select {
     background-color: rgb(231, 231, 231);
     transition: 0.2s background-color;
     color: black;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
 }
 
 select {
@@ -74,12 +77,14 @@ select {
     padding-right: 1.5rem;
 }
 
-button {
+button,
+#upload-button {
     cursor: pointer;
 }
 
 button:hover,
-select:hover {
+select:hover,
+#upload-button:hover {
     background-color: rgb(222, 222, 222);
 }
 
@@ -359,65 +364,42 @@ select:hover {
     transition: 0.3s width;
 }
 
-#file-header {
-    background-color: #f3f4f6;
-    height: 3rem;
+#file-navigation {
     display: flex;
     align-items: center;
-    gap: 2rem;
-    padding: 0.5rem 1rem 0.5rem;
+    gap: 1rem;
+    padding: 1rem;
+    background-color: #f3f4f6;
     border-bottom: solid 1px rgba(0, 0, 0, 0.171);
     border-right: solid 1px rgba(0, 0, 0, 0.171);
-    font-size: 1.3rem;
-    overflow: hidden;
-}
-
-#file-upload {
-    box-shadow: none;
-    background-color: transparent;
-    padding: 0;
-    display: none;
-}
-
-/* improve this to replicate buttons better */
-#upload-button {
-    border: none;
-    box-shadow: 0 0 2px rgba(0, 0, 0, 0.501);
-    border-radius: 0.3rem;
-    padding: 0.55rem 1rem 0.55rem 1rem; /* not good */
-    background-color: rgb(231, 231, 231);
-    transition: 0.2s background-color;
-    color: black;
-    font-size: 0.8rem;
-}
-
-#upload-button:hover {
-    background-color: rgb(224, 224, 224);
-}
-
-#file-navigation {
-    padding: 1rem;
-    height: 2rem;
-    font-size: 1.3rem;
-    text-align: center;
-    vertical-align: center;
     position: relative;
 }
 
-#file-navigation span {
-    display: inline-block;
-    vertical-align: middle;
+#file-navigation * {
+    flex: 0 0 auto;
 }
 
-#return-button {
-    position: absolute;
+#upload-button {
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+#file-upload {
+    display: none;
+}
+
+#file-header {
+    text-align: center;
+    min-width: 20rem;
+    font-size: 1.2rem;
 }
 
 #file-list {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-    padding: 1.5rem;
+    padding: 0.5rem 1.5rem 0 1.5rem;
     color: #2f2f2f;
     height: 100%;
     overflow-y: scroll;
@@ -426,7 +408,7 @@ select:hover {
 .dir-entry {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.8rem;
     font-size: 1.1rem;
     height: 1.2rem;
 }
@@ -446,7 +428,6 @@ select:hover {
     background-color: transparent;
     display: none;
     padding: 0;
-    font-size: 0.4rem;
 }
 
 .dir-entry:hover .rename-button,

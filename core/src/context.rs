@@ -22,6 +22,7 @@ use parser::config::{Config, HideConfig, ImportConfig};
 use parser::ModuleArguments;
 
 use crate::package::{ArgValue, PackageImplementation};
+#[cfg(feature = "web")]
 use crate::fs::MemFS;
 use crate::{std_packages, DenyAllResolver, Element, Resolve};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
