@@ -154,12 +154,12 @@ pub fn native_warn<T>(
 ) -> Result<Either<Element, String>, CoreError> {
     // Push the issue to warnings
     ctx.state.warnings.push(Issue {
-        source: args.remove("source").unwrap().unwrap_string(),
-        target: args.remove("target").unwrap().unwrap_string(),
+        source: args.remove("source").unwrap().get_string().unwrap(),
+        target: args.remove("target").unwrap().get_string().unwrap(),
         description: body.to_string(),
         input: args
             .remove("input")
-            .map(|v| v.unwrap_string())
+            .map(|v| v.get_string().unwrap())
             .and_then(|s| (s != "<unknown>").then_some(s)),
     });
 
@@ -174,11 +174,11 @@ pub fn native_err<T>(
     inline: bool,
     output_format: &OutputFormat,
 ) -> Result<Either<Element, String>, CoreError> {
-    let source = args.get("source").unwrap().clone().unwrap_string();
-    let target = args.get("target").unwrap().clone().unwrap_string();
+    let source = args.get("source").unwrap().clone().get_string().unwrap();
+    let target = args.get("target").unwrap().clone().get_string().unwrap();
     let input = args
         .get("input")
-        .map(|v| v.clone().unwrap_string())
+        .map(|v| v.clone().get_string().unwrap())
         .and_then(|s| (s != "<unknown>").then_some(s));
 
     // Push the issue to errors
