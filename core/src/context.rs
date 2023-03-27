@@ -547,14 +547,10 @@ impl<T> Context<T> {
         let mut output = Pipe::new();
         let mut err_out = Pipe::new();
 
-        // Generate the input data (by serializing elements)
-        let input_data = self.serialize_element(from, output_format)?;
-        write!(&mut input, "{}", input_data)?;
-
-        // Function to create an issue given a body text and if it is an error or not. This closure
-        // captures references to the appropriate variables from this scope to generate correct
-        // issues.
-        let create_issue = |error: bool, body: String| -> Element {
+        // Function to create an issue given a body text, input text and if it is an error or not.
+        // This closure captures references to the appropriate variables from this scope to generate
+        // correct issues.
+        let create_issue = |error: bool, body: String, data: &str| -> Element {
             Element::Module {
                 name: if error {
                     "error".to_string()
@@ -569,7 +565,7 @@ impl<T> Context<T> {
                         map.insert("target".to_string(), output_format.0.to_string());
                         // these two ifs can't be joined, unfortunately, or it won't run on stable
                         if self.state.verbose_errors {
-                            map.insert("input".to_string(), input_data.to_string());
+                            map.insert("input".to_string(), data.to_string());
                         }
                         map
                     }),
@@ -578,6 +574,14 @@ impl<T> Context<T> {
                 inline: false,
             }
         };
+
+        // Generate the input data (by serializing elements)
+        // If this fails, it is likely due to argument serialization so create an issue for it
+        let input_data = match self.serialize_element(from, output_format) {
+            Ok(data) => data,
+            Err(e) => return Ok(Left(create_issue(true, e.to_string(), "n/a"))),
+        };
+        write!(&mut input, "{}", input_data)?;
 
         let wasi_env = WasiState::new("")
             .stdin(Box::new(input))
@@ -600,7 +604,11 @@ impl<T> Context<T> {
         if let Err(e) = fn_res {
             // An error occurred when executing Wasm module =>
             // it probably crashed, so just insert an error node
-            return Ok(Left(create_issue(true, format!("Wasm module crash: {e}"))));
+            return Ok(Left(create_issue(
+                true,
+                format!("Wasm module crash: {e}"),
+                &input_data,
+            )));
         }
 
         // Read the output of the package from stdout
@@ -629,6 +637,7 @@ impl<T> Context<T> {
                 Err(_) => Ok(Left(create_issue(
                     true,
                     "Error deserializing result from module".to_string(),
+                    &input_data,
                 ))),
             };
         }
@@ -639,7 +648,7 @@ impl<T> Context<T> {
         if let Ok(elem) = result {
             let elems = err_str
                 .lines()
-                .map(|line| create_issue(false, format!("Logged warning: {line}")))
+                .map(|line| create_issue(false, format!("Logged warning: {line}"), &input_data))
                 // Here, in the warnings case, chain the result and emit it as well
                 .chain(once(elem))
                 .collect();
@@ -647,7 +656,7 @@ impl<T> Context<T> {
         } else {
             let errors = err_str
                 .lines()
-                .map(|line| create_issue(true, format!("Logged error: {line}")))
+                .map(|line| create_issue(true, format!("Logged error: {line}"), &input_data))
                 .collect();
             Ok(Left(Element::Compound(errors)))
         }
@@ -759,7 +768,8 @@ impl<T> Context<T> {
                     .collect();
 
                 let mut collected_args =
-                    self.collect_parent_arguments(args, name, output_format)?;
+                    self.collect_parent_arguments(args, name, output_format)
+                        .map_err(|e| CoreError::SerializeElement(name.to_string(), Box::new(e)))?;
                 let type_erased_args = collected_args.drain().map(|(k, v)| (k, v.into())).collect();
 
                 Ok(JsonEntry::ParentNode {
@@ -769,17 +779,18 @@ impl<T> Context<T> {
                 })
             }
             Element::Module {
-                name: module_name,
+                name,
                 args,
                 body,
                 inline: one_line,
             } => {
                 let mut collected_args =
-                    self.collect_module_arguments(args, module_name, output_format)?;
+                    self.collect_module_arguments(args, name, output_format)
+                        .map_err(|e| CoreError::SerializeElement(name.to_string(), Box::new(e)))?;
                 let type_erased_args = collected_args.drain().map(|(k, v)| (k, v.into())).collect();
 
                 Ok(JsonEntry::Module {
-                    name: module_name.clone(),
+                    name: name.clone(),
                     arguments: type_erased_args,
                     data: body.clone(),
                     inline: *one_line,

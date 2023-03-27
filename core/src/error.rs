@@ -72,6 +72,8 @@ pub enum CoreError {
     UnusedConfigs(Vec<String>),
     #[error("Config modules are only allowed once at the very top of the document")]
     UnexpectedConfigModule,
+    #[error("Error serializing '{0}': {1}")]
+    SerializeElement(String, Box<CoreError>),
     #[error("Invalid data type: expected {0} but got '{1}'")]
     ArgumentType(&'static str, String),
     #[error("Invalid enum variant: expected one of {0:?}, but got '{1}'")]
