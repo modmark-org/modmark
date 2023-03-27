@@ -6,11 +6,11 @@ use wasmer_vfs::mem_fs::FileSystem as MemoryFileSystem;
 use wasmer_vfs::{FileSystem, FsError, Metadata, OpenOptions, ReadDir};
 
 #[derive(Debug, Clone)]
-pub struct MemFS {
+pub struct WebFs {
     pub inner: Arc<MemoryFileSystem>,
 }
 
-impl FileSystem for MemFS {
+impl FileSystem for WebFs {
     fn read_dir(&self, path: &Path) -> wasmer_vfs::Result<ReadDir> {
         self.inner.read_dir(path)
     }
@@ -58,9 +58,9 @@ impl FileSystem for MemFS {
     }
 }
 
-impl MemFS {
-    pub fn new() -> MemFS {
-        MemFS {
+impl WebFs {
+    pub fn new() -> WebFs {
+        WebFs {
             inner: Arc::new(MemoryFileSystem::default()),
         }
     }

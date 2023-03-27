@@ -15,11 +15,13 @@ use crate::context::CompilationState;
 pub mod context;
 mod element;
 mod error;
-#[cfg(feature = "web")]
-mod fs;
+#[cfg(feature = "native")]
+mod native_fs;
 mod package;
 mod std_packages;
 mod std_packages_macros;
+#[cfg(feature = "web")]
+mod web_fs;
 
 #[cfg(all(feature = "web", feature = "native"))]
 compile_error!("feature \"native\" and feature \"web\" cannot be enabled at the same time");

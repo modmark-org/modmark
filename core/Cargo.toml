@@ -38,7 +38,7 @@ wasmer-compiler = "3.1.1"
 # default is native, bundle_std_packages and precompile_wasm
 [features]
 default = ["native", "bundle_std_packages", "precompile_wasm"]
-native = ["wasmer/sys-default", "wasmer-wasi/sys-default", "wasmer-vfs/mem-fs"]
+native = ["wasmer/sys-default", "wasmer-wasi/sys-default", "wasmer-vfs/host-fs"]
 web = ["wasmer/js-default", "wasmer-wasi/js", "wasmer-vfs/mem-fs"]
 bundle_std_packages = []
 precompile_wasm = []

@@ -10,6 +10,13 @@ use std::{
     io::{Read, Write},
 };
 
+#[cfg(feature = "native")]
+use crate::native_fs::NativeFs;
+use crate::package::{ArgValue, PackageImplementation};
+#[cfg(feature = "web")]
+use crate::web_fs::WebFs;
+use crate::{std_packages, DenyAllResolver, Element, Resolve};
+use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
 use either::{Either, Left};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -21,12 +28,6 @@ use wasmer_wasi::{Pipe, WasiState};
 use parser::config::{Config, HideConfig, ImportConfig};
 use parser::ModuleArguments;
 
-use crate::package::{ArgValue, PackageImplementation};
-#[cfg(feature = "web")]
-use crate::fs::MemFS;
-use crate::{std_packages, DenyAllResolver, Element, Resolve};
-use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
-
 pub struct Context<T> {
     pub(crate) native_packages: HashMap<String, Package>,
     pub(crate) standard_packages: HashMap<String, Package>,
@@ -36,8 +37,12 @@ pub struct Context<T> {
     #[cfg(feature = "native")]
     engine: Engine,
     pub(crate) state: CompilationState,
+    #[cfg(feature = "native")]
+    pub filesystem: NativeFs,
     #[cfg(feature = "web")]
-    pub filesystem: MemFS,
+    pub filesystem: WebFs,
+    #[cfg(feature = "native")]
+    assets_path: Option<String>,
 }
 
 #[derive(Default, Clone, Debug)]
@@ -147,8 +152,9 @@ impl<T> Context<T> {
             #[cfg(feature = "native")]
             engine: EngineBuilder::new(Cranelift::new()).engine(),
             state: CompilationState::default(),
-            #[cfg(feature = "web")]
-            filesystem: MemFS::new(),
+            filesystem: Context::<T>::new_fs(),
+            #[cfg(feature = "native")]
+            assets_path: None,
         };
         ctx.load_default_packages()?;
         Ok(ctx)
@@ -206,6 +212,28 @@ where
 }
 
 impl<T> Context<T> {
+    #[cfg(feature = "native")]
+    pub fn set_args(
+        &mut self,
+        assets_path: &Option<String>,
+        deny_read: bool,
+        deny_write: bool,
+        no_prompts: bool,
+    ) {
+        self.assets_path = assets_path.clone();
+        self.filesystem.config(deny_read, deny_write, no_prompts);
+    }
+
+    #[cfg(feature = "native")]
+    fn new_fs() -> NativeFs {
+        NativeFs::new()
+    }
+
+    #[cfg(feature = "web")]
+    pub fn new_fs() -> WebFs {
+        WebFs::new()
+    }
+
     /// Clears the internal `CompilationState` of this Context. This ensures that any information
     /// specific to previous compilations, such as errors and warnings, gets cleared.
     pub fn clear_state(&mut self) {
@@ -548,7 +576,7 @@ impl<T> Context<T> {
         #[cfg(feature = "web")]
         let mut store = Store::new();
 
-        // Create pipes for stdin, stdout, stderr
+        // Create pipes for stdin, stdwasmerout, stderr
         let mut input = Pipe::new();
         let mut output = Pipe::new();
         let mut err_out = Pipe::new();
@@ -590,28 +618,34 @@ impl<T> Context<T> {
         write!(&mut input, "{}", input_data)?;
 
         #[cfg(feature = "native")]
-        let wasi_env = WasiState::new("")
-            .stdin(Box::new(input))
-            .stdout(Box::new(output.clone()))
-            .stderr(Box::new(err_out.clone()))
-            .preopen(|p| {
-                p.directory("assets")
-                    .alias(".")
-                    .read(true)
-                    .write(true)
-                    .create(true)
-            })?
-            .args(["transform", name, &output_format.to_string()])
-            .finalize(&mut store)?;
+        let mut fs = self.filesystem.clone();
+        #[cfg(feature = "web")]
+        let fs = self.filesystem.clone();
+
+        let preopen_path;
+
+        #[cfg(feature = "native")]
+        {
+            fs.set_current_pkg(name);
+            if let Some(path) = &self.assets_path {
+                preopen_path = path.as_str();
+            } else {
+                preopen_path = "assets";
+            }
+        }
 
         #[cfg(feature = "web")]
+        {
+            preopen_path = "/";
+        }
+
         let wasi_env = WasiState::new("")
             .stdin(Box::new(input))
             .stdout(Box::new(output.clone()))
             .stderr(Box::new(err_out.clone()))
-            .set_fs(Box::new(self.filesystem.clone()))
+            .set_fs(Box::new(fs))
             .preopen(|p| {
-                p.directory("/")
+                p.directory(preopen_path)
                     .alias(".")
                     .read(true)
                     .write(true)
@@ -628,7 +662,10 @@ impl<T> Context<T> {
         wasi_env.data_mut(&mut store).set_memory(memory.clone());
 
         // Call the main entry point of the program
-        let main_fn = instance.exports.get_function("_start")?;
+        let main_fn = instance
+            .exports
+            .get_function("_start")
+            .expect("Unable to find main function");
         let fn_res = main_fn.call(&mut store, &[]);
 
         if let Err(e) = fn_res {
@@ -645,18 +682,17 @@ impl<T> Context<T> {
             }
         }
 
-        // Read the output of the package from stdout
-        let result = {
-            let mut buffer = String::new();
-            output.read_to_string(&mut buffer)?;
-            Self::deserialize_compound(&buffer)
-        };
-
         // Read (possible) warnings and errors
         let err_str = {
             let mut buffer = String::new();
             err_out.read_to_string(&mut buffer)?;
             buffer
+        };
+
+        let result = {
+            let mut buffer = String::new();
+            output.read_to_string(&mut buffer)?;
+            Self::deserialize_compound(&buffer)
         };
 
         // If we have no stderr, just return the result early
