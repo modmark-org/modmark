@@ -10,7 +10,8 @@ exclude = [
     "packages/code",
     "packages/math",
     "packages/layout",
-    "playground/web_bindings",
+    "packages/textfile",
+    "playground/web_bindings"
 ]
 
 # We need to specifiy that we use the new resolver to
