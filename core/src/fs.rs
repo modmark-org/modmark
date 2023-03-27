@@ -5,14 +5,10 @@ use std::sync::{Arc, Mutex};
 #[cfg(feature = "native")]
 use wasmer_vfs::host_fs::{FileOpener as HostFileOpener, FileSystem as HostFileSystem};
 #[cfg(feature = "web")]
-use wasmer_vfs::mem_fs::{FileSystem as MemoryFileSystem};
-use wasmer_vfs::{
-    FsError, FileSystem, Metadata, OpenOptions, ReadDir,
-};
+use wasmer_vfs::mem_fs::FileSystem as MemoryFileSystem;
 #[cfg(feature = "native")]
-use wasmer_vfs::{
-    FileOpener, OpenOptionsConfig, VirtualFile,
-};
+use wasmer_vfs::{FileOpener, OpenOptionsConfig, VirtualFile};
+use wasmer_vfs::{FileSystem, FsError, Metadata, OpenOptions, ReadDir};
 
 pub struct CoreFs<T> {
     inner: Arc<dyn FileSystem>,
@@ -27,8 +23,8 @@ impl<T> Debug for CoreFs<T> {
 }
 
 impl<T> FileSystem for CoreFs<T>
-    where
-        T: AccessPolicy + Send + Sync + 'static,
+where
+    T: AccessPolicy + Send + Sync + 'static,
 {
     fn read_dir(&self, path: &Path) -> wasmer_vfs::Result<ReadDir> {
         self.inner.read_dir(path)
@@ -74,16 +70,20 @@ impl<T> FileSystem for CoreFs<T>
 
     fn new_open_options(&self) -> OpenOptions {
         #[cfg(feature = "native")]
-        { OpenOptions::new(Box::new(self.file_opener.clone())) }
+        {
+            OpenOptions::new(Box::new(self.file_opener.clone()))
+        }
         #[cfg(feature = "web")]
-        { self.inner.new_open_options() }
+        {
+            self.inner.new_open_options()
+        }
         // TODO: Make use of AccessPolicy when MemoryFileSystem implements FileOpener (v.3.2.0)
     }
 }
 
 impl<T> CoreFs<T>
-    where
-        T: AccessPolicy,
+where
+    T: AccessPolicy,
 {
     pub(crate) fn new(access_manager: T) -> Self {
         #[cfg(feature = "native")]
@@ -115,8 +115,8 @@ impl<T> CoreFs<T> {
 }
 
 impl<T> CoreFs<T>
-    where
-        T: AccessPolicy + Send + Sync + 'static,
+where
+    T: AccessPolicy + Send + Sync + 'static,
 {
     pub fn list_dir(&self, path: &Path) -> wasmer_vfs::Result<Vec<(String, bool)>> {
         let mut v = vec![];
@@ -170,8 +170,8 @@ impl<T> Clone for CoreFileOpener<T> {
 }
 
 impl<T> CoreFileOpener<T>
-    where
-        T: AccessPolicy,
+where
+    T: AccessPolicy,
 {
     fn new(access_manager: T) -> Self {
         Self {
@@ -182,27 +182,31 @@ impl<T> CoreFileOpener<T>
 
     // TODO: Maybe handle permission implications? Unless this is done in underlying open()
     #[cfg(feature = "native")]
-    fn handle_options_config(&mut self, path: &Path, conf: &OpenOptionsConfig) -> OpenOptionsConfig {
+    fn handle_options_config(
+        &mut self,
+        path: &Path,
+        conf: &OpenOptionsConfig,
+    ) -> OpenOptionsConfig {
         let read = conf.read()
             && self
-            .access_manager
-            .lock()
-            .unwrap()
-            .allowed_to_read(path, &self.current_module);
+                .access_manager
+                .lock()
+                .unwrap()
+                .allowed_to_read(path, &self.current_module);
 
         let write = conf.write()
             && self
-            .access_manager
-            .lock()
-            .unwrap()
-            .allowed_to_write(path, &self.current_module);
+                .access_manager
+                .lock()
+                .unwrap()
+                .allowed_to_write(path, &self.current_module);
 
         let create = conf.create()
             && self
-            .access_manager
-            .lock()
-            .unwrap()
-            .allowed_to_create(path, &self.current_module);
+                .access_manager
+                .lock()
+                .unwrap()
+                .allowed_to_create(path, &self.current_module);
 
         OpenOptionsConfig {
             read,
@@ -217,8 +221,8 @@ impl<T> CoreFileOpener<T>
 
 #[cfg(feature = "native")]
 impl<T> FileOpener for CoreFileOpener<T>
-    where
-        T: AccessPolicy,
+where
+    T: AccessPolicy,
 {
     fn open(
         &mut self,

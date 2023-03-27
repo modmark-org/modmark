@@ -220,7 +220,7 @@ mod tests {
 
     #[test]
     fn table_manifest_test() {
-        let ctx = Context::new_without_resolver().unwrap();
+        let ctx = Context::new_with_defaults().unwrap();
         let info = ctx.get_package_info("table").unwrap().clone();
 
         let foo = PackageInfo {

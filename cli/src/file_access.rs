@@ -1,12 +1,14 @@
-use std::collections::HashMap;
 use crate::Args;
 use modmark_core::AccessPolicy;
+use std::collections::HashMap;
 use std::io::{stdin, stdout, Write};
 use std::path::Path;
 use PermissionType::*;
 
 enum PermissionType {
-    Read, Write, Create
+    Read,
+    Write,
+    Create,
 }
 
 #[derive(Default)]
@@ -58,9 +60,9 @@ impl AccessPolicy for CliAccessManager {
 
     fn allowed_to_read(&mut self, path: &Path, module_name: &String) -> bool {
         if self.deny_read {
-            return false
+            return false;
         } else if self.no_prompts {
-            return true
+            return true;
         }
 
         let module = self.modules.entry(module_name.clone()).or_default();
@@ -81,19 +83,14 @@ impl AccessPolicy for CliAccessManager {
         );
 
         let input = self.prompt_user(prompt);
-        self.set_permissions(
-            module_name.clone(),
-            path_str.to_string(),
-            input,
-            Read
-        )
+        self.set_permissions(module_name.clone(), path_str.to_string(), input, Read)
     }
 
     fn allowed_to_write(&mut self, path: &Path, module_name: &String) -> bool {
         if self.deny_write {
-            return false
+            return false;
         } else if self.no_prompts {
-            return true
+            return true;
         }
 
         let module = self.modules.entry(module_name.clone()).or_default();
@@ -114,19 +111,14 @@ impl AccessPolicy for CliAccessManager {
         );
 
         let input = self.prompt_user(prompt);
-        self.set_permissions(
-            module_name.clone(),
-            path_str.to_string(),
-            input,
-            Write
-        )
+        self.set_permissions(module_name.clone(), path_str.to_string(), input, Write)
     }
 
     fn allowed_to_create(&mut self, path: &Path, module_name: &String) -> bool {
         if self.deny_create {
-            return false
+            return false;
         } else if self.no_prompts {
-            return true
+            return true;
         }
 
         let module = self.modules.entry(module_name.clone()).or_default();
@@ -147,12 +139,7 @@ impl AccessPolicy for CliAccessManager {
         );
 
         let input = self.prompt_user(prompt);
-        self.set_permissions(
-            module_name.clone(),
-            path_str.to_string(),
-            input,
-            Create
-        )
+        self.set_permissions(module_name.clone(), path_str.to_string(), input, Create)
     }
 }
 
@@ -183,8 +170,6 @@ impl CliAccessManager {
                 return input.to_string();
             }
 
-
-
             print!("Unexpected input. Please enter [{allowed_input_str}]: ");
             stdout().flush().expect("Could not flush output");
         }
@@ -196,42 +181,41 @@ impl CliAccessManager {
         path: String,
         input: String,
         perm_type: PermissionType,
-    ) -> bool
-    {
+    ) -> bool {
         let module = self.modules.entry(module_name).or_default();
         match input.as_str() {
             "d" => {
-                module.permissions
+                module
+                    .permissions
                     .entry(path)
-                    .and_modify(|p|
-                            match perm_type {
-                                Read => p.read = Some(false),
-                                Write => p.write = Some(false),
-                                Create => p.create = Some(false),
-                            })
+                    .and_modify(|p| match perm_type {
+                        Read => p.read = Some(false),
+                        Write => p.write = Some(false),
+                        Create => p.create = Some(false),
+                    })
                     .or_default();
                 false
-            },
+            }
             "g" => {
-                module.permissions
+                module
+                    .permissions
                     .entry(path)
-                    .and_modify(|p|
-                        match perm_type {
-                            Read => p.read = Some(true),
-                            Write => p.write = Some(true),
-                            Create => p.create = Some(true),
-                        })
+                    .and_modify(|p| match perm_type {
+                        Read => p.read = Some(true),
+                        Write => p.write = Some(true),
+                        Create => p.create = Some(true),
+                    })
                     .or_default();
                 true
-            },
+            }
             "p" => {
                 module.permissions.insert(path, Permissions::denied());
                 false
-            },
+            }
             "a" => {
                 module.permissions.insert(path, Permissions::allowed());
                 true
-            },
+            }
             "D" => {
                 match perm_type {
                     Read => module.global_read = Some(false),
@@ -239,7 +223,7 @@ impl CliAccessManager {
                     Create => module.global_create = Some(false),
                 }
                 false
-            },
+            }
             "G" => {
                 match perm_type {
                     Read => module.global_read = Some(true),
@@ -247,19 +231,19 @@ impl CliAccessManager {
                     Create => module.global_create = Some(true),
                 }
                 true
-            },
+            }
             "P" => {
                 module.global_read = Some(false);
                 module.global_write = Some(false);
                 module.global_create = Some(false);
                 false
-            },
+            }
             "A" => {
                 module.global_read = Some(true);
                 module.global_write = Some(true);
                 module.global_create = Some(true);
                 true
-            },
+            }
             _ => panic!("Unexpected input"),
         }
     }
