@@ -64,6 +64,25 @@ struct Args {
 
     #[arg(short = 'd', long = "dev", help = "Print the AST")]
     dev: bool,
+
+    #[arg(long = "deny-read", help = "Disables read access for packages")]
+    deny_read: bool,
+
+    #[arg(long = "deny-write", help = "Disables write access for packages")]
+    deny_write: bool,
+
+    #[arg(
+        long = "no-prompts",
+        help = "Disables prompts for packages requesting file access"
+    )]
+    no_prompts: bool,
+
+    #[arg(
+        short = 'a',
+        long = "assets",
+        help = "Specifies the relative path to the directory with external files"
+    )]
+    assets: Option<String>,
 }
 
 impl Args {
@@ -259,6 +278,13 @@ async fn run_cli(args: Args) -> Result<(), CliError> {
         Context::new_with_resolver(PackageManager { registry }).unwrap(),
     ))
     .unwrap();
+
+    CTX.get().unwrap().lock().unwrap().set_args(
+        &args.assets,
+        args.deny_read,
+        args.deny_write,
+        args.no_prompts,
+    );
 
     // Using html output format and watch flag
     // (or if the user never provided a output file at all)
