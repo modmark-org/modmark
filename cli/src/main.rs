@@ -297,7 +297,7 @@ async fn run_cli(args: Args) -> Result<(), CliError> {
     }
 
     // using the watch flag but with some other output format
-    if args.watch {
+    if args.watch && args.output.is_some() {
         // Just start the file watcher, but without html live preview
         // which means that we wil provide None instead of the document and connections
         return watch_files(None, None, &args, &current_path).await;
