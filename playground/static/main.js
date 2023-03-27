@@ -81,7 +81,7 @@ const fileList = document.getElementById("file-list");
 const fileUpload = document.getElementById("file-upload")
 const folderButton = document.getElementById("folder-button");
 const returnButton = document.getElementById("return-button")
-const pathText = document.getElementById("current-path");
+const currentFolder = document.getElementById("current-folder");
 
 // Menu options
 const selector = document.getElementById("selector");
@@ -163,6 +163,8 @@ function toggleView() {
             editorView.style.width = "0";
             viewToggle.innerHTML = buttonContent("View editor", "edit");
             selector.setAttribute("disabled", "true");
+            fileMenuVisible = true;
+            toggleFileMenu();
             loadPackageInfo();
             break;
         case "package":
@@ -268,7 +270,7 @@ function toggleFileMenu() {
     if (fileMenuVisible) {
         fileMenu.style.width = "0";
     } else {
-        fileMenu.style.width = "25rem";
+        fileMenu.style.width = "24rem";
     }
     fileMenuVisible = !fileMenuVisible;
 }
@@ -285,7 +287,7 @@ async function handleFileUpload() {
                     path: currentPath + uploads[i].name,
                     bytes: bytes
                 })
-                updateFileList();
+                await updateFileList();
             }
         ).catch(
             function(error) {
@@ -298,7 +300,7 @@ async function handleFileUpload() {
 async function addFolder() {
     folderCount += 1;
     await compilerAction({ type: "add_folder", path: currentPath + "Folder" + folderCount })
-    updateFileList();
+    await updateFileList();
 }
 
 async function renameEntry() {
@@ -308,26 +310,29 @@ async function renameEntry() {
         to: currentPath + this.value,
     })
     selectedEntry = "";
-    updateFileList();
+    await updateFileList();
 }
 
 async function removeEntry() {
-    const [type, name] = this.name.split("-");
+    const name_elem = this.parentNode.children[1];
+    const name = name_elem.innerHTML;
+    const type = name_elem.className;
     switch (type) {
-        case "dir":
+        case "dir-name":
             await compilerAction({type: "remove_dir", path: currentPath + name})
             break;
-        case "file":
+        case "file-name":
             await compilerAction({type: "remove_file", path: currentPath + name})
             break;
     }
-    updateFileList();
+    await updateFileList();
 }
 
 function promptRename() {
     let name_div = this.parentNode.childNodes[1];
     selectedEntry = name_div.innerHTML;
-    let input = document.createElement("INPUT");
+    let input = document.createElement("input");
+    input.style.width = "8rem";
     input.setAttribute("type", "text");
     input.addEventListener("focusout", updateFileList, false);
     input.addEventListener("change", renameEntry, false);
@@ -336,16 +341,52 @@ function promptRename() {
 }
 
 async function updateFileList() {
-    fileList.innerHTML = JSON.parse(await compilerAction({type: "get_file_list", path: currentPath})).list;
-    pathText.innerHTML = currentPath.split("/").at(-2);
-    for (let btn of document.getElementsByClassName("rename-button")) {
-        btn.addEventListener("click", promptRename, false);
+    const list = [];
+
+    for (let entry of JSON.parse(await compilerAction({type: "get_file_list", path: currentPath}))) {
+        const [name, isFolder] = entry;
+        const row = document.createElement("div");
+        row.className = "dir-entry";
+
+        const icon = document.createElement("span");
+        icon.className = "material-symbols-outlined";
+
+        const edit_button = document.createElement("button");
+        edit_button.className = "rename-button";
+        edit_button.innerHTML = '<span class="material-symbols-outlined">edit</span>'
+        edit_button.addEventListener("click", promptRename, false);
+
+        const remove_button = document.createElement("button");
+        remove_button.className = "remove-button";
+        remove_button.innerHTML = '<span class="material-symbols-outlined">delete</span>'
+        remove_button.addEventListener("click", removeEntry, false);
+
+        const text = document.createElement("div");
+        text.innerHTML = name;
+
+        if (isFolder) {
+            icon.innerHTML = "folder_open";
+            text.className = "dir-name";
+            text.addEventListener("dblclick", visitDir, false);
+        } else {
+            icon.innerHTML = "description";
+            text.className = "file-name";
+        }
+
+        row.appendChild(icon);
+        row.appendChild(text);
+        row.appendChild(edit_button);
+        row.appendChild(remove_button);
+        list.push(row);
     }
-    for (let btn of document.getElementsByClassName("remove-button")) {
-        btn.addEventListener("click", removeEntry, false);
-    }
-    for (let name of document.getElementsByClassName("dir-name")) {
-        name.addEventListener("dblclick", visitDir, false);
+
+    fileList.replaceChildren(...list);
+
+    const folderName = currentPath.split("/").at(-2);
+    if (folderName) {
+        currentFolder.innerHTML = folderName;
+    } else {
+        currentFolder.innerHTML = "<em>root</em>"
     }
 }
 

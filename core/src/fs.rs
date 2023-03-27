@@ -48,20 +48,19 @@ impl MemFS {
     }
 
     pub fn list_dir(&self, path: &str) -> Vec<(String, bool)> {
+        let mut v = vec![];
         match self.inner.read_dir(Path::new(path)) {
             Ok(entries) => {
-                let mut v = vec![];
-                for entry_res in entries {
-                    let entry = entry_res.unwrap();
-                    if let Some(name) = entry.path.file_name() {
-                        let filename = name.to_os_string().into_string().unwrap();
-                        v.push((format!("{filename}"), entry.file_type().unwrap().dir));
-                    }
+                // fine to unwrap the results in DirEntry here, source code always gives Ok()
+                for entry in entries.map(|res| res.unwrap()) {
+                    let name = entry.file_name().into_string().unwrap();
+                    let is_folder = entry.file_type().unwrap().dir;
+                    v.push((name, is_folder));
                 }
-                v
             }
-            _ => vec![],
+            _ => {}
         }
+        v
     }
 
     pub fn create_file(&self, path: &str, data: &[u8]) -> std::io::Result<()> {

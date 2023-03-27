@@ -56,20 +56,14 @@
 </div>
 <main id="wrapper">
     <div id="file-menu">
-        <div id="file-header">
-            <p>Files</p>
+        <div id="file-navigation">
+            <button id="return-button">Back</button>
             <button id="folder-button">Add folder</button>
             <input type="file" id="file-upload">
             <label for="file-upload" id="upload-button">Add file</label>
+
         </div>
-        <div id="file-navigation">
-            <button id="return-button">
-                <span class="material-symbols-outlined">
-                    arrow_back
-                </span>
-            </button>
-            <span id="current-path"></span>
-        </div>
+        <div id="file-header"><p id="current-folder"><em>root</em></p></div>
         <div id="file-list">
         </div>
     </div>

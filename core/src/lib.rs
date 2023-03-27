@@ -15,6 +15,7 @@ use crate::context::CompilationState;
 pub mod context;
 mod element;
 mod error;
+#[cfg(feature = "web")]
 mod fs;
 mod package;
 mod std_packages;
