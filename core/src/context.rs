@@ -583,6 +583,16 @@ impl<T> Context<T> {
         };
         write!(&mut input, "{}", input_data)?;
 
+        #[cfg(feature = "native")]
+        let wasi_env = WasiState::new("")
+            .stdin(Box::new(input))
+            .stdout(Box::new(output.clone()))
+            .stderr(Box::new(err_out.clone()))
+            .args(["transform", name, &output_format.to_string()])
+            .preopen(|p| p.directory(".").read(true))?
+            .finalize(&mut store)?;
+
+        #[cfg(feature = "web")]
         let wasi_env = WasiState::new("")
             .stdin(Box::new(input))
             .stdout(Box::new(output.clone()))
