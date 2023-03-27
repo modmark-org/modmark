@@ -91,11 +91,6 @@ impl Args {
 
     /// Check if a html live preview should be used
     fn use_html_preview(&self) -> bool {
-        // Check if there is a free port
-        if get_port().is_err() {
-            return false;
-        }
-
         // If no output file was provided and the output format is "html" (or left unspecified)
         // we know that the user wants to use the live preview.
         if self.output.is_none() {
@@ -267,7 +262,7 @@ async fn run_cli(args: Args) -> Result<(), CliError> {
 
     // Using html output format and watch flag
     // (or if the user never provided a output file at all)
-    if args.use_html_preview() {
+    if args.use_html_preview() && get_port().is_ok() {
         let connections = PreviewConnections::default();
         let document = PreviewDoc::default();
         let port = get_port()?;
