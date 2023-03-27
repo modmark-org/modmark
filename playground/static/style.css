@@ -6,10 +6,10 @@ body {
 
 .material-symbols-outlined {
     position: relative;
-    font-variation-settings: 'FILL'0,
-        'wght'400,
-        'GRAD'0,
-        'opsz'48;
+    font-variation-settings: 'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 48;
     font-size: 1rem;
 }
 
@@ -254,14 +254,14 @@ select:hover {
     width: 100%;
     box-shadow: 0 0 2px rgba(0, 0, 0, 0.308);
     box-sizing: border-box;
-    padding: 0.5rem;
+    padding: 1rem;
     margin-bottom: 1rem;
     border-radius: 0.3rem;
     cursor: pointer;
 }
 
 #package-content .expanded .details {
-    max-height: 1000px;
+    max-height: 2000px;
 }
 
 #package-content .details {
@@ -272,6 +272,7 @@ select:hover {
 
 #package-content .container h4 {
     font-size: 1.2rem;
+    margin-bottom: 0.5rem;
 }
 
 #package-content .container>.version {
@@ -283,19 +284,66 @@ select:hover {
     display: inline;
 }
 
-#package-content .transformDescription {
+#package-content .transform {
+    border-top: solid 1px rgba(182, 182, 182, 0.247);
+    padding-top: 0.8rem;
+    padding-bottom: 0.8rem;
+}
+
+#package-content .transform-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 25rem;
+}
+
+#package-content .transform-heading .from {
+    font-weight: bold;
+}
+
+#package-content .transform-description {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+#package-content .transform-heading .to {
+    display: flex;
+    gap: 0.5rem;
+}
+
+#package-content .argument {
+    margin-bottom: 1rem;
+}
+
+#package-content .argument .name-container {
+    margin-bottom: 0.2rem;
+    display: flex;
+    align-items: center;
+}
+
+#package-content .argument .name-container>.name {
+    font-weight: bold;
+    margin-right: 0.5rem;
+}
+
+#package-content .argument .name-container>.type {
+    line-height: 0.9rem;
+    color: rgb(255, 255, 255);
+    padding: 0.2rem 0.5rem 0.2rem 0.5rem;
+    font-size: 0.9rem;
+    border-radius: 1rem;
+    opacity: 0.8;
+}
+
+#package-content .argument .description {
+    max-width: 45rem;
+
+}
+
+#package-content .argument .default {
+    color: grey;
     margin-bottom: 0.4rem;
 }
-
-#package-content .container .arguments li div {
-    display: flex;
-    gap: 1rem;
-}
-
-#package-content .container .arguments li div .default {
-    opacity: 0.6;
-}
-
 
 @media only screen and (max-width: 800px) {
     #editor-view {

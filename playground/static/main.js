@@ -24,7 +24,7 @@ async function compilerAction(action) {
         compiler_callback = res;
         compiler_failure = rej;
     });
-    compiler.postMessage({seq: ++seq, ...action});
+    compiler.postMessage({ seq: ++seq, ...action });
     return promise;
 }
 
@@ -158,32 +158,56 @@ function toggleView() {
 }
 
 async function loadPackageInfo() {
-    const info = JSON.parse(await compilerAction({type: "package_info"}));
+    const info = JSON.parse(await compilerAction({ type: "package_info" }));
 
-    const type_str = (type) => {
+    const type_annotation = (type) => {
+        let type_name = type;
+        let color = "";
         if (Array.isArray(type)) {
-            return type.join("/");
+            type_name = type.join("/");
+            color = "#90A959";
+        } else if (type == "String") {
+            color = "#2A6041";
+        } else if (type == "Unsigned integer") {
+            color = "#3581B8";
+        } else if (type == "Integer") {
+            color = "#8B85C1";
+        } else if (type == "Float") {
+            color = "#C3423F";
+        }
+
+        return `<span style="background-color: ${color};" class="type">${type_name}</span>`
+    }
+
+    const escape_default = (type, default_value) => {
+        if (Array.isArray(type) || type == "String") {
+            return `"${default_value}"`;
         } else {
-            return type;
+            return default_value;
         }
     }
 
     const createTransformList = (transform) => {
-        let args = transform.arguments.map((arg) => `<li><div>
-            <strong class="name">${arg.name}</strong>
-            <span class="default">${type_str(arg.type)}, ${arg.default !== null ? 'default = ' + JSON.stringify(arg.default) : 'required'}</span>
-            <span class="description" > ${arg.description}</span>
-        </div></li> `).join("\n");
+        let args = transform.arguments.map((arg) => `<div class="argument">
+            <div class="name-container"><span class="name">${arg.name}</span>${type_annotation(arg.type)}</div>
+            <div class="default">${arg.default !== null ? 'default = ' + escape_default(arg.type, arg.default) : 'required'}</div>
+            <div class="description">${arg.description}</div>
+        </div>`).join("\n");
 
-        return `<div>
-            <div class="transformDescription">${transform.description ?? ""}</div>
-            <code class="from">${transform.from}</code>
-            <span class="to">${transform.to.join(" ")}</span>
-            <ul class="arguments">${args}</ul>
+        return `<div class="transform">
+            <div class="transform-heading">
+                <code class="from">${transform.from}</code>
+                <div class="to">
+                    supports
+                    ${transform.to.length > 0 ? transform.to.map(t => `<span>${t}</span>`).join("") : "all"}
+                </div>
+            </div>
+            <div class="transform-description">${transform.description ?? ""}</div>
+            <div class="arguments">${args}</div>
         </div> `
     };
 
-    const createElem = ({name, version, description, transforms}) => {
+    const createElem = ({ name, version, description, transforms }) => {
         let expanded = false;
 
         let container = document.createElement("div");
@@ -249,7 +273,7 @@ async function updateOutput(input) {
                 overleafButton.style.display = "none";
 
                 debugEditor.session.setMode("");
-                debugEditor.setValue(await compilerAction({type: "ast", source: input}));
+                debugEditor.setValue(await compilerAction({ type: "ast", source: input }));
                 debugEditor.getSession().selection.clearSelection()
                 break;
             case "ast-debug":
@@ -259,7 +283,7 @@ async function updateOutput(input) {
                 overleafButton.style.display = "none";
 
                 debugEditor.session.setMode("");
-                debugEditor.setValue(await compilerAction({type: "ast_debug", source: input}));
+                debugEditor.setValue(await compilerAction({ type: "ast_debug", source: input }));
                 debugEditor.getSession().selection.clearSelection();
                 break;
             case "json-output":
@@ -269,11 +293,11 @@ async function updateOutput(input) {
                 overleafButton.style.display = "none";
 
                 debugEditor.session.setMode("ace/mode/json");
-                debugEditor.setValue(await compilerAction({type: "json_output", source: input}));
+                debugEditor.setValue(await compilerAction({ type: "json_output", source: input }));
                 debugEditor.getSession().selection.clearSelection();
                 break;
             case "transpile-other": {
-                let {content, warnings, errors} = JSON.parse(await compilerAction({
+                let { content, warnings, errors } = JSON.parse(await compilerAction({
                     type: "transpile",
                     source: input,
                     format: formatInput.value
@@ -293,7 +317,7 @@ async function updateOutput(input) {
             }
                 break;
             case "latex":
-                let {content, warnings, errors} = JSON.parse(await compilerAction({
+                let { content, warnings, errors } = JSON.parse(await compilerAction({
                     type: "transpile",
                     source: input,
                     format: "latex"
@@ -314,7 +338,7 @@ async function updateOutput(input) {
             case "render-iframe":
             case "render": {
                 let type = selector.value == "render" ? "transpile_no_document" : "transpile";
-                let {content, warnings, errors} = JSON.parse(await compilerAction({
+                let { content, warnings, errors } = JSON.parse(await compilerAction({
                     type,
                     source: input,
                     format: "html"
