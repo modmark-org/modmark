@@ -129,10 +129,6 @@ impl ArgType {
         }
     }
 
-    pub(crate) fn is_same_type(&self, value: &ArgValue) -> bool {
-        self == &value.get_type()
-    }
-
     pub(crate) fn try_from_value(&self, value: &Value) -> Result<ArgValue, CoreError> {
         match self {
             ArgType::Enum(values) => value
@@ -273,11 +269,7 @@ impl ArgValue {
         }
     }
 
-    pub fn unwrap_enum_variant(self) -> String {
-        self.get_enum_variant().unwrap()
-    }
-
-    pub fn as_string(&self) -> Option<&str> {
+    pub fn as_str(&self) -> Option<&str> {
         if let ArgValue::String(s) = &self {
             Some(s)
         } else {
@@ -293,20 +285,12 @@ impl ArgValue {
         }
     }
 
-    pub fn unwrap_string(self) -> String {
-        self.get_string().unwrap()
-    }
-
     pub fn get_integer(self) -> Option<i64> {
         if let ArgValue::Integer(i) = self {
             Some(i)
         } else {
             None
         }
-    }
-
-    pub fn unwrap_integer(self) -> i64 {
-        self.get_integer().unwrap()
     }
 
     pub fn get_unsigned_integer(self) -> Option<u64> {
@@ -317,20 +301,12 @@ impl ArgValue {
         }
     }
 
-    pub fn unwrap_unsigned_integer(self) -> u64 {
-        self.get_unsigned_integer().unwrap()
-    }
-
     pub fn get_float(self) -> Option<f64> {
         if let ArgValue::Float(f) = self {
             Some(f)
         } else {
             None
         }
-    }
-
-    pub fn unwrap_float(self) -> f64 {
-        self.get_float().unwrap()
     }
 }
 
