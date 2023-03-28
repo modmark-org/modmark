@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::path::Path;
 
+use modmark_core::{Context, CoreError, DenyAllResolver, eval, eval_no_document, OutputFormat};
 use modmark_core::{
     eval, eval_no_document, Context, CoreError, DenyAllResolver, DefaultAccessManager, OutputFormat
 };
@@ -10,9 +11,12 @@ use thiserror::Error;
 use wasm_bindgen::prelude::*;
 use wasmer_vfs::FileSystem;
 
+use crate::web_resolve::try_fetch;
+
+mod web_resolve;
+
 thread_local! {
-    static CONTEXT: RefCell<Context<DenyAllResolver, DefaultAccessManager>> =
-        RefCell::new(Context::default().unwrap())
+    static CONTEXT: RefCell<Context<web_resolve::WebResolve>> = RefCell::new(Context::new_with_resolver(web_resolve::WebResolve).unwrap())
 }
 
 #[derive(Error, Debug)]
@@ -38,7 +42,7 @@ impl From<PlaygroundError> for JsValue {
 
 #[wasm_bindgen]
 pub fn ast(source: &str) -> Result<String, PlaygroundError> {
-    set_panic_hook();
+    try_fetch();
     let document = parser::parse(source)?;
     Ok(document.tree_string())
 }
@@ -85,6 +89,7 @@ pub fn transpile(source: &str, format: &str) -> Result<String, PlaygroundError> 
 
 #[wasm_bindgen]
 pub fn transpile_no_document(source: &str, format: &str) -> Result<String, PlaygroundError> {
+    set_panic_hook();
     let result = CONTEXT.with(|ctx| {
         let mut ctx = ctx.borrow_mut();
         eval_no_document(source, &mut ctx, &OutputFormat::new(format))

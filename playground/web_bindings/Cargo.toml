@@ -12,7 +12,7 @@ crate-type = ["cdylib", "rlib"]
 parser = { version = "*", path = "../../parser/" }
 thiserror = "1.0.38"
 modmark_core = { version = "*", path = "../../core/", default-features = false, features = ["web", "bundle_std_packages"] }
-wasm-bindgen = "0.2.63"
+wasm-bindgen = "0.2.84"
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
 # all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
@@ -21,3 +21,20 @@ console_error_panic_hook = { version = "0.1.6" }
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.93"
 wasmer-vfs = { version = "3.1.1", default-features = false, features = ["mem-fs"] }
+js-sys = "0.3.61"
+wasm-bindgen-futures = "0.4.34"
+
+[dependencies.web-sys]
+version = "0.3.61"
+features = [
+    'Headers',
+    'Request',
+    'RequestInit',
+    'RequestMode',
+    'Response',
+    'WorkerGlobalScope',
+    'ReadableStream',
+    'ReadableStreamDefaultReader',
+    'Blob',
+    'console'
+]
