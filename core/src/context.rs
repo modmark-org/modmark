@@ -190,10 +190,7 @@ where
         let res: Result<Vec<()>, CoreError> = missing
             .into_iter()
             .zip(resolves.into_iter())
-            .map(|(name, data)| {
-                self.load_external_package(name, data.as_slice())
-                    .map(|_| ())
-            })
+            .map(|(name, data)| self.load_external_package(name, data.as_slice()))
             .collect();
         res.map(|_| ())
     }
@@ -602,15 +599,19 @@ impl<T, U> Context<T, U> {
         &mut self,
         external_name: &str,
         wasm_source: &[u8],
-    ) -> Result<&mut Package, CoreError> {
+    ) -> Result<(), CoreError> {
+        if wasm_source.is_empty() {
+            return Ok(());
+        }
         let pkg = self.package_from_wasm(wasm_source)?;
         debug_assert_ne!(pkg.implementation, PackageImplementation::Native);
         let entry = self.external_packages.entry(external_name.to_string());
 
         match entry {
-            Entry::Occupied(_) => Err(CoreError::OccupiedName(external_name.to_string())),
-            Entry::Vacant(entry) => Ok(entry.insert(pkg)),
-        }
+            Entry::Occupied(_) => return Err(CoreError::OccupiedName(external_name.to_string())),
+            Entry::Vacant(entry) => entry.insert(pkg),
+        };
+        Ok(())
     }
 
     /// This is a helper function to load a package directly from its wasm source. It will be
