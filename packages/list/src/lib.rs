@@ -1,68 +1,29 @@
-use serde_json::{json, Value};
 use std::str::FromStr;
 
-const MAX_DEPTH: usize = 255;
+use serde_json::{json, Value};
 
 #[derive(Debug)]
-pub struct NoListError;
+pub struct InvalidListError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 // Options in ordered types represent if they have a specified start value
-enum ItemType {
-    Bullet,
-    Decimal(Option<u32>),
-    LowerAlpha(Option<u32>),
-    UpperAlpha(Option<u32>),
-    LowerRoman(Option<u32>),
-    UpperRoman(Option<u32>),
-}
-
-impl ItemType {
-    fn opening_tag(&self, start: u32) -> String {
-        use ItemType::*;
-        match self {
-            Bullet => "<ul>".to_string(),
-            Decimal(_) => format!(r#"<ol type="1" start="{start}">"#),
-            LowerAlpha(_) => format!(r#"<ol type="a" start="{start}">"#),
-            UpperAlpha(_) => format!(r#"<ol type="A" start="{start}">"#),
-            LowerRoman(_) => format!(r#"<ol type="i" start="{start}">"#),
-            UpperRoman(_) => format!(r#"<ol type="I" start="{start}">"#),
-        }
-    }
-
-    fn closing_tag(&self) -> String {
-        if *self == ItemType::Bullet {
-            "</ul>"
-        } else {
-            "</ol>"
-        }
-        .to_string()
-    }
-
-    fn is_ordered(&self) -> bool {
-        *self != ItemType::Bullet
-    }
-
-    fn get_start_preference(&self) -> Option<u32> {
-        use ItemType::*;
-        match *self {
-            Bullet => None,
-            Decimal(start) => start,
-            LowerAlpha(start) => start,
-            UpperAlpha(start) => start,
-            LowerRoman(start) => start,
-            UpperRoman(start) => start,
-        }
-    }
+enum OrderedType {
+    Decimal,
+    LowerAlpha,
+    UpperAlpha,
+    LowerRoman,
+    UpperRoman,
 }
 
 struct InvalidItem;
 
-impl FromStr for ItemType {
+impl FromStr for ListType {
     type Err = InvalidItem;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        use ItemType::*;
+        use ListType::*;
+        use OrderedType::*;
+        let s = s.trim().split_ascii_whitespace().next().unwrap_or("");
         let start_str = if s.starts_with('(') && s.ends_with(')') {
             &s[1..s.len() - 1]
         } else if s.ends_with(')') || s.ends_with('.') {
@@ -73,15 +34,15 @@ impl FromStr for ItemType {
 
         // Edge cases for i and I which should be roman and not alpha.
         if start_str == "i" {
-            return Ok(LowerRoman(Some(1)));
+            return Ok(OrderedList(1, LowerRoman));
         }
         if start_str == "I" {
-            return Ok(UpperRoman(Some(1)));
+            return Ok(OrderedList(1, UpperRoman));
         }
 
         if !start_str.is_empty() {
             if let Ok(start) = start_str.parse::<u32>() {
-                return Ok(Decimal(Some(start)));
+                return Ok(OrderedList(start, Decimal));
             } else if start_str.len() == 1
                 && start_str.chars().next().unwrap().is_ascii_alphabetic()
             {
@@ -89,153 +50,298 @@ impl FromStr for ItemType {
                 let order = alpha_to_start(&c);
                 if let Some(start) = order {
                     if c.is_ascii_lowercase() {
-                        return Ok(LowerAlpha(Some(start)));
+                        return Ok(OrderedList(start, LowerAlpha));
                     } else {
-                        return Ok(UpperAlpha(Some(start)));
+                        return Ok(OrderedList(start, UpperAlpha));
                     }
                 }
             } else if let Some(start) = roman::from(&start_str.to_ascii_uppercase()) {
                 if start_str.chars().next().unwrap().is_ascii_lowercase() {
-                    return Ok(LowerRoman(Some(start.unsigned_abs())));
+                    return Ok(OrderedList(start.unsigned_abs(), LowerRoman));
                 } else {
-                    return Ok(UpperRoman(Some(start.unsigned_abs())));
+                    return Ok(OrderedList(start.unsigned_abs(), UpperRoman));
                 }
             }
         }
 
         // If we have not already returned it is a bullet item or invalid.
         match s {
-            "-" => Ok(Bullet),
-            "+" => Ok(Bullet),
-            "*" => Ok(Bullet),
+            "-" => Ok(UnorderedList),
+            "+" => Ok(UnorderedList),
+            "*" => Ok(UnorderedList),
             _ => Err(InvalidItem),
         }
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct ListItem {
-    item_type: ItemType,
-    content: String,
-    level: usize,
+#[derive(Debug, Clone, Copy)]
+enum ListType {
+    OrderedList(u32, OrderedType),
+    UnorderedList,
+}
+
+#[derive(Debug)]
+pub enum ListItem {
+    Content(String),
+    List(List),
+}
+
+impl ListItem {
+    fn to_html_vec(&self) -> Vec<Value> {
+        use ListItem::*;
+        match self {
+            Content(content) => {
+                let mut json_vec = vec![];
+                json_vec.push(json!({"name": "raw", "data": "<li>"}));
+                json_vec.push(json!({"name": "raw", "data": content}));
+                json_vec.push(json!({"name": "raw", "data": "</li>"}));
+                json_vec
+            }
+            List(list) => list.to_html_vec(),
+        }
+    }
+
+    fn to_latex_vec(&self) -> Vec<Value> {
+        use ListItem::*;
+        match self {
+            Content(content) => {
+                let mut json_vec = vec![];
+                json_vec.push(json!({"name": "raw", "data": "\\item "}));
+                let mut item = content.clone();
+                item.push('\n');
+                json_vec.push(json!({"name": "raw", "data": item}));
+                json_vec
+            }
+            List(list) => list.to_latex_vec(),
+        }
+    }
 }
 
 #[derive(Debug)]
 pub struct List {
-    pub items: Vec<ListItem>,
+    list_type: ListType,
+    items: Vec<ListItem>,
 }
 
 impl List {
+    fn max_depth(&self) -> usize {
+        self.items
+            .iter()
+            .map(|item| match item {
+                ListItem::Content(_) => 1,
+                ListItem::List(sub_list) => sub_list.max_depth() + 1,
+            })
+            .max()
+            .unwrap_or(1)
+    }
+
+    fn jumps_multiple_levels(&self) -> bool {
+        if !self.items.is_empty() && matches!(self.items[0], ListItem::List(_)) {
+            return true;
+        }
+        for item in &self.items {
+            match item {
+                ListItem::Content(_) => {}
+                ListItem::List(sub_list) => {
+                    if sub_list.jumps_multiple_levels() {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+
+    fn opening_html_tag(&self) -> String {
+        use ListType::*;
+        use OrderedType::*;
+        match self.list_type {
+            UnorderedList => "<ul>".to_string(),
+            OrderedList(start, Decimal) => format!(r#"<ol type="1" start="{start}">"#),
+            OrderedList(start, LowerAlpha) => format!(r#"<ol type="a" start="{start}">"#),
+            OrderedList(start, UpperAlpha) => format!(r#"<ol type="A" start="{start}">"#),
+            OrderedList(start, LowerRoman) => format!(r#"<ol type="i" start="{start}">"#),
+            OrderedList(start, UpperRoman) => format!(r#"<ol type="I" start="{start}">"#),
+        }
+    }
+
+    fn closing_html_tag(&self) -> String {
+        match self.list_type {
+            ListType::OrderedList(_, _) => "</ol>",
+            ListType::UnorderedList => "</ul>",
+        }
+        .to_string()
+    }
+
     pub fn to_html(&self) -> String {
-        if self.items.is_empty() {
-            return String::new();
-        }
-        let mut counters: Vec<u32> = vec![1; MAX_DEPTH];
-        let (mut json_vec, mut tag_stack) = self.items.iter().fold(
-            (Vec::<Value>::new(), vec![]),
-            |(mut json_arr, mut tag_stack), item| {
-                // new_level is used to check if the start preference
-                // of a item can be used
-                while item.level != tag_stack.len() {
-                    if item.level > tag_stack.len() {
-                        tag_stack.push(item.item_type);
-                        let opening_tag = item.item_type.opening_tag(counters[item.level]);
-                        json_arr.push(json!({"name": "raw", "data": opening_tag}));
-                    } else {
-                        let reset_level = tag_stack.len();
-                        let closing_tag = tag_stack.pop().unwrap().closing_tag();
-                        json_arr.push(json!({"name": "raw", "data": closing_tag}));
-                        *counters.get_mut(reset_level).unwrap() = 1;
-                    }
-                }
-                let closing_tag = tag_stack.pop().unwrap().closing_tag();
-                tag_stack.push(item.item_type);
-                if counters[item.level] == 1 {
-                    if let Some(start) = item.item_type.get_start_preference() {
-                        *counters.get_mut(item.level).unwrap() = start;
-                    }
-                }
-                json_arr.extend(
-                    json!([
-                        {"name": "raw", "data": closing_tag},
-                        {"name": "raw", "data": item.item_type.opening_tag(counters[item.level])},
-                        {"name": "raw", "data": "<li>"},
-                        {"name": "block_content", "data": item.content},
-                        {"name": "raw", "data": "</li>"}
-                    ])
-                    .as_array()
-                    .unwrap()
-                    .clone(),
-                );
-                if item.item_type.is_ordered() {
-                    *counters.get_mut(item.level).unwrap() += 1;
-                }
-                (json_arr, tag_stack)
-            },
-        );
-
-        while let Some(item_type) = tag_stack.pop() {
-            let closing_tag = item_type.closing_tag();
-            json_vec.push(json!({"name": "raw", "data": closing_tag}));
-        }
-
+        let json_vec = self.to_html_vec();
         json!(json_vec).to_string()
     }
 
-    pub fn from_str(s: &str, indent: u64) -> Result<Self, NoListError> {
-        // If the first nonempty line is not a list item, return err
-        s.lines()
-            .find(|&l| !l.is_empty())
-            .unwrap_or("")
-            .trim()
-            .split_ascii_whitespace()
-            .next()
-            .unwrap_or("")
-            .parse::<ItemType>()
-            .map_err(|_| NoListError)?;
+    fn to_html_vec(&self) -> Vec<Value> {
+        let mut json_vec: Vec<Value> = vec![];
 
-        let items: Vec<ListItem> =
-            s.lines()
-                .skip_while(|&l| l.is_empty())
-                .fold(Vec::new(), |mut items, line| {
-                    let start = line
-                        .trim()
-                        .split_ascii_whitespace()
-                        .next()
-                        .unwrap_or("")
-                        .parse::<ItemType>();
+        json_vec.push(json!({"name": "raw", "data": &self.opening_html_tag()}));
 
-                    match start {
-                        Ok(item_type) => {
-                            let level = (line
-                                .chars()
-                                .take_while(|&x| x.is_ascii_whitespace())
-                                .count()
-                                / indent as usize)
-                                + 1;
-                            items.push(ListItem {
-                                item_type,
-                                content: line
-                                    .chars()
-                                    .skip_while(|&x| x.is_ascii_whitespace())
-                                    .skip_while(|&x| !x.is_ascii_whitespace())
-                                    .skip_while(|&x| x.is_ascii_whitespace())
-                                    .collect::<String>(),
-                                level,
-                            });
-                        }
-                        Err(_) => {
-                            let last_index = items.len() - 1;
-                            let mut last_item = items[last_index].clone();
-                            last_item.content.push('\n');
-                            last_item.content.push_str(line);
-                            items[last_index] = last_item;
-                        }
+        for item in &self.items {
+            json_vec.extend(item.to_html_vec());
+        }
+
+        json_vec.push(json!({"name": "raw", "data": &self.closing_html_tag()}));
+
+        json_vec
+    }
+
+    fn opening_latex_command(&self) -> String {
+        use ListType::*;
+        use OrderedType::*;
+        match self.list_type {
+            UnorderedList => "\\begin{itemize}\n".to_string(),
+            OrderedList(start, Decimal) => {
+                let mut string = format!(r#"\begin{{enumerate}}[start={start}, label=(\arabic*)]"#);
+                string.push('\n');
+                string
+            }
+            OrderedList(start, LowerAlpha) => {
+                let mut string = format!(r#"\begin{{enumerate}}[start={start}, label=(\alph*)]"#);
+                string.push('\n');
+                string
+            }
+            OrderedList(start, UpperAlpha) => {
+                let mut string = format!(r#"\begin{{enumerate}}[start={start}, label=(\Alph*)]"#);
+                string.push('\n');
+                string
+            }
+            OrderedList(start, LowerRoman) => {
+                let mut string = format!(r#"\begin{{enumerate}}[start={start}, label=(\roman*)]"#);
+                string.push('\n');
+                string
+            }
+            OrderedList(start, UpperRoman) => {
+                let mut string = format!(r#"\begin{{enumerate}}[start={start}, label=(\Roman*)]"#);
+                string.push('\n');
+                string
+            }
+        }
+    }
+
+    fn closing_latex_command(&self) -> String {
+        match self.list_type {
+            ListType::OrderedList(_, _) => "\\end{enumerate}\n",
+            ListType::UnorderedList => "\\end{itemize}\n",
+        }
+        .to_string()
+    }
+
+    pub fn to_latex(&self) -> String {
+        if self.max_depth() > 4 {
+            eprintln!("List is too deep to be rendered in LaTeX");
+            std::process::exit(0);
+        }
+        if self.jumps_multiple_levels() {
+            eprintln!("List jumps multiple levels, which is not supported in LaTeX");
+            std::process::exit(0);
+        }
+        let json_vec = self.to_latex_vec();
+        json!(json_vec).to_string()
+    }
+
+    fn to_latex_vec(&self) -> Vec<Value> {
+        let mut json_vec: Vec<Value> = vec![];
+
+        json_vec.push(json!({"name": "raw", "data": self.opening_latex_command()}));
+
+        for item in &self.items {
+            json_vec.extend(item.to_latex_vec());
+        }
+
+        json_vec.push(json!({"name": "raw", "data": self.closing_latex_command()}));
+
+        json_vec
+    }
+
+    pub fn from_str(s: &str, spaces_per_indent: u64) -> Result<Self, InvalidListError> {
+        if s.lines().count() == 0 || s.lines().next().unwrap().parse::<ListType>().is_err() {
+            return Err(InvalidListError);
+        }
+
+        let mut lines: Vec<(String, ListType)> = vec![];
+
+        for line in s.lines() {
+            if let Ok(list_type) = line.parse::<ListType>() {
+                lines.push((line.to_string(), list_type))
+            } else {
+                let last_index = lines.len() - 1;
+                let last = lines.get_mut(last_index).unwrap();
+                last.0.push('\n');
+                last.0.push_str(line);
+            }
+        }
+
+        let lines: Vec<(u64, ListType, String)> = lines
+            .iter()
+            .map(|(l, list_type)| {
+                let level = l.chars().take_while(char::is_ascii_whitespace).count() as u64
+                    / spaces_per_indent;
+                (
+                    level,
+                    *list_type,
+                    l.trim_start()
+                        .chars()
+                        .skip_while(|c| !c.is_ascii_whitespace())
+                        .skip(1)
+                        .collect::<String>(),
+                )
+            })
+            .collect();
+
+        let list_item = List::from_lines(&lines, 0, 0)?.0;
+
+        if let ListItem::List(list) = list_item {
+            Ok(list)
+        } else {
+            // This cannot happen but due to using from_lines recursively and having a
+            // ListItem vec we need to unwrap the list here from the ListItem struct here.
+            Err(InvalidListError)
+        }
+    }
+
+    fn from_lines(
+        lines: &Vec<(u64, ListType, String)>,
+        curr_level: u64,
+        start_index: usize,
+    ) -> Result<(ListItem, usize), InvalidListError> {
+        use std::cmp::Ordering;
+        let mut items = vec![];
+        let mut first_type = None;
+
+        let mut i = start_index;
+        while i < lines.len() {
+            let (level, list_type, content) = &lines[i];
+            match level.cmp(&curr_level) {
+                Ordering::Less => break,
+                Ordering::Equal => {
+                    items.push(ListItem::Content(content.to_string()));
+                    if first_type.is_none() {
+                        first_type = Some(*list_type);
                     }
-                    items
-                });
+                }
+                Ordering::Greater => {
+                    let (item, new_i) = List::from_lines(lines, curr_level + 1, i)?;
+                    i = new_i - 1;
+                    items.push(item);
+                }
+            }
+            i += 1;
+        }
 
-        Ok(List { items })
+        Ok((
+            ListItem::List(List {
+                list_type: first_type.unwrap_or(ListType::UnorderedList),
+                items,
+            }),
+            i,
+        ))
     }
 }
 
