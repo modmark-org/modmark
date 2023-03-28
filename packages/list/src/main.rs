@@ -4,6 +4,8 @@ use std::io::{self, Read};
 use list::List;
 use serde_json::{json, Value};
 
+// FIXME: latex requires enumitem package
+
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
     let action = &args[0];
@@ -27,7 +29,7 @@ fn manifest() {
             "transforms": [
                 {
                     "from": "list",
-                    "to": ["html"],
+                    "to": ["html", "latex"],
                     "arguments": [
                         {
                             "name": "indent",
@@ -67,6 +69,26 @@ fn transform_list(to: &str) {
 
             if let Ok(list) = List::from_str(body, indent) {
                 print!("{}", list.to_html())
+            } else {
+                eprintln!("Module block does not start with a list")
+            }
+        }
+        "latex" => {
+            let input: Value = {
+                let mut buffer = String::new();
+                io::stdin().read_to_string(&mut buffer).unwrap();
+                serde_json::from_str(&buffer).unwrap()
+            };
+
+            let body = input["data"].as_str().unwrap();
+            let indent = input["arguments"]["indent"]
+                .as_str()
+                .unwrap_or("4")
+                .parse()
+                .unwrap_or(4);
+
+            if let Ok(list) = List::from_str(body, indent) {
+                print!("{}", list.to_latex())
             } else {
                 eprintln!("Module block does not start with a list")
             }

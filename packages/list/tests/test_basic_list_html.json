@@ -6,14 +6,6 @@
   "__test_transform_to": "html",
   "__test_expected_result": [
     {
-      "data": "<ol type=\"i\" start=\"1\">",
-      "name": "raw"
-    },
-    {
-      "data": "</ol>",
-      "name": "raw"
-    },
-    {
       "data": "<ol type=\"i\" start=\"3\">",
       "name": "raw"
     },
@@ -23,18 +15,10 @@
     },
     {
       "data": "awefawef",
-      "name": "block_content"
+      "name": "raw"
     },
     {
       "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "data": "</ol>",
-      "name": "raw"
-    },
-    {
-      "data": "<ul>",
       "name": "raw"
     },
     {
@@ -43,18 +27,10 @@
     },
     {
       "data": "qwer",
-      "name": "block_content"
+      "name": "raw"
     },
     {
       "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "data": "</ul>",
-      "name": "raw"
-    },
-    {
-      "data": "<ol type=\"I\" start=\"4\">",
       "name": "raw"
     },
     {
@@ -63,18 +39,10 @@
     },
     {
       "data": "awe",
-      "name": "block_content"
+      "name": "raw"
     },
     {
       "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "data": "<ol type=\"1\" start=\"1\">",
-      "name": "raw"
-    },
-    {
-      "data": "</ol>",
       "name": "raw"
     },
     {
@@ -87,18 +55,10 @@
     },
     {
       "data": "wef",
-      "name": "block_content"
+      "name": "raw"
     },
     {
       "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "data": "</ol>",
-      "name": "raw"
-    },
-    {
-      "data": "<ol type=\"1\" start=\"7\">",
       "name": "raw"
     },
     {
@@ -107,7 +67,7 @@
     },
     {
       "data": "awef",
-      "name": "block_content"
+      "name": "raw"
     },
     {
       "data": "</li>",
@@ -115,14 +75,6 @@
     },
     {
       "data": "</ol>",
-      "name": "raw"
-    },
-    {
-      "data": "</ol>",
-      "name": "raw"
-    },
-    {
-      "data": "<ol type=\"a\" start=\"5\">",
       "name": "raw"
     },
     {
@@ -131,26 +83,18 @@
     },
     {
       "data": "awfe",
-      "name": "block_content"
+      "name": "raw"
     },
     {
       "data": "</li>",
       "name": "raw"
     },
     {
-      "data": "<ol type=\"a\" start=\"1\">",
+      "data": "<ul>",
       "name": "raw"
     },
     {
-      "data": "<ol type=\"a\" start=\"1\">",
-      "name": "raw"
-    },
-    {
-      "data": "<ol type=\"a\" start=\"1\">",
-      "name": "raw"
-    },
-    {
-      "data": "</ol>",
+      "data": "<ol type=\"1\" start=\"1\">",
       "name": "raw"
     },
     {
@@ -163,7 +107,7 @@
     },
     {
       "data": "awef",
-      "name": "block_content"
+      "name": "raw"
     },
     {
       "data": "</li>",
@@ -171,14 +115,6 @@
     },
     {
       "data": "</ol>",
-      "name": "raw"
-    },
-    {
-      "data": "</ol>",
-      "name": "raw"
-    },
-    {
-      "data": "<ol type=\"1\" start=\"1\">",
       "name": "raw"
     },
     {
@@ -187,18 +123,10 @@
     },
     {
       "data": "qwef",
-      "name": "block_content"
+      "name": "raw"
     },
     {
       "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "data": "<ol type=\"1\" start=\"1\">",
-      "name": "raw"
-    },
-    {
-      "data": "</ol>",
       "name": "raw"
     },
     {
@@ -211,7 +139,7 @@
     },
     {
       "data": "wqfe",
-      "name": "block_content"
+      "name": "raw"
     },
     {
       "data": "</li>",
@@ -219,14 +147,6 @@
     },
     {
       "data": "</ol>",
-      "name": "raw"
-    },
-    {
-      "data": "</ol>",
-      "name": "raw"
-    },
-    {
-      "data": "<ol type=\"1\" start=\"2\">",
       "name": "raw"
     },
     {
@@ -235,18 +155,10 @@
     },
     {
       "data": "qwef",
-      "name": "block_content"
+      "name": "raw"
     },
     {
       "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "data": "<ul>",
-      "name": "raw"
-    },
-    {
-      "data": "</ul>",
       "name": "raw"
     },
     {
@@ -259,7 +171,19 @@
     },
     {
       "data": "qwef",
-      "name": "block_content"
+      "name": "raw"
+    },
+    {
+      "data": "</li>",
+      "name": "raw"
+    },
+    {
+      "data": "<li>",
+      "name": "raw"
+    },
+    {
+      "data": "qwef",
+      "name": "raw"
     },
     {
       "data": "</li>",
@@ -270,39 +194,11 @@
       "name": "raw"
     },
     {
-      "data": "<ol type=\"1\" start=\"1\">",
-      "name": "raw"
-    },
-    {
-      "data": "<li>",
-      "name": "raw"
-    },
-    {
-      "data": "qwef",
-      "name": "block_content"
-    },
-    {
-      "data": "</li>",
-      "name": "raw"
-    },
-    {
       "data": "</ol>",
       "name": "raw"
     },
     {
-      "data": "</ol>",
-      "name": "raw"
-    },
-    {
-      "data": "</ol>",
-      "name": "raw"
-    },
-    {
-      "data": "</ol>",
-      "name": "raw"
-    },
-    {
-      "data": "<ol type=\"1\" start=\"6\">",
+      "data": "</ul>",
       "name": "raw"
     },
     {
@@ -311,18 +207,10 @@
     },
     {
       "data": "qwfe",
-      "name": "block_content"
+      "name": "raw"
     },
     {
       "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "data": "<ol type=\"a\" start=\"1\">",
-      "name": "raw"
-    },
-    {
-      "data": "</ol>",
       "name": "raw"
     },
     {
@@ -335,7 +223,7 @@
     },
     {
       "data": "qwre",
-      "name": "block_content"
+      "name": "raw"
     },
     {
       "data": "</li>",
