@@ -1,6 +1,7 @@
 use std::convert::Infallible;
 use std::future::Future;
 use std::pin::{pin, Pin};
+use std::sync::{Arc, Mutex};
 use std::task::Poll;
 
 use js_sys::{ArrayBuffer, Date, Map, Object, Uint8Array};

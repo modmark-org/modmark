@@ -192,6 +192,9 @@ pub fn native_err<T, U>(
 
     // Check if we have an __error transform
     if ctx
+        .package_manager
+        .lock()
+        .unwrap()
         .transforms
         .get("__error")
         .and_then(|t| t.find_transform_to(output_format))
