@@ -1,8 +1,3 @@
-use crate::error::CliError;
-use directories::ProjectDirs;
-use futures::{executor::block_on, future::join_all};
-use modmark_core::Resolve;
-use serde_json;
 use std::{
     env::current_dir,
     fs::{self, create_dir_all, File},
@@ -10,43 +5,50 @@ use std::{
     path::PathBuf,
 };
 
+use directories::ProjectDirs;
+use futures::future::join_all;
+use thiserror::Error;
+use tokio::sync::mpsc::Sender;
+
+use modmark_core::package_manager::{PackageID, PackageSource, Resolve, ResolveTask};
+
+use crate::error::CliError;
+
+#[derive(Clone)]
 pub struct PackageManager {
     pub(crate) registry: String,
+    pub(crate) sender: Sender<()>,
 }
 
 impl Resolve for PackageManager {
-    type Error = CliError;
-    fn resolve(&self, path: &str) -> Result<Vec<u8>, Self::Error> {
-        // Hmm, it does not seem like the best idea to block the thread like this
-        // but it should work good enough for our needs
-        // https://github.com/tokio-rs/tokio/issues/2289
-        tokio::task::block_in_place(move || block_on(async { self.resolve_package(path).await }))
-    }
-
-    fn resolve_all(&self, paths: &[&str]) -> Vec<Result<Vec<u8>, Self::Error>> {
-        tokio::task::block_in_place(move || block_on(async { self.resolve_packages(paths).await }))
+    fn resolve_all(&self, paths: Vec<ResolveTask>) {
+        let self_clone = self.clone();
+        tokio::spawn(async move {
+            let self_clone2 = self_clone.clone();
+            join_all(
+                paths
+                    .into_iter()
+                    .map(|task| {
+                        let self_clone = self_clone.clone();
+                        tokio::spawn(async move { self_clone.clone().resolve(task).await })
+                    })
+                    .collect::<Vec<_>>(),
+            )
+            .await;
+            self_clone2.sender.send(()).await.unwrap();
+        });
     }
 }
 
 impl PackageManager {
-    async fn resolve_packages(&self, paths: &[&str]) -> Vec<Result<Vec<u8>, CliError>> {
-        let futures = paths.iter().map(|&path| self.resolve_package(path));
-        join_all(futures).await
-    }
-
-    async fn resolve_package(&self, path: &str) -> Result<Vec<u8>, CliError> {
-        let splitter = path.split_once(':');
-
-        let Some((specifier, package_path)) = splitter else {
-            return self.fetch_local(path);
+    async fn resolve(&self, task: ResolveTask) {
+        let PackageID { name, target } = &task.package;
+        let result = match target {
+            PackageSource::Local => self.fetch_local(name),
+            PackageSource::Registry => self.fetch_registry(name).await,
+            PackageSource::Url => self.fetch_url(name).await,
         };
-
-        match specifier {
-            "http" => self.fetch_url(path).await,
-            "https" => self.fetch_url(path).await,
-            "pkgs" => self.fetch_registry(package_path).await,
-            other => Err(CliError::Specifier(other.to_string())),
-        }
+        task.complete(result);
     }
 
     async fn fetch_url(&self, package_path: &str) -> Result<Vec<u8>, CliError> {

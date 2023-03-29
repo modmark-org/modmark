@@ -65,7 +65,7 @@ pub enum CoreError {
     #[error("Importing external packages is not allowed")]
     DenyAllResolver,
     #[error("Error resolving {0}: {1:?}")]
-    Resolve(String, Box<dyn Error>),
+    Resolve(String, Box<dyn Error + Send>),
     #[error("Duplicate configurations for packages: '{0:?}'")]
     DuplicateConfigs(Vec<String>),
     #[error("Unused configurations for packages: '{0:?}'")]

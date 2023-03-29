@@ -6,6 +6,7 @@ use std::hash::{Hash, Hasher};
 use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
+use thiserror::Error;
 
 use wasmer::Engine;
 
@@ -217,7 +218,7 @@ impl PackageManager {
 
     pub(crate) fn reject_request<E>(&mut self, request: PackageID, response: E)
     where
-        E: Error + 'static,
+        E: Error + Send + 'static,
     {
         if self.awaited_packages.remove(&request) {
             self.failed_packages
@@ -321,7 +322,7 @@ pub struct ResolveTask {
 impl ResolveTask {
     pub fn complete<E>(mut self, result: Result<Vec<u8>, E>)
     where
-        E: Error + 'static,
+        E: Error + Send + 'static,
     {
         match result {
             Ok(result) => self.resolve(result),
@@ -342,7 +343,7 @@ impl ResolveTask {
 
     pub fn reject<E>(mut self, error: E)
     where
-        E: Error + 'static,
+        E: Error + Send + 'static,
     {
         self.resolved = true;
         let ResolveTask {
@@ -357,8 +358,8 @@ impl ResolveTask {
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct PackageID {
-    pub(crate) name: String,
-    pub(crate) target: PackageSource,
+    pub name: String,
+    pub target: PackageSource,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -368,12 +369,16 @@ pub enum PackageSource {
     Url,
 }
 
+#[derive(Error, Debug)]
+#[error("Deny all resolve attempts")]
+pub struct DenyAllResolverError;
+
 pub struct DenyAllResolver;
 
 impl Resolve for DenyAllResolver {
     fn resolve_all(&self, paths: Vec<ResolveTask>) {
         paths
             .into_iter()
-            .for_each(|p| p.reject(CoreError::DenyAllResolver))
+            .for_each(|p| p.reject(DenyAllResolverError))
     }
 }
