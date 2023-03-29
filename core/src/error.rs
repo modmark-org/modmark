@@ -86,6 +86,8 @@ pub enum CoreError {
         expected_type: String,
         given_value: String,
     },
+    #[error("A package request was dropped before resolving")]
+    DroppedRequest
 }
 
 impl From<WasiError> for CoreError {

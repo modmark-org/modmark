@@ -20,32 +20,12 @@ mod fs;
 mod package;
 mod std_packages;
 mod std_packages_macros;
+pub mod package_manager;
+use package_manager::Resolve;
 
 #[cfg(all(feature = "web", feature = "native"))]
 compile_error!("feature \"native\" and feature \"web\" cannot be enabled at the same time");
 
-pub trait Resolve {
-    type Error;
-    fn resolve(&self, path: &str) -> Result<Vec<u8>, Self::Error>;
-    fn resolve_all(&self, paths: &[&str]) -> Vec<Result<Vec<u8>, Self::Error>>;
-}
-
-pub struct DenyAllResolver;
-
-impl Resolve for DenyAllResolver {
-    type Error = CoreError;
-
-    fn resolve(&self, _path: &str) -> Result<Vec<u8>, Self::Error> {
-        Err(CoreError::DenyAllResolver)
-    }
-
-    fn resolve_all(&self, paths: &[&str]) -> Vec<Result<Vec<u8>, Self::Error>> {
-        paths
-            .iter()
-            .map(|_| Err(CoreError::DenyAllResolver))
-            .collect()
-    }
-}
 
 pub trait AccessPolicy: Send + Sync + 'static {
     fn root(&self) -> Option<String>;
@@ -123,7 +103,6 @@ pub fn eval<T, U>(
 ) -> Result<(String, CompilationState), CoreError>
 where
     T: Resolve,
-    <T as Resolve>::Error: Error + 'static,
     U: AccessPolicy + Send + Sync + 'static,
 {
     // Note: this isn't actually needed, since take_state clears state, but it
@@ -151,7 +130,6 @@ pub fn eval_no_document<T, U>(
 ) -> Result<(String, CompilationState), CoreError>
 where
     T: Resolve,
-    <T as Resolve>::Error: Error + 'static,
     U: AccessPolicy + Send + Sync + 'static,
 {
     ctx.clear_state();
@@ -225,7 +203,7 @@ mod tests {
 
     #[test]
     fn table_manifest_test() {
-        let ctx = Context::default().unwrap();
+        let ctx = Context::new_without_resolver().unwrap();
         let info = ctx.get_package_info("table").unwrap().clone();
 
         let foo = PackageInfo {
