@@ -1,3 +1,17 @@
+use std::cell::RefCell;
+use std::{
+    collections::HashMap,
+    env,
+    fs::{self, File},
+    io::{stdout, Write},
+    path::{Path, PathBuf},
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc, Mutex,
+    },
+    time::Duration,
+};
+
 use clap::Parser;
 use crossterm::{
     cursor,
@@ -12,20 +26,9 @@ use notify_debouncer_mini::{
 };
 use once_cell::sync::OnceCell;
 use portpicker::Port;
-use std::{
-    collections::HashMap,
-    env,
-    fs::{self, File},
-    io::{stdout, Write},
-    path::{Path, PathBuf},
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc, Mutex,
-    },
-    time::Duration,
-};
-use tokio::sync::{mpsc, RwLock};
 use tokio::sync::mpsc::{channel, Receiver};
+use tokio::sync::{mpsc, RwLock};
+use tokio::task::spawn_blocking;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::{
     ws::{Message, WebSocket},
@@ -143,7 +146,7 @@ static DEFAULT_REGISTRY: &str =
     "https://raw.githubusercontent.com/modmark-org/package-registry/main/package-registry.json";
 
 static CTX: OnceCell<Mutex<Context<PackageManager, CliAccessManager>>> = OnceCell::new();
-static RECEIVER: OnceCell<Receiver<()>> = OnceCell::new();
+static RECEIVER: OnceCell<Mutex<Receiver<()>>> = OnceCell::new();
 static PREVIEW_PORT: OnceCell<Option<Port>> = OnceCell::new();
 static ABSOLUTE_OUTPUT_PATH: OnceCell<PathBuf> = OnceCell::new();
 static CONNECTION_ID_COUNTER: AtomicUsize = AtomicUsize::new(1);
@@ -154,16 +157,34 @@ type PreviewDoc = Arc<Mutex<String>>;
 type CompilationResult = Result<(String, CompilationState, Ast), CoreError>;
 
 /// Compile a file and return the transpiled content, compilation state and ast.
-fn compile_file(input_file: &Path, output_format: &OutputFormat) -> CompilationResult {
+async fn compile_file(input_file: &Path, output_format: &OutputFormat) -> CompilationResult {
     let source = fs::read_to_string(input_file)?;
     let ast = parse(&source)?;
-    let (output, state) = eval(
+    if let Some((output, state)) = eval(
         &source,
         &mut CTX.get().unwrap().lock().unwrap(),
         output_format,
-    )?;
+    )? {
+        return Ok((output, state, ast));
+    }
 
-    Ok((output, state, ast))
+    spawn_blocking(|| {
+        println!("Waiting");
+        RECEIVER.get().unwrap().lock().unwrap().blocking_recv();
+        println!("Got it!");
+    })
+    .await
+    .unwrap();
+
+    if let Some((output, state)) = eval(
+        &source,
+        &mut CTX.get().unwrap().lock().unwrap(),
+        output_format,
+    )? {
+        return Ok((output, state, ast));
+    }
+
+    panic!("Something went wrong!!!")
 }
 
 fn print_compiling_message() -> Result<(), CliError> {
@@ -283,7 +304,7 @@ async fn run_cli(args: Args) -> Result<(), CliError> {
 
     let (sender, receiver) = channel::<()>(1);
 
-    RECEIVER.set(receiver).unwrap();
+    RECEIVER.set(Mutex::new(receiver)).unwrap();
     CTX.set(Mutex::new(
         Context::new(PackageManager { registry, sender }, CliAccessManager::new(&args)).unwrap(),
     ))
@@ -331,7 +352,7 @@ async fn run_cli(args: Args) -> Result<(), CliError> {
     // just compile the file once, assuming that they actually provided a output file
     if args.output.is_some() {
         print_compiling_message()?;
-        let compilation_result = compile_file(&args.input, &args.get_output_format()?);
+        let compilation_result = compile_file(&args.input, &args.get_output_format()?).await;
         save_result(&compilation_result, &args)?;
         print_result(&compilation_result, &args)?;
     } else {
@@ -438,7 +459,8 @@ async fn watch_files<P: AsRef<Path>>(
             &args
                 .get_output_format()
                 .unwrap_or_else(|_| OutputFormat::new("html")),
-        );
+        )
+        .await;
 
         // Write to the output file (if there was one)
         save_result(&compilation_result, args)?;

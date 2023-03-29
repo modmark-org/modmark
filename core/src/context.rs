@@ -199,14 +199,22 @@ where
 
     // This function configures the context with the given config, so that it is appropriate to
     // evaluate a document having that configuration with it. It also resolves packages if needed
-    pub(crate) fn configure(&mut self, config: Option<Config>) -> Result<(), CoreError> {
+    // If this returns "true", it had everything it needed to compile, if "false" it is waiting for
+    // more packages
+    pub(crate) fn configure(&mut self, config: Option<Config>) -> Result<bool, CoreError> {
         let config = config.unwrap_or_default();
         let mut lock = self.package_manager.lock().unwrap();
+        lock.finalize(&self.engine).unwrap();
         let arc_mutex = Arc::clone(&self.package_manager);
         let missings = lock.get_missing_packages(arc_mutex, &config);
-        self.resolver.resolve_all(missings);
-        lock.expose_transforms(config.try_into()?)?;
-        Ok(())
+        println!("Missings: {:?}", missings);
+        if missings.is_empty() {
+            lock.expose_transforms(config.try_into()?)?;
+            Ok(true)
+        } else {
+            self.resolver.resolve_all(missings);
+            Ok(false)
+        }
     }
 }
 

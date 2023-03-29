@@ -10,6 +10,7 @@ pub use context::Context;
 pub use element::Element;
 pub use error::CoreError;
 pub use package::{ArgInfo, Package, PackageInfo, Transform};
+use package_manager::Resolve;
 
 use crate::context::CompilationState;
 
@@ -18,11 +19,9 @@ mod element;
 mod error;
 mod fs;
 mod package;
+pub mod package_manager;
 mod std_packages;
 mod std_packages_macros;
-pub mod package_manager;
-use package_manager::Resolve;
-
 #[cfg(all(feature = "web", feature = "native"))]
 compile_error!("feature \"native\" and feature \"web\" cannot be enabled at the same time");
 
@@ -100,7 +99,7 @@ pub fn eval<T, U>(
     source: &str,
     ctx: &mut Context<T, U>,
     format: &OutputFormat,
-) -> Result<(String, CompilationState), CoreError>
+) -> Result<Option<(String, CompilationState)>, CoreError>
 where
     T: Resolve,
     U: AccessPolicy + Send + Sync + 'static,
@@ -115,11 +114,15 @@ where
     ctx.state.verbose_errors = true;
     let (doc_ast, config) = parser::parse_with_config(source)?;
     let document = doc_ast.try_into()?;
-    ctx.configure(config)?;
+    let success = ctx.configure(config)?;
+    if !success {
+        println!("No success");
+        return Ok(None);
+    }
 
     let res = eval_elem(document, ctx, format);
 
-    res.map(|s| (s, ctx.take_state()))
+    res.map(|s| Some((s, ctx.take_state())))
 }
 
 /// Evaluates a document using the given context without a document element
@@ -127,7 +130,7 @@ pub fn eval_no_document<T, U>(
     source: &str,
     ctx: &mut Context<T, U>,
     format: &OutputFormat,
-) -> Result<(String, CompilationState), CoreError>
+) -> Result<Option<(String, CompilationState)>, CoreError>
 where
     T: Resolve,
     U: AccessPolicy + Send + Sync + 'static,
@@ -149,10 +152,15 @@ where
     } else {
         Err(CoreError::RootElementNotParent)
     }?;
-    ctx.configure(config)?;
+
+    let success = ctx.configure(config)?;
+    if !success {
+        return Ok(None);
+    }
+
     let res = eval_elem(no_doc, ctx, format);
 
-    res.map(|s| (s, ctx.take_state()))
+    res.map(|s| Some((s, ctx.take_state())))
 }
 
 pub fn eval_elem<T, U>(
