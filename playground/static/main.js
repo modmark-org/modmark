@@ -161,7 +161,7 @@ function toggleView() {
             view = "package";
             packageView.style.width = "100%";
             editorView.style.width = "0";
-            viewToggle.innerHTML = buttonContent("View editor", "edit");
+            viewToggle.innerHTML = buttonContent("Editor", "edit");
             selector.setAttribute("disabled", "true");
             fileMenuVisible = true;
             toggleFileMenu();
@@ -172,7 +172,7 @@ function toggleView() {
             view = "editor";
             packageView.style.width = "0";
             editorView.style.width = "100%";
-            viewToggle.innerHTML = buttonContent("View packages", "widgets");
+            viewToggle.innerHTML = buttonContent("Packages", "widgets");
             selector.removeAttribute("disabled");
             break;
     }
@@ -588,6 +588,8 @@ async function updateOutput(input) {
     }
     let timeElapsed = new Date() - start;
     status.innerHTML = buttonContent(`Compiled in ${timeElapsed} ms`, "magic_button");
+    // Update the file list because new files may be crated during compilation
+    updateFileList();
 }
 
 const overleafButton = document.getElementById("overleaf-button");

@@ -63,7 +63,7 @@ fn transform(from: &str, to: &str) {
 fn transform_text(input: Value, to: &str) {
     match to {
         "html" => {
-            let path = input["data"].as_str().unwrap();
+            let path = input["data"].as_str().unwrap().trim();
             match fs::read_to_string(path) {
                 Ok(contents) => {
                     let html = format!("<p>{contents}</p>");
@@ -86,7 +86,7 @@ fn transform_text(input: Value, to: &str) {
 fn transform_image(input: Value, to: &str) {
     match to {
         "html" => {
-            let path = input["data"].as_str().unwrap();
+            let path = input["data"].as_str().unwrap().trim();
             match fs::read(path) {
                 Ok(contents) => {
                     let encoded: String = general_purpose::STANDARD_NO_PAD.encode(contents);
@@ -110,7 +110,7 @@ fn transform_image(input: Value, to: &str) {
 fn transform_include(input: Value, to: &str) {
     match to {
         "html" => {
-            let path = input["data"].as_str().unwrap();
+            let path = input["data"].as_str().unwrap().trim();
             match fs::read_to_string(path) {
                 Ok(contents) => {
                     let json = json!({"name": "block_content", "data": contents}).to_string();

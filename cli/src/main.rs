@@ -67,20 +67,21 @@ struct Args {
     #[arg(short = 'd', long = "dev", help = "Print the AST")]
     dev: bool,
 
-    #[arg(long = "deny-read", help = "Disables read access for packages")]
+    #[arg(long = "deny-read", help = "Deny read read privileges to 'assets'")]
     deny_read: bool,
 
-    #[arg(long = "deny-write", help = "Disables write access for packages")]
+    #[arg(long = "deny-write", help = "Deny read write privileges to 'assets'")]
     deny_write: bool,
 
-    #[arg(long = "deny-create", help = "Disables create access for packages")]
+    #[arg(long = "deny-create", help = "Deny read create privileges to 'assets'")]
     deny_create: bool,
 
     #[arg(
-        long = "no-prompts",
-        help = "Disables prompts for packages requesting file access"
+        long = "allow-every-module",
+        short = 'A',
+        help = "Allow every modules access the 'assets' directory"
     )]
-    no_prompts: bool,
+    allow_every_module: bool,
 
     #[arg(
         long = "assets",
@@ -279,11 +280,7 @@ async fn run_cli(args: Args) -> Result<(), CliError> {
         .to_string();
 
     CTX.set(Mutex::new(
-        Context::new(
-            PackageManager { registry },
-            CliAccessManager::new_with_args(&args),
-        )
-        .unwrap(),
+        Context::new(PackageManager { registry }, CliAccessManager::new(&args)).unwrap(),
     ))
     .unwrap();
 

@@ -11,8 +11,10 @@ use wasmer_vfs::{FileOpener, OpenOptionsConfig, VirtualFile};
 use wasmer_vfs::{FileSystem, FsError, Metadata, OpenOptions, ReadDir};
 
 pub struct CoreFs<T> {
-    inner: Arc<dyn FileSystem>,
-    root_path: String,
+    #[cfg(feature = "native")]
+    inner: Arc<HostFileSystem>,
+    #[cfg(feature = "web")]
+    inner: Arc<MemoryFileSystem>,
     file_opener: CoreFileOpener<T>,
 }
 
@@ -24,13 +26,15 @@ impl<T> Debug for CoreFs<T> {
 
 impl<T> FileSystem for CoreFs<T>
 where
-    T: AccessPolicy + Send + Sync + 'static,
+    T: AccessPolicy,
 {
     fn read_dir(&self, path: &Path) -> wasmer_vfs::Result<ReadDir> {
         self.inner.read_dir(path)
     }
 
     fn create_dir(&self, path: &Path) -> wasmer_vfs::Result<()> {
+        // This check for duplicates is required since MemoryFileSystem
+        // does not seem to properly handle duplicates itself
         if let Some(parent) = path.parent() {
             for (name, _) in self.list_dir(parent)? {
                 if path.ends_with(name.as_str()) {
@@ -48,6 +52,8 @@ where
     }
 
     fn rename(&self, from: &Path, to: &Path) -> wasmer_vfs::Result<()> {
+        // This check for duplicates is required since MemoryFileSystem
+        // does not seem to properly handle duplicates itself
         if let Some(parent) = from.parent() {
             for (name, _) in self.list_dir(parent)? {
                 if to.ends_with(name.as_str()) {
@@ -85,15 +91,15 @@ impl<T> CoreFs<T>
 where
     T: AccessPolicy,
 {
-    pub(crate) fn new(access_manager: T) -> Self {
+    pub(crate) fn new(policy: Arc<Mutex<T>>) -> Self {
         #[cfg(feature = "native")]
         let inner = Arc::new(HostFileSystem::default());
         #[cfg(feature = "web")]
         let inner = Arc::new(MemoryFileSystem::default());
+
         Self {
             inner,
-            root_path: access_manager.root(),
-            file_opener: CoreFileOpener::new(access_manager),
+            file_opener: CoreFileOpener::new(policy),
         }
     }
 }
@@ -104,19 +110,14 @@ impl<T> CoreFs<T> {
         file_opener.current_module = name;
         Self {
             inner: self.inner.clone(),
-            root_path: self.root_path.clone(),
             file_opener,
         }
-    }
-
-    pub(crate) fn root_path(&self) -> String {
-        self.root_path.clone()
     }
 }
 
 impl<T> CoreFs<T>
 where
-    T: AccessPolicy + Send + Sync + 'static,
+    T: AccessPolicy,
 {
     pub fn list_dir(&self, path: &Path) -> wasmer_vfs::Result<Vec<(String, bool)>> {
         let mut v = vec![];
@@ -156,14 +157,14 @@ where
 }
 
 pub struct CoreFileOpener<T> {
-    access_manager: Arc<Mutex<T>>,
+    policy: Arc<Mutex<T>>,
     current_module: String,
 }
 
 impl<T> Clone for CoreFileOpener<T> {
     fn clone(&self) -> Self {
         Self {
-            access_manager: self.access_manager.clone(),
+            policy: self.policy.clone(),
             current_module: self.current_module.clone(),
         }
     }
@@ -173,40 +174,30 @@ impl<T> CoreFileOpener<T>
 where
     T: AccessPolicy,
 {
-    fn new(access_manager: T) -> Self {
+    fn new(policy: Arc<Mutex<T>>) -> Self {
         Self {
-            access_manager: Arc::new(Mutex::new(access_manager)),
+            policy,
             current_module: String::new(),
         }
     }
 
-    // TODO: Maybe handle permission implications? Unless this is done in underlying open()
     #[cfg(feature = "native")]
     fn handle_options_config(
         &mut self,
         path: &Path,
         conf: &OpenOptionsConfig,
     ) -> OpenOptionsConfig {
+        let mut policy = self.policy.lock().unwrap();
+
         let read = conf.read()
-            && self
-                .access_manager
-                .lock()
-                .unwrap()
-                .allowed_to_read(path, &self.current_module);
-
+            && policy.allowed_to_read()
+            && policy.allowed_access(path, &self.current_module);
         let write = conf.write()
-            && self
-                .access_manager
-                .lock()
-                .unwrap()
-                .allowed_to_write(path, &self.current_module);
-
+            && policy.allowed_to_write()
+            && policy.allowed_access(path, &self.current_module);
         let create = conf.create()
-            && self
-                .access_manager
-                .lock()
-                .unwrap()
-                .allowed_to_create(path, &self.current_module);
+            && policy.allowed_to_create()
+            && policy.allowed_access(path, &self.current_module);
 
         OpenOptionsConfig {
             read,

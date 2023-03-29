@@ -4,6 +4,7 @@ use std::error::Error;
 use std::fmt::Formatter;
 use std::iter::once;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 use std::{
     collections::HashMap,
     fmt,
@@ -37,6 +38,7 @@ pub struct Context<T, U> {
     engine: Engine,
     pub(crate) state: CompilationState,
     pub filesystem: CoreFs<U>,
+    policy: Arc<Mutex<U>>,
 }
 
 #[derive(Default, Clone, Debug)]
@@ -127,17 +129,18 @@ impl TransformVariant {
 }
 
 impl Context<DenyAllResolver, DefaultAccessManager> {
-    pub fn new_with_defaults() -> Result<Self, CoreError> {
+    pub fn default() -> Result<Self, CoreError> {
         Self::new(DenyAllResolver, DefaultAccessManager)
     }
 }
 
 impl<T, U> Context<T, U> {
-    pub fn new(resolver: T, access_manager: U) -> Result<Self, CoreError>
+    pub fn new(resolver: T, policy: U) -> Result<Self, CoreError>
     where
         T: Resolve,
         U: AccessPolicy,
     {
+        let policy = Arc::new(Mutex::new(policy));
         let mut ctx = Context {
             native_packages: HashMap::new(),
             standard_packages: HashMap::new(),
@@ -147,7 +150,8 @@ impl<T, U> Context<T, U> {
             #[cfg(feature = "native")]
             engine: EngineBuilder::new(Cranelift::new()).engine(),
             state: CompilationState::default(),
-            filesystem: CoreFs::new(access_manager),
+            filesystem: CoreFs::new(Arc::clone(&policy)),
+            policy,
         };
         ctx.load_default_packages()?;
         Ok(ctx)
@@ -206,7 +210,7 @@ where
 
 impl<T, U> Context<T, U>
 where
-    U: AccessPolicy + Send + Sync + 'static,
+    U: AccessPolicy,
 {
     /// Transform an Element by using the loaded packages. The function will return a
     /// `Element::Compound`.
@@ -304,17 +308,29 @@ where
         };
 
         let fs = self.filesystem.clone_for_module(name.to_string());
+
+        // check the access policy
+        let (read, write, create, root_path) = {
+            let policy = self.policy.lock().unwrap();
+            (
+                policy.allowed_to_read(),
+                policy.allowed_to_write(),
+                policy.allowed_to_create(),
+                policy.root(),
+            )
+        };
+
         let wasi_env = WasiState::new("")
             .stdin(Box::new(input))
             .stdout(Box::new(output.clone()))
             .stderr(Box::new(err_out.clone()))
             .set_fs(Box::new(fs))
             .preopen(|p| {
-                p.directory(Path::new(self.filesystem.root_path().as_str()))
+                p.directory(Path::new(&root_path))
                     .alias(".")
-                    .read(true)
-                    .write(true)
-                    .create(true)
+                    .read(read)
+                    .write(write)
+                    .create(create)
             })?
             .args(["transform", name, &output_format.to_string()])
             .finalize(&mut store)?;
