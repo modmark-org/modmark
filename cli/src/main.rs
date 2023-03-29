@@ -25,6 +25,7 @@ use std::{
     time::Duration,
 };
 use tokio::sync::{mpsc, RwLock};
+use tokio::sync::mpsc::{channel, Receiver};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::{
     ws::{Message, WebSocket},
@@ -142,6 +143,7 @@ static DEFAULT_REGISTRY: &str =
     "https://raw.githubusercontent.com/modmark-org/package-registry/main/package-registry.json";
 
 static CTX: OnceCell<Mutex<Context<PackageManager, CliAccessManager>>> = OnceCell::new();
+static RECEIVER: OnceCell<Receiver<()>> = OnceCell::new();
 static PREVIEW_PORT: OnceCell<Option<Port>> = OnceCell::new();
 static ABSOLUTE_OUTPUT_PATH: OnceCell<PathBuf> = OnceCell::new();
 static CONNECTION_ID_COUNTER: AtomicUsize = AtomicUsize::new(1);
@@ -279,8 +281,11 @@ async fn run_cli(args: Args) -> Result<(), CliError> {
         .unwrap_or(DEFAULT_REGISTRY)
         .to_string();
 
+    let (sender, receiver) = channel::<()>(1);
+
+    RECEIVER.set(receiver).unwrap();
     CTX.set(Mutex::new(
-        Context::new(PackageManager { registry }, CliAccessManager::new(&args)).unwrap(),
+        Context::new(PackageManager { registry, sender }, CliAccessManager::new(&args)).unwrap(),
     ))
     .unwrap();
 
