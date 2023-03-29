@@ -36,6 +36,7 @@ impl Resolve for PackageManager {
             )
             .await;
             self_clone2.sender.send(()).await.unwrap();
+            println!("Sent!")
         });
     }
 }

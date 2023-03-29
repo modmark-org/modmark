@@ -6,8 +6,8 @@ use std::hash::{Hash, Hasher};
 use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
-use thiserror::Error;
 
+use thiserror::Error;
 use wasmer::Engine;
 
 use parser::config::{Config, Hide, Import, ImportConfig};
@@ -36,7 +36,7 @@ impl PackageManager {
     }
 
     // Might want to change this to Vec<CoreError>?
-    fn finalize(&mut self, engine: &Engine) -> Result<(), CoreError> {
+    pub fn finalize(&mut self, engine: &Engine) -> Result<(), CoreError> {
         // First, get all successful fetches and add them to external_packages, propagating any
         // error when creating the package itself
         let result: Vec<(PackageID, Package)> = self
@@ -58,7 +58,7 @@ impl PackageManager {
     }
 
     pub(crate) fn get_missing_packages(
-        &self,
+        &mut self,
         arc_mutex: Arc<Mutex<Self>>,
         config: &Config,
     ) -> Vec<ResolveTask> {
@@ -70,6 +70,9 @@ impl PackageManager {
             .filter(|name| {
                 !self.standard_packages.contains_key(name)
                     && !self.external_packages.contains_key(name)
+            })
+            .inspect(|id| {
+                self.awaited_packages.insert(id.clone());
             })
             .map(|id| ResolveTask {
                 manager: Arc::clone(&arc_mutex),
@@ -313,6 +316,7 @@ pub struct ResolveWrapper {
     }
 }*/
 
+#[derive(Debug)]
 pub struct ResolveTask {
     manager: Arc<Mutex<PackageManager>>,
     pub package: PackageID,
@@ -324,6 +328,7 @@ impl ResolveTask {
     where
         E: Error + Send + 'static,
     {
+        println!("Found it, error: {}", result.is_err());
         match result {
             Ok(result) => self.resolve(result),
             Err(error) => self.reject(error),
