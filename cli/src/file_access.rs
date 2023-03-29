@@ -60,7 +60,7 @@ impl AccessPolicy for CliAccessManager {
 fn prompt_user(prompt: &str) -> bool {
     println!("{prompt}");
 
-    let allowed_input = ["y", "n", "Y", "n"];
+    let allowed_input = ["y", "n", "Y", "N"];
 
     loop {
         let mut buffer = String::new();
