@@ -1,8 +1,8 @@
-use std::env;
-use std::io::{self, Read};
-use std::fs;
+use base64::{engine::general_purpose, Engine as _};
 use serde_json::{json, Value};
-use base64::{Engine as _, engine::general_purpose};
+use std::env;
+use std::fs;
+use std::io::{self, Read};
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -17,38 +17,41 @@ fn main() {
 }
 
 fn manifest() {
-    print!("{}", serde_json::to_string(&json!(
-        {
-        "name": "files",
-        "version": "0.1",
-        "description": "This package provides file access",
-        "transforms": [
+    print!(
+        "{}",
+        serde_json::to_string(&json!(
             {
-                "from": "textfile",
-                "to": ["html"],
-                "arguments": [],
-            },
-            {
-                "from": "image",
-                "to": ["html"],
-                "arguments": [],
-            },
-            {
-                "from": "include",
-                "to": ["html"],
-                "arguments": [],
+            "name": "files",
+            "version": "0.1",
+            "description": "This package provides file access",
+            "transforms": [
+                {
+                    "from": "textfile",
+                    "to": ["html"],
+                    "arguments": [],
+                },
+                {
+                    "from": "image",
+                    "to": ["html"],
+                    "arguments": [],
+                },
+                {
+                    "from": "include",
+                    "to": ["html"],
+                    "arguments": [],
+                }
+            ]
             }
-        ]
-        }
-    ))
-    .unwrap());
+        ))
+        .unwrap()
+    );
 }
 
 fn transform(from: &str, to: &str) {
     let input: Value = {
-                let mut buffer = String::new();
-                io::stdin().read_to_string(&mut buffer).unwrap();
-                serde_json::from_str(&buffer).unwrap()
+        let mut buffer = String::new();
+        io::stdin().read_to_string(&mut buffer).unwrap();
+        serde_json::from_str(&buffer).unwrap()
     };
     match from {
         "textfile" => transform_text(input, to),
@@ -69,7 +72,7 @@ fn transform_text(input: Value, to: &str) {
                     let html = format!("<p>{contents}</p>");
                     let json = json!({"name": "raw", "data": html}).to_string();
                     print!("[{json}]");
-                },
+                }
                 _ => {
                     let json = json!({"name": "raw", "data": ""}).to_string();
                     print!("[{json}]");
@@ -93,7 +96,7 @@ fn transform_image(input: Value, to: &str) {
                     let html = format!("<img src=\"data:image/png;base64, {encoded} \"/>");
                     let json = json!({"name": "raw", "data": html}).to_string();
                     print!("[{json}]");
-                },
+                }
                 _ => {
                     let json = json!({"name": "raw", "data": ""}).to_string();
                     print!("[{json}]");
