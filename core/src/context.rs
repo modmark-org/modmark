@@ -602,13 +602,17 @@ impl<T> Context<T> {
         let fn_res = main_fn.call(&mut store, &[]);
 
         if let Err(e) = fn_res {
-            // An error occurred when executing Wasm module =>
-            // it probably crashed, so just insert an error node
-            return Ok(Left(create_issue(
-                true,
-                format!("Wasm module crash: {e}"),
-                &input_data,
-            )));
+            // TODO: See if this can be done without string comparison
+            let error_msg = e.to_string();
+            if !error_msg.contains("WASI exited with code: 0") {
+                // An error occurred when executing Wasm module =>
+                // it probably crashed, so just insert an error node
+                return Ok(Left(create_issue(
+                    true,
+                    format!("Wasm module crash: {error_msg}"),
+                    &input_data,
+                )));
+            }
         }
 
         // Read the output of the package from stdout
