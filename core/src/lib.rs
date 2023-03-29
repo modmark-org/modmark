@@ -47,11 +47,12 @@ impl Resolve for DenyAllResolver {
     }
 }
 
-pub trait AccessPolicy {
+pub trait AccessPolicy: Send + Sync + 'static {
     fn root(&self) -> String;
-    fn allowed_to_read(&mut self, path: &Path, package_name: &String) -> bool;
-    fn allowed_to_write(&mut self, path: &Path, package_name: &String) -> bool;
-    fn allowed_to_create(&mut self, path: &Path, package_name: &String) -> bool;
+    fn allowed_to_read(&self) -> bool;
+    fn allowed_to_write(&self) -> bool;
+    fn allowed_to_create(&self) -> bool;
+    fn allowed_access(&mut self, path: &Path, module_name: &String) -> bool;
 }
 
 pub struct DefaultAccessManager;
@@ -61,15 +62,19 @@ impl AccessPolicy for DefaultAccessManager {
         String::from("/")
     }
 
-    fn allowed_to_read(&mut self, _path: &Path, _package_name: &String) -> bool {
+    fn allowed_to_read(&self) -> bool {
         true
     }
 
-    fn allowed_to_write(&mut self, _path: &Path, _package_name: &String) -> bool {
+    fn allowed_to_write(&self) -> bool {
         true
     }
 
-    fn allowed_to_create(&mut self, _path: &Path, _package_name: &String) -> bool {
+    fn allowed_to_create(&self) -> bool {
+        true
+    }
+
+    fn allowed_access(&mut self, _path: &Path, _module_name: &String) -> bool {
         true
     }
 }
@@ -220,7 +225,7 @@ mod tests {
 
     #[test]
     fn table_manifest_test() {
-        let ctx = Context::new_with_defaults().unwrap();
+        let ctx = Context::default().unwrap();
         let info = ctx.get_package_info("table").unwrap().clone();
 
         let foo = PackageInfo {
