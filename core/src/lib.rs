@@ -18,6 +18,7 @@ mod error;
 mod package;
 mod std_packages;
 mod std_packages_macros;
+mod fs;
 
 #[cfg(all(feature = "web", feature = "native"))]
 compile_error!("feature \"native\" and feature \"web\" cannot be enabled at the same time");

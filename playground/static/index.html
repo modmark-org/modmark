@@ -38,6 +38,12 @@
                     </span>
                 View packages
             </button>
+            <button id="view-files">
+                <span class="material-symbols-outlined">
+                    folder
+                </span>
+                View files
+            </button>
             <button id="overleaf-button" style="display:none">Open in Overleaf</button>
         </div>
         <a href="https://github.com/modmark-org/modmark">
@@ -49,6 +55,24 @@
     </div>
 </div>
 <main id="wrapper">
+    <div id="file-menu">
+        <div id="file-header">
+            <p>Files</p>
+            <button id="folder-button">Add folder</button>
+            <input type="file" id="file-upload">
+            <label for="file-upload" id="upload-button">Add file</label>
+        </div>
+        <div id="file-navigation">
+            <button id="return-button">
+                <span class="material-symbols-outlined">
+                    arrow_back
+                </span>
+            </button>
+            <span id="current-path"></span>
+        </div>
+        <div id="file-list">
+        </div>
+    </div>
     <div id="editor-view">
         <div id="editor"></div>
         <div id="preview">

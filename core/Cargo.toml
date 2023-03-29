@@ -10,6 +10,7 @@ edition = "2021"
 parser = { version = "*", path = "../parser/" }
 wasmer = { version = "3.1.1", default-features = false }
 wasmer-wasi = { version = "3.1.1", default-features = false }
+wasmer-vfs = { version = "3.1.1", default-features = false }
 thiserror = "1.0.38"
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.93"
@@ -37,7 +38,7 @@ wasmer-compiler = "3.1.1"
 # default is native, bundle_std_packages and precompile_wasm
 [features]
 default = ["native", "bundle_std_packages", "precompile_wasm"]
-native = ["wasmer/sys-default", "wasmer-wasi/sys-default"]
-web = ["wasmer/js-default", "wasmer-wasi/js"]
+native = ["wasmer/sys-default", "wasmer-wasi/sys-default", "wasmer-vfs/mem-fs"]
+web = ["wasmer/js-default", "wasmer-wasi/js", "wasmer-vfs/mem-fs"]
 bundle_std_packages = []
 precompile_wasm = []

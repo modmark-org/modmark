@@ -24,6 +24,7 @@ use parser::ModuleArguments;
 use crate::package::{ArgValue, PackageImplementation};
 use crate::{std_packages, DenyAllResolver, Element, Resolve};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
+use crate::fs::MemFS;
 
 pub struct Context<T> {
     pub(crate) native_packages: HashMap<String, Package>,
@@ -34,6 +35,8 @@ pub struct Context<T> {
     #[cfg(feature = "native")]
     engine: Engine,
     pub(crate) state: CompilationState,
+    #[cfg(feature = "web")]
+    pub filesystem: MemFS,
 }
 
 #[derive(Default, Clone, Debug)]
@@ -143,6 +146,8 @@ impl<T> Context<T> {
             #[cfg(feature = "native")]
             engine: EngineBuilder::new(Cranelift::new()).engine(),
             state: CompilationState::default(),
+            #[cfg(feature = "web")]
+            filesystem: MemFS::new(),
         };
         ctx.load_default_packages()?;
         Ok(ctx)
@@ -588,8 +593,8 @@ impl<T> Context<T> {
             .stdin(Box::new(input))
             .stdout(Box::new(output.clone()))
             .stderr(Box::new(err_out.clone()))
+            .preopen(|p| p.directory("assets").alias(".").read(true))?
             .args(["transform", name, &output_format.to_string()])
-            .preopen(|p| p.directory(".").read(true))?
             .finalize(&mut store)?;
 
         #[cfg(feature = "web")]
@@ -597,6 +602,8 @@ impl<T> Context<T> {
             .stdin(Box::new(input))
             .stdout(Box::new(output.clone()))
             .stderr(Box::new(err_out.clone()))
+            .set_fs(Box::new(self.filesystem.clone()))
+            .preopen(|p| p.directory("/").alias(".").read(true))?
             .args(["transform", name, &output_format.to_string()])
             .finalize(&mut store)?;
 
