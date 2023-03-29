@@ -31,6 +31,24 @@ onmessage = (event) => {
             case "transpile_no_document":
                 result = wasm_bindgen.transpile_no_document(event.data.source, event.data.format);
                 break;
+            case "add_file":
+                wasm_bindgen.add_file(event.data.path, event.data.bytes);
+                break;
+            case "add_folder":
+                wasm_bindgen.add_folder(event.data.path);
+                break;
+            case "rename_entry":
+                wasm_bindgen.rename_entry(event.data.from, event.data.to);
+                break;
+            case "remove_file":
+                wasm_bindgen.remove_file(event.data.path);
+                break;
+            case "remove_dir":
+                wasm_bindgen.remove_dir(event.data.path);
+                break;
+            case "get_file_list":
+                result = wasm_bindgen.get_file_list(event.data.path);
+                break;
         }
         postMessage({ result: result, success: true, ...event.data });
     } catch (error) {

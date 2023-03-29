@@ -3,6 +3,7 @@ let compiler_callback;
 let compiler_failure;
 let compiler = new Worker("./compiler.js");
 
+
 compiler.onmessage = (event) => {
     // Render the document once the wasm module containing the
     // compiler has been instantiated.
@@ -29,6 +30,11 @@ async function compilerAction(action) {
 }
 
 let view = "editor";
+let fileMenuVisible = false;
+let currentPath = "/";
+let selectedEntry = "";
+let folderCount = 0;
+
 const editorView = document.getElementById("editor-view");
 
 // Set up the editor
@@ -69,11 +75,20 @@ const status = document.getElementById("status");
 const packageView = document.getElementById("package-view");
 const packageContent = document.getElementById("package-content");
 
+// Files
+const fileMenu = document.getElementById("file-menu");
+const fileList = document.getElementById("file-list");
+const fileUpload = document.getElementById("file-upload")
+const folderButton = document.getElementById("folder-button");
+const returnButton = document.getElementById("return-button")
+const pathText = document.getElementById("current-path");
+
 // Menu options
 const selector = document.getElementById("selector");
 const viewToggle = document.getElementById("view-toggle");
 const leftMenu = document.getElementById("left-menu");
 const formatInput = document.getElementById("format-input");
+const viewFiles = document.getElementById("view-files");
 
 // Set to "render html" by default
 selector.value = "render";
@@ -85,6 +100,10 @@ if (selector.value === "transpile-other") {
 }
 
 viewToggle.onclick = toggleView;
+viewFiles.onclick = toggleFileMenu;
+fileUpload.onchange = handleFileUpload;
+folderButton.onclick = addFolder;
+returnButton.onclick = leaveDir;
 
 // Add the PR button
 const regex = /pr-preview\/pr-(\d+)/;
@@ -245,6 +264,104 @@ async function loadPackageInfo() {
 
 }
 
+function toggleFileMenu() {
+    if (fileMenuVisible) {
+        fileMenu.style.width = "0";
+    } else {
+        fileMenu.style.width = "25rem";
+    }
+    fileMenuVisible = !fileMenuVisible;
+}
+
+async function handleFileUpload() {
+    const uploads = fileUpload.files;
+    for (let i = 0; i < uploads.length; i++) {
+        const promise = uploads[i].arrayBuffer();
+        promise.then(
+            async function (result) {
+                const bytes = new Uint8Array(result);
+                await compilerAction({
+                    type: "add_file",
+                    path: currentPath + uploads[i].name,
+                    bytes: bytes
+                })
+                updateFileList();
+            }
+        ).catch(
+            function(error) {
+                console.log(error);
+            }
+        )
+    }
+}
+
+async function addFolder() {
+    folderCount += 1;
+    await compilerAction({ type: "add_folder", path: currentPath + "Folder" + folderCount })
+    updateFileList();
+}
+
+async function renameEntry() {
+    await compilerAction( {
+        type: "rename_entry",
+        from: currentPath + selectedEntry,
+        to: currentPath + this.value,
+    })
+    selectedEntry = "";
+    updateFileList();
+}
+
+async function removeEntry() {
+    const [type, name] = this.name.split("-");
+    switch (type) {
+        case "dir":
+            await compilerAction({type: "remove_dir", path: currentPath + name})
+            break;
+        case "file":
+            await compilerAction({type: "remove_file", path: currentPath + name})
+            break;
+    }
+    updateFileList();
+}
+
+function promptRename() {
+    let name_div = this.parentNode.childNodes[1];
+    selectedEntry = name_div.innerHTML;
+    let input = document.createElement("INPUT");
+    input.setAttribute("type", "text");
+    input.addEventListener("focusout", updateFileList, false);
+    input.addEventListener("change", renameEntry, false);
+    name_div.replaceWith(input);
+    input.focus();
+}
+
+async function updateFileList() {
+    fileList.innerHTML = JSON.parse(await compilerAction({type: "get_file_list", path: currentPath})).list;
+    pathText.innerHTML = currentPath.split("/").at(-2);
+    for (let btn of document.getElementsByClassName("rename-button")) {
+        btn.addEventListener("click", promptRename, false);
+    }
+    for (let btn of document.getElementsByClassName("remove-button")) {
+        btn.addEventListener("click", removeEntry, false);
+    }
+    for (let name of document.getElementsByClassName("dir-name")) {
+        name.addEventListener("dblclick", visitDir, false);
+    }
+}
+
+function visitDir() {
+    currentPath += this.innerHTML;
+    currentPath += "/";
+    updateFileList();
+}
+
+function leaveDir() {
+    if (currentPath.length > 1) {
+        const trimmed = currentPath.slice(0, -1);
+        currentPath = trimmed.slice(0, trimmed.lastIndexOf("/")+1);
+        updateFileList();
+    }
+}
 
 function addError(message) {
     errorPrompt.style.display = "block";

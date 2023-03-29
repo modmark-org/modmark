@@ -1,10 +1,13 @@
 use std::cell::RefCell;
+use std::path::Path;
 
 use modmark_core::{eval, eval_no_document, Context, CoreError, DenyAllResolver, OutputFormat};
 use parser::ParseError;
 use serde::Serialize;
+use serde_json::json;
 use thiserror::Error;
 use wasm_bindgen::prelude::*;
+use wasmer_vfs::FileSystem;
 
 thread_local! {
     static CONTEXT: RefCell<Context<DenyAllResolver>> = RefCell::new(Context::new_without_resolver().unwrap())
@@ -131,6 +134,93 @@ pub fn package_info() -> String {
     CONTEXT.with(|ctx| {
         let ctx = ctx.borrow();
         serde_json::to_string(&ctx.get_all_package_info()).unwrap()
+    })
+}
+
+#[wasm_bindgen]
+pub fn get_file_list(path: &str) -> String {
+    CONTEXT.with(|ctx| {
+        let mut html = String::new();
+        let ctx = ctx.borrow();
+
+        for (name, is_folder) in ctx.filesystem.list_dir(path) {
+            let icon = if is_folder {
+                "<span class=\"material-symbols-outlined\">folder_open</span>"
+            } else {
+                "<span class=\"material-symbols-outlined\">description</span>"
+            };
+
+            let id = if is_folder {
+                format!("dir-{name}")
+            } else {
+                format!("file-{name}")
+            };
+
+            let entry_name = if is_folder {
+                format!("<div class=\"dir-name\">{name}</div>")
+            } else {
+                format!("<div class=\"file-name\">{name}</div>")
+            };
+
+            let rename_button = format!(
+                "<button class=\"rename-button\" name=\"{id}\">\
+                <span class=\"material-symbols-outlined\">edit</span>\
+                </button>"
+            );
+            let delete_button = format!(
+                "<button class=\"remove-button\" name=\"{id}\">\
+                <span class=\"material-symbols-outlined\">delete</span>\
+                </button>"
+            );
+            html = format!(
+                "{html}<div class=\"dir-entry\">\
+                {icon}\
+                {entry_name}\
+                {rename_button}\
+                {delete_button}\
+                </div>");
+        }
+        json!({"list": html}).to_string()
+    })
+}
+
+#[wasm_bindgen]
+pub fn add_file(path: &str, data: &[u8]) {
+    CONTEXT.with(|ctx| {
+        let ctx = ctx.borrow();
+        ctx.filesystem.create_file(path, data).unwrap();
+    })
+}
+
+#[wasm_bindgen]
+pub fn add_folder(path: &str) {
+    CONTEXT.with(|ctx| {
+        let ctx = ctx.borrow();
+        ctx.filesystem.create_dir(Path::new(path)).unwrap();
+    })
+}
+
+#[wasm_bindgen]
+pub fn rename_entry(path: &str, new_path: &str) {
+    CONTEXT.with(|ctx| {
+        let ctx = ctx.borrow();
+        ctx.filesystem.rename(Path::new(path), Path::new(new_path)).unwrap();
+    })
+}
+
+#[wasm_bindgen]
+pub fn remove_file(path: &str) {
+    CONTEXT.with(|ctx| {
+        let ctx = ctx.borrow();
+        ctx.filesystem.remove_file(Path::new(path)).unwrap();
+    })
+}
+
+#[wasm_bindgen]
+pub fn remove_dir(path: &str) {
+    CONTEXT.with(|ctx| {
+        let ctx = ctx.borrow();
+        ctx.filesystem.remove_dir(Path::new(path)).unwrap();
     })
 }
 
