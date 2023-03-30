@@ -46,8 +46,8 @@ macro_rules! define_native_packages {
             ]
         }
 
-        pub fn handle_native<T>(
-            ctx: &mut Context<T>,
+        pub fn handle_native<T, U>(
+            ctx: &mut Context<T, U>,
             package_name: &str,
             node_name: &str, // name of module or parent
             element: &Element,
