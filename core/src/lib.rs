@@ -1,4 +1,3 @@
-use std::error::Error;
 use std::hash::{Hash, Hasher};
 use std::path::Path;
 use std::str::FromStr;
