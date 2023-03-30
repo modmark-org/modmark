@@ -10,7 +10,7 @@ struct ModulePermissions {
 }
 
 pub struct CliAccessManager {
-    root: String,
+    root: Option<String>,
     deny_read: bool,
     deny_write: bool,
     deny_create: bool,
@@ -19,7 +19,7 @@ pub struct CliAccessManager {
 }
 
 impl AccessPolicy for CliAccessManager {
-    fn root(&self) -> String {
+    fn root(&self) -> Option<String> {
         self.root.clone()
     }
 
@@ -79,7 +79,7 @@ fn prompt_user(prompt: &str) -> bool {
 impl CliAccessManager {
     pub(crate) fn new(args: &Args) -> Self {
         Self {
-            root: args.assets.clone().unwrap_or(String::from("assets")),
+            root: args.assets.clone(),
             deny_read: args.deny_read,
             deny_write: args.deny_write,
             deny_create: args.deny_create,
