@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::convert::Infallible;
 use std::error::Error;
 use std::hash::{Hash, Hasher};
+use std::mem;
 use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
@@ -240,31 +241,26 @@ impl PackageManager {
     }
 }
 
-impl FromStr for PackageID {
-    type Err = Infallible;
+impl From<&str> for PackageID {
+    fn from(s: &str) -> Self {
+        #[inline]
+        fn prefix<'a, T>(s: &'a str, prefix: &'static str, t: T) -> Option<(&'a str, T)> {
+            s.starts_with(prefix)
+                .then(|| (s.split_at(prefix.len()).1, t))
+        }
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(if s.starts_with("pkg:") {
-            Self {
-                name: s.split_at(4).1.to_string(),
-                target: PackageSource::Registry,
-            }
-        } else if s.starts_with("pkgs:") {
-            Self {
-                name: s.split_at(5).1.to_string(),
-                target: PackageSource::Registry,
-            }
-        } else {
-            let target = if s.starts_with("http://") || s.starts_with("https://") {
-                PackageSource::Url
-            } else {
-                PackageSource::Local
-            };
-            Self {
-                name: s.to_string(),
-                target,
-            }
-        })
+        let (name, target) = None
+            .or(prefix(s, "pkg:", PackageSource::Registry))
+            .or(prefix(s, "pkgs:", PackageSource::Registry))
+            .or(prefix(s, "prelude:", PackageSource::Standard))
+            .or(prefix(s, "std:", PackageSource::Standard))
+            .or_else(|| {
+                (s.starts_with("http://") | s.starts_with("https://"))
+                    .then_some((s, PackageSource::Url))
+            })
+            .unwrap_or((s, PackageSource::Local));
+        let name = name.to_string();
+        PackageID { name, target }
     }
 }
 
@@ -274,9 +270,11 @@ impl From<String> for PackageID {
     }
 }
 
-impl From<&str> for PackageID {
-    fn from(value: &str) -> Self {
-        PackageID::from_str(value).unwrap()
+impl FromStr for PackageID {
+    type Err = Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(s.into())
     }
 }
 
@@ -312,20 +310,6 @@ pub struct ResolveWrapper {
     task: ResolveTask,
 }
 
-/*impl Drop for ResolveTask {
-    fn drop(&mut self) {
-        if !self.resolved {
-            let ResolveTask {
-                manager,
-                package,
-                resolved,
-            } = self;
-            let mut manager = manager.lock().unwrap();
-            manager.reject_request(package.clone(), CoreError::DroppedRequest);
-        }
-    }
-}*/
-
 #[derive(Debug)]
 pub struct ResolveTask {
     manager: Arc<Mutex<PackageManager>>,
@@ -347,12 +331,8 @@ impl ResolveTask {
 
     pub fn resolve(mut self, result: Vec<u8>) {
         self.resolved = true;
-        let ResolveTask {
-            manager,
-            package,
-            resolved,
-        } = self;
-        let mut manager = manager.lock().unwrap();
+        let mut manager = self.manager.lock().unwrap();
+        let mut package = mem::take(&mut self.package);
         manager.resolve_request(package, result);
     }
 
@@ -361,27 +341,35 @@ impl ResolveTask {
         E: Error + Send + 'static,
     {
         self.resolved = true;
-        let ResolveTask {
-            manager,
-            package,
-            resolved,
-        } = self;
-        let mut manager = manager.lock().unwrap();
+        let mut manager = self.manager.lock().unwrap();
+        let mut package = mem::take(&mut self.package);
         manager.reject_request(package, error);
     }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+impl Drop for ResolveTask {
+    fn drop(&mut self) {
+        if !self.resolved {
+            let mut manager = self.manager.lock().unwrap();
+            let mut package = mem::take(&mut self.package);
+            manager.reject_request(package.clone(), CoreError::DroppedRequest);
+        }
+    }
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Default)]
 pub struct PackageID {
     pub name: String,
     pub target: PackageSource,
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Default)]
 pub enum PackageSource {
     Local,
     Registry,
     Url,
+    #[default]
+    Standard,
 }
 
 #[derive(Error, Debug)]

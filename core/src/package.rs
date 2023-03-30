@@ -350,26 +350,18 @@ impl Package {
 
     /// Read the binary data from a `.wasm` file and create a Package
     /// containing info about the package as well as the compiled wasm source module.
-    #[cfg(feature = "native")]
-    pub fn new(wasm_source: &[u8], engine: &Engine) -> Result<Self, CoreError> {
-        let module = Module::from_binary(engine, wasm_source)?;
+    pub fn new(
+        wasm_source: &[u8],
+        #[cfg(feature = "native")] engine: &Engine,
+    ) -> Result<Self, CoreError> {
+        #[cfg(feature = "native")]
         let mut store = Store::new(engine);
-        let package_info = Self::read_manifest(&module, &mut store)?;
-        Ok(Package {
-            info: Arc::new(package_info),
-            implementation: PackageImplementation::Wasm(module),
-        })
-    }
+        #[cfg(feature = "native")]
+        let module = Module::from_binary(engine, wasm_source)?;
 
-    /// Read the binary data from a `.wasm` file and create a Package
-    /// containing info about the package as well as the compiled wasm source module.
-    #[cfg(feature = "web")]
-    pub fn new(wasm_source: &[u8]) -> Result<Self, CoreError> {
-        // Looking at the code found in the wasmer::js::module it looks like
-        // this store never actually will be tied to the Module so it should be fine
-        // to create a "dummy" store like this and then later create a new store each
-        // time we create a new instance.
+        #[cfg(feature = "web")]
         let mut store = Store::new();
+        #[cfg(feature = "web")]
         let module =
             Module::from_binary(&store, wasm_source).expect("Failed to create wasm module");
 
