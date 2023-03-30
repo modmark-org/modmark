@@ -41,6 +41,7 @@ pub fn resolve(task: ResolveTask) {
                 task.complete(result);
             });
         }
+        PackageSource::Standard => { todo!() }
     }
 }
 

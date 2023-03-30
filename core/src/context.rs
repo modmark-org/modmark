@@ -33,6 +33,7 @@ use parser::config::{Config, HideConfig, ImportConfig};
 use parser::ModuleArguments;
 
 use crate::package::{ArgValue, PackageImplementation};
+use crate::package_manager::PackageSource::Standard;
 use crate::package_manager::{DenyAllResolver, PackageID, PackageManager, Resolve};
 use crate::{std_packages, Element};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
@@ -509,8 +510,12 @@ impl<T, U> Context<T, U> {
         let pkg = self.package_from_wasm(wasm_source)?;
 
         let name = pkg.info.name.as_str();
+        let id = PackageID {
+            name: name.to_string(),
+            target: Standard,
+        };
         let mut lock = self.package_manager.lock().unwrap();
-        let entry = lock.standard_packages.entry(name.into());
+        let entry = lock.standard_packages.entry(id);
 
         match entry {
             Entry::Occupied(_) => Err(CoreError::OccupiedName(name.to_string())),
@@ -543,8 +548,12 @@ impl<T, U> Context<T, U> {
         let pkg = Package::new_precompiled(wasm_source, &self.engine)?;
 
         let name = pkg.info.name.as_str();
+        let id = PackageID {
+            name: name.to_string(),
+            target: Standard,
+        };
         let mut lock = self.package_manager.lock().unwrap();
-        let entry = lock.standard_packages.entry(name.into());
+        let entry = lock.standard_packages.entry(id);
 
         match entry {
             Entry::Occupied(_) => Err(CoreError::OccupiedName(name.to_string())),

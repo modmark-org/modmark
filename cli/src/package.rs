@@ -48,6 +48,7 @@ impl PackageManager {
             PackageSource::Local => self.fetch_local(name),
             PackageSource::Registry => self.fetch_registry(name).await,
             PackageSource::Url => self.fetch_url(name).await,
+            PackageSource::Standard => Err(CliError::Registry),
         };
         task.complete(result);
     }
