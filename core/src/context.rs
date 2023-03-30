@@ -3,20 +3,12 @@ use std::fmt::Formatter;
 use std::iter::once;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use std::pin::Pin;
-use std::str::FromStr;
-use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::{Arc, Mutex};
 use std::{
     collections::HashMap,
     fmt,
     fmt::Debug,
     io::{Read, Write},
 };
-
-use crate::package::{ArgValue, PackageImplementation};
-use crate::{std_packages, AccessPolicy, DefaultAccessManager, DenyAllResolver, Element, Resolve};
-use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
 
 use either::{Either, Left};
 use serde::{Deserialize, Serialize};
@@ -26,16 +18,16 @@ use wasmer::{Cranelift, Engine, EngineBuilder};
 use wasmer::{Instance, Module, Store};
 use wasmer_wasi::{Pipe, WasiState};
 
-use crate::fs::CoreFs;
 use parser::config::{Config, HideConfig, ImportConfig};
 use parser::ModuleArguments;
 
+use crate::fs::CoreFs;
 use crate::package::{ArgValue, PackageImplementation};
-use crate::package_store::{PackageID, PackageStore, Resolve};
-use crate::{std_packages, Element};
+use crate::package_store::{PackageID, PackageStore};
+use crate::{std_packages, AccessPolicy, Element, Resolve};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
 
-pub struct Context<T,U> {
+pub struct Context<T, U> {
     pub package_manager: Arc<Mutex<PackageStore>>,
     pub(crate) resolver: T,
     #[cfg(feature = "native")]
@@ -132,14 +124,14 @@ impl TransformVariant {
     }
 }
 
-impl<T> Context<T> {
-    pub fn new_with_resolver(resolver: T) -> Result<Self, CoreError>
+impl<T, U> Context<T, U> {
+    pub fn new(resolver: T, policy: U) -> Result<Self, CoreError>
     where
         T: Resolve,
         U: AccessPolicy,
     {
         let policy = Arc::new(Mutex::new(policy));
-        let mut ctx = Context {
+        let ctx = Context {
             package_manager: Arc::default(),
             resolver,
             #[cfg(feature = "native")]
@@ -454,185 +446,6 @@ impl<T, U> Context<T, U> {
     /// a cleared out `CompilationState`
     pub fn take_state(&mut self) -> CompilationState {
         std::mem::take(&mut self.state)
-    }
-
-    /// Transform an Element by using the loaded packages. The function will return a
-    /// `Element::Compound`.
-    pub fn transform(
-        &mut self,
-        from: &Element,
-        output_format: &OutputFormat,
-    ) -> Result<Either<Element, String>, CoreError> {
-        use Element::{Compound, Module, Parent};
-
-        match from {
-            Compound(_) => unreachable!("Should not transform compound element"),
-            Parent {
-                name,
-                args: _,
-                children: _,
-            }
-            | Module {
-                name,
-                args: _,
-                body: _,
-                inline: _,
-            } => {
-                let lock = self.package_manager.lock().unwrap();
-                let Some((_, package)) = lock.get_transform_to(name, output_format) else {
-                    return Err(CoreError::MissingTransform(name.clone(), output_format.to_string()));
-                };
-                drop(lock);
-
-                match &package.implementation {
-                    PackageImplementation::Wasm(wasm_module) => {
-                        // note: cloning modules is cheap
-                        self.transform_from_wasm(wasm_module, name, from, output_format)
-                    }
-                    PackageImplementation::Native => self.transform_from_native(
-                        &package.info.name.clone(),
-                        name,
-                        from,
-                        output_format,
-                    ),
-                }
-            }
-        }
-    }
-
-    /// This function loads the default packages to the Context. First, it loads all native
-    /// packages, retrieved from `std_packages::native_package_list()`, and then it loads all
-    /// standard packages by passing this Context to `std_packages::load_standard_packages()`. This
-    /// will be run when constructing the Context, and may only be run once.
-    fn load_default_packages(&mut self) -> Result<(), CoreError> {
-        for pkg in std_packages::native_package_list() {
-            self.load_native_package(Package::new_native(pkg)?)?
-        }
-        std_packages::load_standard_packages(self)?;
-        Ok(())
-    }
-
-    pub fn load_native_package(&mut self, pkg: Package) -> Result<(), CoreError> {
-        debug_assert_eq!(pkg.implementation, PackageImplementation::Native);
-        let name = &pkg.info.as_ref().name;
-        let mut lock = self.package_manager.lock().unwrap();
-        let entry = lock.native_packages.entry(name.to_string());
-
-        match entry {
-            Entry::Occupied(_) => return Err(CoreError::OccupiedName(name.to_string())),
-            Entry::Vacant(entry) => entry.insert(pkg),
-        };
-        Ok(())
-    }
-
-    /// This is a helper function to load a package directly from its wasm source. It will be
-    /// compiled using `Package::new` to become a `Package` and then loaded using `load_package`
-    pub fn load_external_package(
-        &mut self,
-        external_name: &str,
-        wasm_source: &[u8],
-    ) -> Result<(), CoreError> {
-        if wasm_source.is_empty() {
-            return Ok(());
-        }
-        let pkg = self.package_from_wasm(wasm_source)?;
-        debug_assert_ne!(pkg.implementation, PackageImplementation::Native);
-        let mut lock = self.package_manager.lock().unwrap();
-        let entry = lock
-            .external_packages
-            .entry(PackageID::from_str(external_name).unwrap());
-
-        match entry {
-            Entry::Occupied(_) => return Err(CoreError::OccupiedName(external_name.to_string())),
-            Entry::Vacant(entry) => entry.insert(pkg),
-        };
-        Ok(())
-    }
-
-    /// This is a helper function to load a package directly from its wasm source. It will be
-    /// compiled using `Package::new` to become a `Package` and then loaded using `load_package`
-    #[allow(dead_code)]
-    pub(crate) fn load_standard_package(&mut self, wasm_source: &[u8]) -> Result<(), CoreError> {
-        let pkg = self.package_from_wasm(wasm_source)?;
-
-        let name = pkg.info.name.as_str();
-        let id = PackageID {
-            name: name.to_string(),
-            target: Standard,
-        };
-        let mut lock = self.package_manager.lock().unwrap();
-        let entry = lock.standard_packages.entry(id);
-
-        match entry {
-            Entry::Occupied(_) => Err(CoreError::OccupiedName(name.to_string())),
-            Entry::Vacant(entry) => {
-                entry.insert(pkg);
-                Ok(())
-            }
-        }
-    }
-
-    #[allow(unreachable_code)]
-    fn package_from_wasm(&mut self, wasm_source: &[u8]) -> Result<Package, CoreError> {
-        #[cfg(feature = "native")]
-        return Package::new(wasm_source, &self.engine);
-
-        #[cfg(feature = "web")]
-        return Package::new(wasm_source);
-
-        #[cfg(not(any(feature = "native", feature = "web")))]
-        compile_error!("'native' and 'web' features are both disabled")
-    }
-
-    /// This function loads a package from the serialized format retrieved from Module::serialize.
-    /// This is only available on native when using the precompile_wasm feature.
-    #[cfg(all(feature = "native", feature = "precompile_wasm"))]
-    pub(crate) fn load_precompiled_package_from_wasm(
-        &mut self,
-        wasm_source: &[u8],
-    ) -> Result<(), CoreError> {
-        let pkg = Package::new_precompiled(wasm_source, &self.engine)?;
-
-        let name = pkg.info.name.as_str();
-        let id = PackageID {
-            name: name.to_string(),
-            target: Standard,
-        };
-        let mut lock = self.package_manager.lock().unwrap();
-        let entry = lock.standard_packages.entry(id);
-
-        match entry {
-            Entry::Occupied(_) => Err(CoreError::OccupiedName(name.to_string())),
-            Entry::Vacant(entry) => {
-                entry.insert(pkg);
-                Ok(())
-            }
-        }
-    }
-
-    /// Gets the transform and package the transform is in, for a transform from a specific element
-    /// to a specific output format. Returns None if no such transform exists
-    pub fn get_transform_to(
-        &self,
-        element_name: &str,
-        output_format: &OutputFormat,
-    ) -> Option<(Transform, Package)> {
-        let lock = self.package_manager.lock().unwrap();
-        lock.transforms
-            .get(element_name)
-            .and_then(|t| t.find_transform_to(output_format))
-            .cloned()
-    }
-
-    /// This gets the transform info for a given element and output format. If a native package
-    /// supplies a transform for that element, that will be returned and the output format returned
-    pub fn get_transform_info(
-        &self,
-        element_name: &str,
-        output_format: &OutputFormat,
-    ) -> Option<Transform> {
-        self.get_transform_to(element_name, output_format)
-            .map(|(transform, _)| transform)
     }
 
     fn transform_from_native(

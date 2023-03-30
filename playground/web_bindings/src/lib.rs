@@ -1,17 +1,21 @@
 use std::cell::RefCell;
 use std::path::Path;
 
-use modmark_core::{eval, eval_no_document, Context, CoreError, OutputFormat};
+use modmark_core::{
+    eval, eval_no_document, Context, CoreError, DefaultAccessManager, OutputFormat,
+};
 use parser::ParseError;
 use serde::Serialize;
 use thiserror::Error;
 use wasm_bindgen::prelude::*;
+
 use wasmer_vfs::FileSystem;
 
 mod web_resolve;
 
 thread_local! {
-    static CONTEXT: RefCell<Context<web_resolve::WebResolve>> = RefCell::new(Context::new_with_resolver(web_resolve::WebResolve).unwrap())
+    static CONTEXT: RefCell<Context<web_resolve::WebResolve, DefaultAccessManager>> =
+        RefCell::new(Context::new(web_resolve::WebResolve, DefaultAccessManager).unwrap())
 }
 
 #[derive(Error, Debug)]

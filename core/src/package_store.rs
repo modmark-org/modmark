@@ -5,9 +5,8 @@ use std::error::Error;
 use std::hash::Hash;
 use std::mem;
 use std::str::FromStr;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex};
 
-use thiserror::Error;
 #[cfg(feature = "native")]
 use wasmer::Engine;
 

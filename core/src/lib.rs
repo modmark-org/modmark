@@ -24,7 +24,6 @@ mod std_packages_macros;
 #[cfg(all(feature = "web", feature = "native"))]
 compile_error!("feature \"native\" and feature \"web\" cannot be enabled at the same time");
 
-
 pub trait AccessPolicy: Send + Sync + 'static {
     fn root(&self) -> Option<String>;
     fn allowed_to_read(&self) -> bool;
@@ -219,7 +218,7 @@ mod tests {
 
     #[test]
     fn table_manifest_test() {
-        let ctx = Context::new_with_resolver(UnimplementedResolver).unwrap();
+        let ctx = Context::new(UnimplementedResolver, DefaultAccessManager).unwrap();
         let info = ctx.get_package_info("std:table").unwrap().clone();
 
         let foo = PackageInfo {
