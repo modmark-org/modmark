@@ -1,6 +1,4 @@
-use std::collections::hash_map::Entry;
 use std::collections::HashSet;
-use std::error::Error;
 use std::fmt::Formatter;
 use std::iter::once;
 use std::path::Path;
@@ -33,7 +31,6 @@ use parser::config::{Config, HideConfig, ImportConfig};
 use parser::ModuleArguments;
 
 use crate::package::{ArgValue, PackageImplementation};
-use crate::package_manager::PackageSource::Standard;
 use crate::package_manager::{DenyAllResolver, PackageID, PackageManager, Resolve};
 use crate::{std_packages, Element};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
@@ -260,9 +257,11 @@ where
                 body: _,
                 inline: _,
             } => {
-                let Some((_, package)) = self.get_transform_to(name, output_format) else {
+                let lock = self.package_manager.lock().unwrap();
+                let Some((_, package)) = lock.get_transform_to(name, output_format) else {
                     return Err(CoreError::MissingTransform(name.clone(), output_format.to_string()));
                 };
+                drop(lock);
 
                 match &package.implementation {
                     PackageImplementation::Wasm(wasm_module) => {
@@ -669,7 +668,7 @@ impl<T, U> Context<T, U> {
 
     /// Borrow information about a package with a given name
     pub fn get_package_info(&self, name: &str) -> Option<Arc<PackageInfo>> {
-        let mut lock = self.package_manager.lock().unwrap();
+        let lock = self.package_manager.lock().unwrap();
         lock.native_packages
             .get(name)
             .or(lock.standard_packages.get(&name.into()))

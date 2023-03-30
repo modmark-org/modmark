@@ -1,26 +1,21 @@
-use std::cell::RefCell;
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::convert::Infallible;
 use std::error::Error;
-use std::fmt::{Debug, Formatter};
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 use std::mem;
-use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
 use thiserror::Error;
 #[cfg(feature = "native")]
 use wasmer::Engine;
-#[cfg(feature = "native")]
-use wasmer::{Cranelift, EngineBuilder};
 
-use parser::config::{Config, Hide, Import, ImportConfig};
+use parser::config::{Config, Hide, Import};
 
 use crate::context::{ModuleImport, ModuleImportConfig, TransformVariant};
 use crate::package::PackageImplementation;
-use crate::{std_packages, Context, CoreError, OutputFormat, Package, Transform};
+use crate::{std_packages,  CoreError, OutputFormat, Package, Transform};
 
 #[cfg(feature = "native")]
 macro_rules! package_new {
@@ -200,22 +195,6 @@ impl PackageManager {
             .get(element_name)
             .and_then(|t| t.find_transform_to(output_format))
             .cloned()
-    }
-
-    #[allow(unreachable_code)]
-    fn package_from_wasm(
-        &mut self,
-        wasm_source: &[u8],
-        #[cfg(feature = "native")] engine: &Engine,
-    ) -> Result<Package, CoreError> {
-        #[cfg(feature = "native")]
-        return Package::new(wasm_source, engine);
-
-        #[cfg(feature = "web")]
-        return Package::new(wasm_source);
-
-        #[cfg(not(any(feature = "native", feature = "web")))]
-        compile_error!("'native' and 'web' features are both disabled")
     }
 
     pub(crate) fn get_missing_packages(
@@ -468,7 +447,7 @@ pub struct ResolveTask {
 }
 
 impl ResolveTask {
-    pub fn complete<E>(mut self, result: Result<Vec<u8>, E>)
+    pub fn complete<E>(self, result: Result<Vec<u8>, E>)
     where
         E: Error + Send + 'static,
     {
@@ -482,7 +461,7 @@ impl ResolveTask {
     pub fn resolve(mut self, result: Vec<u8>) {
         self.resolved = true;
         let mut manager = self.manager.lock().unwrap();
-        let mut package = mem::take(&mut self.package);
+        let package = mem::take(&mut self.package);
         manager.resolve_request(package, result);
     }
 
@@ -492,7 +471,7 @@ impl ResolveTask {
     {
         self.resolved = true;
         let mut manager = self.manager.lock().unwrap();
-        let mut package = mem::take(&mut self.package);
+        let package = mem::take(&mut self.package);
         manager.reject_request(package, error);
     }
 }
@@ -501,7 +480,7 @@ impl Drop for ResolveTask {
     fn drop(&mut self) {
         if !self.resolved {
             let mut manager = self.manager.lock().unwrap();
-            let mut package = mem::take(&mut self.package);
+            let package = mem::take(&mut self.package);
             manager.reject_request(package.clone(), CoreError::DroppedRequest);
         }
     }
