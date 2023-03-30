@@ -157,7 +157,16 @@ impl<T, U> Context<T, U> {
             filesystem: CoreFs::new(Arc::clone(&policy)),
             policy,
         };
-        ctx.load_default_packages()?;
+        #[cfg(feature = "native")]
+        ctx.package_manager
+            .lock()
+            .unwrap()
+            .load_default_packages(&ctx.engine)?;
+        #[cfg(not(feature = "native"))]
+        ctx.package_manager
+            .lock()
+            .unwrap()
+            .load_default_packages()?;
         Ok(ctx)
     }
 }
@@ -452,6 +461,50 @@ impl<T, U> Context<T, U> {
     /// a cleared out `CompilationState`
     pub fn take_state(&mut self) -> CompilationState {
         std::mem::take(&mut self.state)
+    }
+
+    /// Transform an Element by using the loaded packages. The function will return a
+    /// `Element::Compound`.
+    pub fn transform(
+        &mut self,
+        from: &Element,
+        output_format: &OutputFormat,
+    ) -> Result<Either<Element, String>, CoreError> {
+        use Element::{Compound, Module, Parent};
+
+        match from {
+            Compound(_) => unreachable!("Should not transform compound element"),
+            Parent {
+                name,
+                args: _,
+                children: _,
+            }
+            | Module {
+                name,
+                args: _,
+                body: _,
+                inline: _,
+            } => {
+                let lock = self.package_manager.lock().unwrap();
+                let Some((_, package)) = lock.get_transform_to(name, output_format) else {
+                    return Err(CoreError::MissingTransform(name.clone(), output_format.to_string()));
+                };
+                drop(lock);
+
+                match &package.implementation {
+                    PackageImplementation::Wasm(wasm_module) => {
+                        // note: cloning modules is cheap
+                        self.transform_from_wasm(wasm_module, name, from, output_format)
+                    }
+                    PackageImplementation::Native => self.transform_from_native(
+                        &package.info.name.clone(),
+                        name,
+                        from,
+                        output_format,
+                    ),
+                }
+            }
+        }
     }
 
     /// This function loads the default packages to the Context. First, it loads all native
@@ -762,7 +815,8 @@ impl<T, U> Context<T, U> {
         element_name: &str,
         output_format: &OutputFormat,
     ) -> Result<Vec<ArgInfo>, CoreError> {
-        self.get_transform_info(element_name, output_format)
+        let lock = self.package_manager.lock().unwrap();
+        lock.get_transform_info(element_name, output_format)
             .map(|info| info.arguments.clone())
             .ok_or(CoreError::MissingTransform(
                 element_name.to_string(),

@@ -4,9 +4,12 @@ use either::Either::{self, Left, Right};
 use serde_json::Value;
 
 use parser::ModuleArguments;
+#[cfg(feature = "native")]
+use wasmer::Engine;
 
 use crate::context::Issue;
 use crate::package::{ArgValue, PrimitiveArgType};
+use crate::package_manager::PackageManager;
 use crate::std_packages_macros::{define_native_packages, define_standard_package_loader};
 use crate::{ArgInfo, Context, CoreError, Element, OutputFormat, PackageInfo, Transform};
 
