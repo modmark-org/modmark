@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::hash::{Hash, Hasher};
+use std::path::Path;
 use std::str::FromStr;
 
 use either::Either::{Left, Right};
@@ -15,13 +16,10 @@ use crate::context::CompilationState;
 pub mod context;
 mod element;
 mod error;
-#[cfg(feature = "native")]
-mod native_fs;
+mod fs;
 mod package;
 mod std_packages;
 mod std_packages_macros;
-#[cfg(feature = "web")]
-mod web_fs;
 
 #[cfg(all(feature = "web", feature = "native"))]
 compile_error!("feature \"native\" and feature \"web\" cannot be enabled at the same time");
@@ -46,6 +44,33 @@ impl Resolve for DenyAllResolver {
             .iter()
             .map(|_| Err(CoreError::DenyAllResolver))
             .collect()
+    }
+}
+
+pub trait AccessPolicy {
+    fn root(&self) -> String;
+    fn allowed_to_read(&mut self, path: &Path, package_name: &String) -> bool;
+    fn allowed_to_write(&mut self, path: &Path, package_name: &String) -> bool;
+    fn allowed_to_create(&mut self, path: &Path, package_name: &String) -> bool;
+}
+
+pub struct DefaultAccessManager;
+
+impl AccessPolicy for DefaultAccessManager {
+    fn root(&self) -> String {
+        String::from("/")
+    }
+
+    fn allowed_to_read(&mut self, _path: &Path, _package_name: &String) -> bool {
+        true
+    }
+
+    fn allowed_to_write(&mut self, _path: &Path, _package_name: &String) -> bool {
+        true
+    }
+
+    fn allowed_to_create(&mut self, _path: &Path, _package_name: &String) -> bool {
+        true
     }
 }
 
@@ -86,14 +111,15 @@ impl FromStr for OutputFormat {
 }
 
 /// Evaluates a document using the given context
-pub fn eval<T>(
+pub fn eval<T, U>(
     source: &str,
-    ctx: &mut Context<T>,
+    ctx: &mut Context<T, U>,
     format: &OutputFormat,
 ) -> Result<(String, CompilationState), CoreError>
 where
     T: Resolve,
     <T as Resolve>::Error: Error + 'static,
+    U: AccessPolicy + Send + Sync + 'static,
 {
     // Note: this isn't actually needed, since take_state clears state, but it
     // is still called to ensure that it is cleared, if someone uses any context mutating functions
@@ -113,14 +139,15 @@ where
 }
 
 /// Evaluates a document using the given context without a document element
-pub fn eval_no_document<T>(
+pub fn eval_no_document<T, U>(
     source: &str,
-    ctx: &mut Context<T>,
+    ctx: &mut Context<T, U>,
     format: &OutputFormat,
 ) -> Result<(String, CompilationState), CoreError>
 where
     T: Resolve,
     <T as Resolve>::Error: Error + 'static,
+    U: AccessPolicy + Send + Sync + 'static,
 {
     ctx.clear_state();
 
@@ -145,11 +172,14 @@ where
     res.map(|s| (s, ctx.take_state()))
 }
 
-pub fn eval_elem<T>(
+pub fn eval_elem<T, U>(
     root: Element,
-    ctx: &mut Context<T>,
+    ctx: &mut Context<T, U>,
     format: &OutputFormat,
-) -> Result<String, CoreError> {
+) -> Result<String, CoreError>
+where
+    U: AccessPolicy + Send + Sync + 'static,
+{
     use Element::{Compound, Module, Parent};
     match root {
         Compound(children) => {

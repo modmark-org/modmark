@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use std::error::Error;
 use std::fmt::Formatter;
 use std::iter::once;
+use std::path::Path;
 use std::{
     collections::HashMap,
     fmt,
@@ -10,13 +11,10 @@ use std::{
     io::{Read, Write},
 };
 
-#[cfg(feature = "native")]
-use crate::native_fs::NativeFs;
 use crate::package::{ArgValue, PackageImplementation};
-#[cfg(feature = "web")]
-use crate::web_fs::WebFs;
-use crate::{std_packages, DenyAllResolver, Element, Resolve};
+use crate::{std_packages, AccessPolicy, DefaultAccessManager, DenyAllResolver, Element, Resolve};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
+
 use either::{Either, Left};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -25,10 +23,11 @@ use wasmer::{Cranelift, Engine, EngineBuilder};
 use wasmer::{Instance, Module, Store};
 use wasmer_wasi::{Pipe, WasiState};
 
+use crate::fs::CoreFs;
 use parser::config::{Config, HideConfig, ImportConfig};
 use parser::ModuleArguments;
 
-pub struct Context<T> {
+pub struct Context<T, U> {
     pub(crate) native_packages: HashMap<String, Package>,
     pub(crate) standard_packages: HashMap<String, Package>,
     pub(crate) external_packages: HashMap<String, Package>,
@@ -37,12 +36,7 @@ pub struct Context<T> {
     #[cfg(feature = "native")]
     engine: Engine,
     pub(crate) state: CompilationState,
-    #[cfg(feature = "native")]
-    pub filesystem: NativeFs,
-    #[cfg(feature = "web")]
-    pub filesystem: WebFs,
-    #[cfg(feature = "native")]
-    assets_path: Option<String>,
+    pub filesystem: CoreFs<U>,
 }
 
 #[derive(Default, Clone, Debug)]
@@ -85,7 +79,7 @@ impl CompilationState {
     }
 }
 
-impl<T> Debug for Context<T> {
+impl<T, U> Debug for Context<T, U> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("Context")
             .field("native packages", &self.native_packages)
@@ -132,16 +126,17 @@ impl TransformVariant {
     }
 }
 
-impl Context<DenyAllResolver> {
-    pub fn new_without_resolver() -> Result<Self, CoreError> {
-        Self::new_with_resolver(DenyAllResolver)
+impl Context<DenyAllResolver, DefaultAccessManager> {
+    pub fn new_with_defaults() -> Result<Self, CoreError> {
+        Self::new(DenyAllResolver, DefaultAccessManager)
     }
 }
 
-impl<T> Context<T> {
-    pub fn new_with_resolver(resolver: T) -> Result<Self, CoreError>
+impl<T, U> Context<T, U> {
+    pub fn new(resolver: T, access_manager: U) -> Result<Self, CoreError>
     where
         T: Resolve,
+        U: AccessPolicy,
     {
         let mut ctx = Context {
             native_packages: HashMap::new(),
@@ -152,16 +147,14 @@ impl<T> Context<T> {
             #[cfg(feature = "native")]
             engine: EngineBuilder::new(Cranelift::new()).engine(),
             state: CompilationState::default(),
-            filesystem: Context::<T>::new_fs(),
-            #[cfg(feature = "native")]
-            assets_path: None,
+            filesystem: CoreFs::new(access_manager),
         };
         ctx.load_default_packages()?;
         Ok(ctx)
     }
 }
 
-impl<T> Context<T>
+impl<T, U> Context<T, U>
 where
     T: Resolve,
     <T as Resolve>::Error: Error + 'static,
@@ -211,29 +204,201 @@ where
     }
 }
 
-impl<T> Context<T> {
-    #[cfg(feature = "native")]
-    pub fn set_args(
+impl<T, U> Context<T, U>
+where
+    U: AccessPolicy + Send + Sync + 'static,
+{
+    /// Transform an Element by using the loaded packages. The function will return a
+    /// `Element::Compound`.
+    pub fn transform(
         &mut self,
-        assets_path: &Option<String>,
-        deny_read: bool,
-        deny_write: bool,
-        no_prompts: bool,
-    ) {
-        self.assets_path = assets_path.clone();
-        self.filesystem.config(deny_read, deny_write, no_prompts);
+        from: &Element,
+        output_format: &OutputFormat,
+    ) -> Result<Either<Element, String>, CoreError> {
+        use Element::{Compound, Module, Parent};
+
+        match from {
+            Compound(_) => unreachable!("Should not transform compound element"),
+            Parent {
+                name,
+                args: _,
+                children: _,
+            }
+            | Module {
+                name,
+                args: _,
+                body: _,
+                inline: _,
+            } => {
+                let Some((_, package)) = self.get_transform_to(name, output_format) else {
+                    return Err(CoreError::MissingTransform(name.clone(), output_format.to_string()));
+                };
+
+                match &package.implementation {
+                    PackageImplementation::Wasm(wasm_module) => {
+                        // note: cloning modules is cheap
+                        self.transform_from_wasm(wasm_module, name, from, output_format)
+                    }
+                    PackageImplementation::Native => self.transform_from_native(
+                        &package.info.name.clone(),
+                        name,
+                        from,
+                        output_format,
+                    ),
+                }
+            }
+        }
     }
 
-    #[cfg(feature = "native")]
-    fn new_fs() -> NativeFs {
-        NativeFs::new()
-    }
+    //noinspection RsLiveness
+    /// This function transforms an Element to another Element by invoking the Wasm module.
+    fn transform_from_wasm(
+        &self,
+        module: &Module,
+        name: &str,
+        from: &Element,
+        output_format: &OutputFormat,
+    ) -> Result<Either<Element, String>, CoreError> {
+        // Create a new store
+        #[cfg(feature = "native")]
+        let mut store = Store::new(&self.engine);
 
-    #[cfg(feature = "web")]
-    pub fn new_fs() -> WebFs {
-        WebFs::new()
-    }
+        #[cfg(feature = "web")]
+        let mut store = Store::new();
 
+        // Create pipes for stdin, stdwasmerout, stderr
+        let mut input = Pipe::new();
+        let mut output = Pipe::new();
+        let mut err_out = Pipe::new();
+
+        // Generate the input data (by serializing elements)
+        let input_data = self.serialize_element(from, output_format)?;
+        write!(&mut input, "{}", input_data)?;
+
+        // Function to create an issue given a body text and if it is an error or not. This closure
+        // captures references to the appropriate variables from this scope to generate correct
+        // issues.
+        let create_issue = |error: bool, body: String, data: &str| -> Element {
+            Element::Module {
+                name: if error {
+                    "error".to_string()
+                } else {
+                    "warning".to_string()
+                },
+                args: ModuleArguments {
+                    positioned: None,
+                    named: Some({
+                        let mut map = HashMap::new();
+                        map.insert("source".to_string(), name.to_string());
+                        map.insert("target".to_string(), output_format.0.to_string());
+                        // these two ifs can't be joined, unfortunately, or it won't run on stable
+                        if self.state.verbose_errors {
+                            map.insert("input".to_string(), data.to_string());
+                        }
+                        map
+                    }),
+                },
+                body,
+                inline: false,
+            }
+        };
+
+        let fs = self.filesystem.clone_for_module(name.to_string());
+        let wasi_env = WasiState::new("")
+            .stdin(Box::new(input))
+            .stdout(Box::new(output.clone()))
+            .stderr(Box::new(err_out.clone()))
+            .set_fs(Box::new(fs))
+            .preopen(|p| {
+                p.directory(Path::new(self.filesystem.root_path().as_str()))
+                    .alias(".")
+                    .read(true)
+                    .write(true)
+                    .create(true)
+            })?
+            .args(["transform", name, &output_format.to_string()])
+            .finalize(&mut store)?;
+
+        let import_object = wasi_env.import_object(&mut store, module)?;
+        let instance = Instance::new(&mut store, module, &import_object)?;
+
+        // Attach the memory export
+        let memory = instance.exports.get_memory("memory")?;
+        wasi_env.data_mut(&mut store).set_memory(memory.clone());
+
+        // Call the main entry point of the program
+        let main_fn = instance
+            .exports
+            .get_function("_start")
+            .expect("Unable to find main function");
+        let fn_res = main_fn.call(&mut store, &[]);
+
+        if let Err(e) = fn_res {
+            // TODO: See if this can be done without string comparison
+            let error_msg = e.to_string();
+            if !error_msg.contains("WASI exited with code: 0") {
+                // An error occurred when executing Wasm module =>
+                // it probably crashed, so just insert an error node
+                return Ok(Left(create_issue(
+                    true,
+                    format!("Wasm module crash: {error_msg}"),
+                    &input_data,
+                )));
+            }
+        }
+
+        // Read (possible) warnings and errors
+        let err_str = {
+            let mut buffer = String::new();
+            err_out.read_to_string(&mut buffer)?;
+            buffer
+        };
+
+        let result = {
+            let mut buffer = String::new();
+            output.read_to_string(&mut buffer)?;
+            Self::deserialize_compound(&buffer)
+        };
+
+        // If we have no stderr, just return the result early
+        if err_str.is_empty() {
+            return match result {
+                // This is the only fully successful exit point, where we have a result and no
+                // stderr => no errors/warnings logged
+                Ok(res) => Ok(Left(res)),
+                // If there is an issue in "result", the result was deserialized incorrectly.
+                // The CoreError error message is misleading so we skip printing it and only print
+                // our custom message
+                Err(_) => Ok(Left(create_issue(
+                    true,
+                    "Error deserializing result from module".to_string(),
+                    &input_data,
+                ))),
+            };
+        }
+
+        // If we have stderr, check if result is successful or not
+        // If successful, we treat the messages in stderr as warnings
+        // If not, we treat them as if they are errors
+        if let Ok(elem) = result {
+            let elems = err_str
+                .lines()
+                .map(|line| create_issue(false, format!("Logged warning: {line}"), &input_data))
+                // Here, in the warnings case, chain the result and emit it as well
+                .chain(once(elem))
+                .collect();
+            Ok(Left(Element::Compound(elems)))
+        } else {
+            let errors = err_str
+                .lines()
+                .map(|line| create_issue(true, format!("Logged error: {line}"), &input_data))
+                .collect();
+            Ok(Left(Element::Compound(errors)))
+        }
+    }
+}
+
+impl<T, U> Context<T, U> {
     /// Clears the internal `CompilationState` of this Context. This ensures that any information
     /// specific to previous compilations, such as errors and warnings, gets cleared.
     pub fn clear_state(&mut self) {
@@ -493,48 +658,6 @@ impl<T> Context<T> {
             .map(|(transform, _)| transform)
     }
 
-    /// Transform an Element by using the loaded packages. The function will return a
-    /// `Element::Compound`.
-    pub fn transform(
-        &mut self,
-        from: &Element,
-        output_format: &OutputFormat,
-    ) -> Result<Either<Element, String>, CoreError> {
-        use Element::{Compound, Module, Parent};
-
-        match from {
-            Compound(_) => unreachable!("Should not transform compound element"),
-            Parent {
-                name,
-                args: _,
-                children: _,
-            }
-            | Module {
-                name,
-                args: _,
-                body: _,
-                inline: _,
-            } => {
-                let Some((_, package)) = self.get_transform_to(name, output_format) else {
-                    return Err(CoreError::MissingTransform(name.clone(), output_format.to_string()));
-                };
-
-                match &package.implementation {
-                    PackageImplementation::Wasm(wasm_module) => {
-                        // note: cloning modules is cheap
-                        self.transform_from_wasm(wasm_module, name, from, output_format)
-                    }
-                    PackageImplementation::Native => self.transform_from_native(
-                        &package.info.name.clone(),
-                        name,
-                        from,
-                        output_format,
-                    ),
-                }
-            }
-        }
-    }
-
     fn transform_from_native(
         &mut self,
         package_name: &str,
@@ -558,178 +681,6 @@ impl<T> Context<T> {
         }?;
 
         std_packages::handle_native(self, package_name, node_name, element, args, output_format)
-    }
-
-    //noinspection RsLiveness
-    /// This function transforms an Element to another Element by invoking the Wasm module.
-    fn transform_from_wasm(
-        &self,
-        module: &Module,
-        name: &str,
-        from: &Element,
-        output_format: &OutputFormat,
-    ) -> Result<Either<Element, String>, CoreError> {
-        // Create a new store
-        #[cfg(feature = "native")]
-        let mut store = Store::new(&self.engine);
-
-        #[cfg(feature = "web")]
-        let mut store = Store::new();
-
-        // Create pipes for stdin, stdwasmerout, stderr
-        let mut input = Pipe::new();
-        let mut output = Pipe::new();
-        let mut err_out = Pipe::new();
-
-        // Function to create an issue given a body text, input text and if it is an error or not.
-        // This closure captures references to the appropriate variables from this scope to generate
-        // correct issues.
-        let create_issue = |error: bool, body: String, data: &str| -> Element {
-            Element::Module {
-                name: if error {
-                    "error".to_string()
-                } else {
-                    "warning".to_string()
-                },
-                args: ModuleArguments {
-                    positioned: None,
-                    named: Some({
-                        let mut map = HashMap::new();
-                        map.insert("source".to_string(), name.to_string());
-                        map.insert("target".to_string(), output_format.0.to_string());
-                        // these two ifs can't be joined, unfortunately, or it won't run on stable
-                        if self.state.verbose_errors {
-                            map.insert("input".to_string(), data.to_string());
-                        }
-                        map
-                    }),
-                },
-                body,
-                inline: false,
-            }
-        };
-
-        // Generate the input data (by serializing elements)
-        // If this fails, it is likely due to argument serialization so create an issue for it
-        let input_data = match self.serialize_element(from, output_format) {
-            Ok(data) => data,
-            Err(e) => return Ok(Left(create_issue(true, e.to_string(), "n/a"))),
-        };
-        write!(&mut input, "{}", input_data)?;
-
-        #[cfg(feature = "native")]
-        let mut fs = self.filesystem.clone();
-        #[cfg(feature = "web")]
-        let fs = self.filesystem.clone();
-
-        let preopen_path;
-
-        #[cfg(feature = "native")]
-        {
-            fs.set_current_pkg(name);
-            if let Some(path) = &self.assets_path {
-                preopen_path = path.as_str();
-            } else {
-                preopen_path = "assets";
-            }
-        }
-
-        #[cfg(feature = "web")]
-        {
-            preopen_path = "/";
-        }
-
-        let wasi_env = WasiState::new("")
-            .stdin(Box::new(input))
-            .stdout(Box::new(output.clone()))
-            .stderr(Box::new(err_out.clone()))
-            .set_fs(Box::new(fs))
-            .preopen(|p| {
-                p.directory(preopen_path)
-                    .alias(".")
-                    .read(true)
-                    .write(true)
-                    .create(true)
-            })?
-            .args(["transform", name, &output_format.to_string()])
-            .finalize(&mut store)?;
-
-        let import_object = wasi_env.import_object(&mut store, module)?;
-        let instance = Instance::new(&mut store, module, &import_object)?;
-
-        // Attach the memory export
-        let memory = instance.exports.get_memory("memory")?;
-        wasi_env.data_mut(&mut store).set_memory(memory.clone());
-
-        // Call the main entry point of the program
-        let main_fn = instance
-            .exports
-            .get_function("_start")
-            .expect("Unable to find main function");
-        let fn_res = main_fn.call(&mut store, &[]);
-
-        if let Err(e) = fn_res {
-            // TODO: See if this can be done without string comparison
-            let error_msg = e.to_string();
-            if !error_msg.contains("WASI exited with code: 0") {
-                // An error occurred when executing Wasm module =>
-                // it probably crashed, so just insert an error node
-                return Ok(Left(create_issue(
-                    true,
-                    format!("Wasm module crash: {error_msg}"),
-                    &input_data,
-                )));
-            }
-        }
-
-        // Read (possible) warnings and errors
-        let err_str = {
-            let mut buffer = String::new();
-            err_out.read_to_string(&mut buffer)?;
-            buffer
-        };
-
-        let result = {
-            let mut buffer = String::new();
-            output.read_to_string(&mut buffer)?;
-            Self::deserialize_compound(&buffer)
-        };
-
-        // If we have no stderr, just return the result early
-        if err_str.is_empty() {
-            return match result {
-                // This is the only fully successful exit point, where we have a result and no
-                // stderr => no errors/warnings logged
-                Ok(res) => Ok(Left(res)),
-                // If there is an issue in "result", the result was deserialized incorrectly.
-                // The CoreError error message is misleading so we skip printing it and only print
-                // our custom message
-                Err(_) => Ok(Left(create_issue(
-                    true,
-                    "Error deserializing result from module".to_string(),
-                    &input_data,
-                ))),
-            };
-        }
-
-        // If we have stderr, check if result is successful or not
-        // If successful, we treat the messages in stderr as warnings
-        // If not, we treat them as if they are errors
-        if let Ok(elem) = result {
-            let elems = err_str
-                .lines()
-                .map(|line| create_issue(false, format!("Logged warning: {line}"), &input_data))
-                // Here, in the warnings case, chain the result and emit it as well
-                .chain(once(elem))
-                .collect();
-            Ok(Left(Element::Compound(elems)))
-        } else {
-            let errors = err_str
-                .lines()
-                .map(|line| create_issue(true, format!("Logged error: {line}"), &input_data))
-                .collect();
-            Ok(Left(Element::Compound(errors)))
-        }
     }
 
     /// Borrow information about a package with a given name

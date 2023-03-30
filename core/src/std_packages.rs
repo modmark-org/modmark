@@ -91,8 +91,8 @@ define_native_packages! {
 
 /// Returns a string containing the body of this invocation. This is the "leaf" call; no tree will
 /// be created as a result of this call
-pub fn native_raw<T>(
-    _ctx: &mut Context<T>,
+pub fn native_raw<T, U>(
+    _ctx: &mut Context<T, U>,
     body: &str,
     _args: HashMap<String, ArgValue>,
     _inline: bool,
@@ -103,8 +103,8 @@ pub fn native_raw<T>(
 
 /// Re-parses the content as block content (a paragraph with tags, modules etc) and
 /// returns the resulting compound element containing the contents of the paragraph
-pub fn native_inline_content<T>(
-    _ctx: &mut Context<T>,
+pub fn native_inline_content<T, U>(
+    _ctx: &mut Context<T, U>,
     body: &str,
     _args: HashMap<String, ArgValue>,
     _inline: bool,
@@ -120,8 +120,8 @@ pub fn native_inline_content<T>(
 
 /// Re-parses the content as block content (multiple paragraph or multiline module invocations) and
 /// returns the resulting compound element
-pub fn native_block_content<T>(
-    _ctx: &mut Context<T>,
+pub fn native_block_content<T, U>(
+    _ctx: &mut Context<T, U>,
     body: &str,
     _args: HashMap<String, ArgValue>,
     _inline: bool,
@@ -136,8 +136,8 @@ pub fn native_block_content<T>(
 }
 
 /// Example function for setting environment variables, currently unimplemented
-pub fn native_set_env<T>(
-    _ctx: &mut Context<T>,
+pub fn native_set_env<T, U>(
+    _ctx: &mut Context<T, U>,
     _body: &str,
     _args: HashMap<String, ArgValue>,
     _inline: bool,
@@ -146,8 +146,8 @@ pub fn native_set_env<T>(
     unimplemented!("native_set_env")
 }
 
-pub fn native_warn<T>(
-    ctx: &mut Context<T>,
+pub fn native_warn<T, U>(
+    ctx: &mut Context<T, U>,
     body: &str,
     mut args: HashMap<String, ArgValue>,
     _inline: bool,
@@ -168,8 +168,8 @@ pub fn native_warn<T>(
     Ok(Left(Element::Compound(vec![])))
 }
 
-pub fn native_err<T>(
-    ctx: &mut Context<T>,
+pub fn native_err<T, U>(
+    ctx: &mut Context<T, U>,
     body: &str,
     args: HashMap<String, ArgValue>,
     inline: bool,
