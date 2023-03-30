@@ -169,9 +169,7 @@ async fn compile_file(input_file: &Path, output_format: &OutputFormat) -> Compil
     }
 
     spawn_blocking(|| {
-        println!("Waiting");
         RECEIVER.get().unwrap().lock().unwrap().blocking_recv();
-        println!("Got it!");
     })
     .await
     .unwrap();

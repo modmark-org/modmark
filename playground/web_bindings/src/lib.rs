@@ -1,10 +1,7 @@
 use std::cell::RefCell;
 use std::path::Path;
 
-use modmark_core::{Context, CoreError, DenyAllResolver, eval, eval_no_document, OutputFormat};
-use modmark_core::{
-    eval, eval_no_document, Context, CoreError, DenyAllResolver, DefaultAccessManager, OutputFormat
-};
+use modmark_core::{Context, CoreError, eval, eval_no_document, OutputFormat};
 use parser::ParseError;
 use serde::Serialize;
 use thiserror::Error;
@@ -25,6 +22,8 @@ pub enum PlaygroundError {
     Core(#[from] CoreError),
     #[error("Failed to parse")]
     Parsing(#[from] ParseError),
+    #[error("No result")]
+    NoResult,
 }
 
 impl From<PlaygroundError> for JsValue {
@@ -35,6 +34,9 @@ impl From<PlaygroundError> for JsValue {
             }
             PlaygroundError::Parsing(error) => {
                 JsValue::from_str(&format!("<p>{error}</p><pre>{error:#?}</pre>"))
+            }
+            PlaygroundError::NoResult => {
+                JsValue::from_str(&format!("<p>{error}</p><pre>No result</pre>"))
             }
         }
     }
@@ -65,7 +67,8 @@ pub fn transpile(source: &str, format: &str) -> Result<String, PlaygroundError> 
     let result = CONTEXT.with(|ctx| {
         let mut ctx = ctx.borrow_mut();
         eval(source, &mut ctx, &OutputFormat::new(format))
-    })?;
+    })?
+        .ok_or(PlaygroundError::NoResult)?;
 
     let warnings = result
         .1
@@ -93,7 +96,8 @@ pub fn transpile_no_document(source: &str, format: &str) -> Result<String, Playg
     let result = CONTEXT.with(|ctx| {
         let mut ctx = ctx.borrow_mut();
         eval_no_document(source, &mut ctx, &OutputFormat::new(format))
-    })?;
+    })?
+        .ok_or(PlaygroundError::NoResult)?;
 
     let warnings = result
         .1

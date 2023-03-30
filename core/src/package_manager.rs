@@ -8,6 +8,7 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
 use thiserror::Error;
+#[cfg(feature = "native")]
 use wasmer::Engine;
 
 use parser::config::{Config, Hide, Import, ImportConfig};
@@ -35,14 +36,23 @@ impl PackageManager {
         self.external_packages = Default::default();
     }
 
+    //noinspection RsUnreachableCode
     // Might want to change this to Vec<CoreError>?
-    pub fn finalize(&mut self, engine: &Engine) -> Result<(), CoreError> {
+    pub fn finalize(
+        &mut self,
+        #[cfg(feature = "native")] engine: &Engine,
+    ) -> Result<(), CoreError> {
         // First, get all successful fetches and add them to external_packages, propagating any
         // error when creating the package itself
         let result: Vec<(PackageID, Package)> = self
             .new_packages
             .drain()
-            .map(|(k, v)| Package::new(v.as_slice(), engine).map(|p| (k, p)))
+            .map(|(k, v)| {
+                #[cfg(feature = "native")]
+                return Package::new(v.as_slice(), engine).map(|p| (k, p));
+                #[cfg(feature = "web")]
+                return Package::new(v.as_slice()).map(|p| (k, p));
+            })
             .collect::<Result<Vec<_>, _>>()?;
 
         for (package_name, package) in result {
