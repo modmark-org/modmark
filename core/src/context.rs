@@ -31,12 +31,12 @@ use parser::config::{Config, HideConfig, ImportConfig};
 use parser::ModuleArguments;
 
 use crate::package::{ArgValue, PackageImplementation};
-use crate::package_manager::{DenyAllResolver, PackageID, PackageManager, Resolve};
+use crate::package_store::{PackageID, PackageStore, Resolve};
 use crate::{std_packages, Element};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
 
 pub struct Context<T,U> {
-    pub package_manager: Arc<Mutex<PackageManager>>,
+    pub package_manager: Arc<Mutex<PackageStore>>,
     pub(crate) resolver: T,
     #[cfg(feature = "native")]
     engine: Engine,
@@ -132,14 +132,8 @@ impl TransformVariant {
     }
 }
 
-impl Context<DenyAllResolver, DefaultAccessManager> {
-    pub fn default() -> Result<Self, CoreError> {
-        Self::new(DenyAllResolver, DefaultAccessManager)
-    }
-}
-
-impl<T, U> Context<T, U> {
-    pub fn new(resolver: T, policy: U) -> Result<Self, CoreError>
+impl<T> Context<T> {
+    pub fn new_with_resolver(resolver: T) -> Result<Self, CoreError>
     where
         T: Resolve,
         U: AccessPolicy,
@@ -208,7 +202,7 @@ where
     // evaluate a document having that configuration with it. It also resolves packages if needed
     // If this returns "true", it had everything it needed to compile, if "false" it is waiting for
     // more packages
-    pub(crate) fn configure(&mut self, config: Option<Config>) -> Result<bool, CoreError> {
+    pub(crate) fn configure(&mut self, config: Option<Config>) -> Result<bool, Vec<CoreError>> {
         let config = config.unwrap_or_default();
         let mut lock = self.package_manager.lock().unwrap();
 
@@ -219,8 +213,7 @@ where
         lock.finalize()?;
 
         let arc_mutex = Arc::clone(&self.package_manager);
-        let missings = lock.get_missing_packages(arc_mutex, &config);
-        println!("Missings: {:?}", missings);
+        let missings = lock.get_missing_packages(arc_mutex, &config)?;
         if missings.is_empty() {
             lock.expose_transforms(config.try_into()?)?;
             Ok(true)
@@ -993,7 +986,7 @@ impl From<ImportConfig> for ModuleImportConfig {
 }
 
 impl TryFrom<Config> for ModuleImport {
-    type Error = CoreError;
+    type Error = Vec<CoreError>;
 
     fn try_from(value: Config) -> Result<Self, Self::Error> {
         let Config {
@@ -1018,12 +1011,14 @@ impl TryFrom<Config> for ModuleImport {
             })
             .collect();
 
-        if !duplicates.is_empty() {
-            Err(CoreError::DuplicateConfigs(
-                duplicates.into_iter().map(|x| x.name).collect(),
-            ))
-        } else {
+        if duplicates.is_empty() {
             Ok(ModuleImport(entries))
+        } else {
+            let errs = duplicates
+                .into_iter()
+                .map(|x| CoreError::DuplicateConfig(x.name))
+                .collect();
+            Err(errs)
         }
     }
 }

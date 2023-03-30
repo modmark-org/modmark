@@ -5,7 +5,7 @@ use std::error::Error;
 use std::hash::Hash;
 use std::mem;
 use std::str::FromStr;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use thiserror::Error;
 #[cfg(feature = "native")]
@@ -15,8 +15,11 @@ use parser::config::{Config, Hide, Import};
 
 use crate::context::{ModuleImport, ModuleImportConfig, TransformVariant};
 use crate::package::PackageImplementation;
-use crate::{std_packages,  CoreError, OutputFormat, Package, Transform};
+use crate::{std_packages, CoreError, OutputFormat, Package, Transform};
 
+// The package_new allows us to run Package::new(source, [engine]) by supplying the identifier to
+// the engine that would have been used if we were compiling to native, which will be ignored
+// if we aren't compiling to native
 #[cfg(feature = "native")]
 macro_rules! package_new {
     ($source:expr, $engine:tt) => {
@@ -26,13 +29,13 @@ macro_rules! package_new {
 
 #[cfg(not(feature = "native"))]
 macro_rules! package_new {
-    ($source:expr, $engine:expr) => {
+    ($source:expr, $engine:tt) => {
         Package::new($source)
     };
 }
 
-#[derive(Debug)]
-pub struct PackageManager {
+#[derive(Debug, Default)]
+pub struct PackageStore {
     pub(crate) native_packages: HashMap<String, Package>,
     pub(crate) standard_packages: HashMap<PackageID, Package>,
     pub(crate) external_packages: HashMap<PackageID, Package>,
@@ -42,21 +45,7 @@ pub struct PackageManager {
     pub(crate) transforms: HashMap<String, TransformVariant>,
 }
 
-impl Default for PackageManager {
-    fn default() -> Self {
-        Self {
-            native_packages: Default::default(),
-            standard_packages: Default::default(),
-            external_packages: Default::default(),
-            awaited_packages: Default::default(),
-            new_packages: Default::default(),
-            failed_packages: Default::default(),
-            transforms: Default::default(),
-        }
-    }
-}
-
-impl PackageManager {
+impl PackageStore {
     /// Clears the loaded external packages and transforms, possibly saving memory, forcing the
     /// Resolve to fetch any external packages again, essentially clearing the internal package
     /// cache of the Context
@@ -65,30 +54,42 @@ impl PackageManager {
         self.external_packages = Default::default();
     }
 
-    //noinspection RsUnreachableCode
     // Might want to change this to Vec<CoreError>?
     pub fn finalize(
         &mut self,
         #[cfg(feature = "native")] engine: &Engine,
-    ) -> Result<(), CoreError> {
+    ) -> Result<(), Vec<CoreError>> {
         // First, get all successful fetches and add them to external_packages, propagating any
         // error when creating the package itself
-        let result: Vec<(PackageID, Package)> = self
+        let (successes, failures) = self
             .new_packages
             .drain()
             .map(|(k, v)| package_new!(v.as_slice(), engine).map(|p| (k, p)))
-            .collect::<Result<Vec<_>, _>>()?;
+            .fold((vec![], vec![]), |(mut s, mut f), res| {
+                match res {
+                    Ok(ok) => s.push(ok),
+                    Err(err) => f.push(err),
+                };
+                (s, f)
+            });
 
-        for (package_name, package) in result {
+        for (package_name, package) in successes {
             self.external_packages.insert(package_name, package);
         }
 
-        // Then, clear all failed packages and if any failed, return that error
-        if let Some(error) = self.failed_packages.drain(..).next() {
-            return Err(error);
+        // Here we check if any packages failed to compile (not if they failed to resolve)
+        if !failures.is_empty() {
+            return Err(failures);
         }
 
-        Ok(())
+        // Then, clear all failed packages and if any failed, return that error
+        // Note that "drain" here drains all errors, not just the one we (possibly) return
+        let failed = mem::take(&mut self.failed_packages);
+        if failed.is_empty() {
+            Ok(())
+        } else {
+            Err(failed)
+        }
     }
 
     /// This function loads the default packages to the Context. First, it loads all native
@@ -118,21 +119,7 @@ impl PackageManager {
         engine: &Engine,
     ) -> Result<(), CoreError> {
         let pkg = Package::new_precompiled(wasm_source, engine)?;
-
-        let name = pkg.info.name.as_str();
-        let id = PackageID {
-            name: name.to_string(),
-            target: PackageSource::Standard,
-        };
-        let entry = self.standard_packages.entry(id);
-
-        match entry {
-            Entry::Occupied(_) => Err(CoreError::OccupiedName(name.to_string())),
-            Entry::Vacant(entry) => {
-                entry.insert(pkg);
-                Ok(())
-            }
-        }
+        self.insert_standard_package(pkg)
     }
 
     /// This is a helper function to load a package directly from its wasm source. It will be
@@ -144,11 +131,15 @@ impl PackageManager {
         #[cfg(feature = "native")] engine: &Engine,
     ) -> Result<(), CoreError> {
         let pkg = package_new!(wasm_source, engine)?;
+        self.insert_standard_package(pkg)
+    }
 
+    /// This function tries to insert a standard package into the `standard_packages` map
+    fn insert_standard_package(&mut self, pkg: Package) -> Result<(), CoreError> {
         let name = pkg.info.name.as_str();
         let id = PackageID {
             name: name.to_string(),
-            target: PackageSource::Standard,
+            source: PackageSource::Standard,
         };
         let entry = self.standard_packages.entry(id);
 
@@ -161,7 +152,7 @@ impl PackageManager {
         }
     }
 
-    pub fn load_native_package(&mut self, pkg: Package) -> Result<(), CoreError> {
+    pub(crate) fn load_native_package(&mut self, pkg: Package) -> Result<(), CoreError> {
         debug_assert_eq!(pkg.implementation, PackageImplementation::Native);
         let name = &pkg.info.as_ref().name;
         let entry = self.native_packages.entry(name.to_string());
@@ -201,8 +192,8 @@ impl PackageManager {
         &mut self,
         arc_mutex: Arc<Mutex<Self>>,
         config: &Config,
-    ) -> Vec<ResolveTask> {
-        config
+    ) -> Result<Vec<ResolveTask>, Vec<CoreError>> {
+        let missings: Vec<PackageID> = config
             .imports
             .iter()
             .map(|i| i.into())
@@ -211,6 +202,19 @@ impl PackageManager {
                 !self.standard_packages.contains_key(name)
                     && !self.external_packages.contains_key(name)
             })
+            .collect();
+        let missing_std: Vec<_> = missings
+            .iter()
+            .filter_map(|id| {
+                (id.source == PackageSource::Standard)
+                    .then(|| CoreError::NoSuchStdPackage(id.name.clone()))
+            })
+            .collect();
+        if !missing_std.is_empty() {
+            return Err(missing_std);
+        }
+        let missing_externals: Vec<_> = missings
+            .into_iter()
             .inspect(|id| {
                 self.awaited_packages.insert(id.clone());
             })
@@ -219,13 +223,19 @@ impl PackageManager {
                 package: id.clone(),
                 resolved: false,
             })
-            .collect()
+            .collect();
+        Ok(missing_externals)
     }
 
     // This function makes sure the transforms that should be exposed according to the given
     // ModuleImport is exposed, and that no other transforms are exposed.
-    pub(crate) fn expose_transforms(&mut self, mut config: ModuleImport) -> Result<(), CoreError> {
+    pub(crate) fn expose_transforms(
+        &mut self,
+        mut config: ModuleImport,
+    ) -> Result<(), Vec<CoreError>> {
         self.transforms.clear();
+
+        let mut errors = vec![];
 
         // First, expose all native packages
         for (name, pkg) in &self.native_packages {
@@ -237,15 +247,16 @@ impl PackageManager {
                     arguments: _,
                 } = transform;
                 if self.transforms.contains_key(from) {
-                    return Err(CoreError::OccupiedNativeTransform(
+                    errors.push(CoreError::OccupiedNativeTransform(
                         from.clone(),
                         name.clone(),
                     ));
+                } else {
+                    self.transforms.insert(
+                        from.to_string(),
+                        TransformVariant::Native((transform.clone(), pkg.clone())),
+                    );
                 }
-                self.transforms.insert(
-                    from.to_string(),
-                    TransformVariant::Native((transform.clone(), pkg.clone())),
-                );
             }
         }
 
@@ -265,12 +276,14 @@ impl PackageManager {
                 Some(ModuleImportConfig::Include(vec)) => (true, vec),
                 None => (false, vec![]),
             };
-            Self::insert_transforms(
+            if let Err(e) = Self::insert_transforms(
                 &mut self.transforms,
                 pkg,
                 include_entries,
                 include_list.as_slice(),
-            )?;
+            ) {
+                errors.push(e);
+            }
         }
 
         for (name, pkg) in &self.external_packages {
@@ -287,20 +300,25 @@ impl PackageManager {
                 Some(ModuleImportConfig::Include(vec)) => (true, vec),
                 None => (true, vec![]),
             };
-            Self::insert_transforms(
+            if let Err(e) = Self::insert_transforms(
                 &mut self.transforms,
                 pkg,
                 include_entries,
                 include_list.as_slice(),
-            )?;
+            ) {
+                errors.push(e);
+            }
         }
 
-        if config.0.is_empty() {
+        mem::take(&mut config.0)
+            .into_iter()
+            .map(|(id, _)| CoreError::UnusedConfig(id.name))
+            .for_each(|e| errors.push(e));
+
+        if errors.is_empty() {
             Ok(())
         } else {
-            Err(CoreError::UnusedConfigs(
-                config.0.drain().map(|(k, _)| k.name).collect(),
-            ))
+            Err(errors)
         }
     }
 
@@ -389,7 +407,10 @@ impl From<&str> for PackageID {
             })
             .unwrap_or((s, PackageSource::Local));
         let name = name.to_string();
-        PackageID { name, target }
+        PackageID {
+            name,
+            source: target,
+        }
     }
 }
 
@@ -432,6 +453,8 @@ impl From<Hide> for PackageID {
 }
 
 pub trait Resolve {
+    /// The implementor should resolve the given tasks in an **asynchronous manner**. It is of
+    /// highest importance that this is isn't done synchronous, since that would give a dead-lock.
     fn resolve_all(&self, paths: Vec<ResolveTask>);
 }
 
@@ -441,7 +464,7 @@ pub struct ResolveWrapper {
 
 #[derive(Debug)]
 pub struct ResolveTask {
-    manager: Arc<Mutex<PackageManager>>,
+    manager: Arc<Mutex<PackageStore>>,
     pub package: PackageID,
     resolved: bool,
 }
@@ -451,7 +474,6 @@ impl ResolveTask {
     where
         E: Error + Send + 'static,
     {
-        println!("Found it, error: {}", result.is_err());
         match result {
             Ok(result) => self.resolve(result),
             Err(error) => self.reject(error),
@@ -489,7 +511,7 @@ impl Drop for ResolveTask {
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Default)]
 pub struct PackageID {
     pub name: String,
-    pub target: PackageSource,
+    pub source: PackageSource,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Default)]
@@ -499,18 +521,4 @@ pub enum PackageSource {
     Url,
     #[default]
     Standard,
-}
-
-#[derive(Error, Debug)]
-#[error("Deny all resolve attempts")]
-pub struct DenyAllResolverError;
-
-pub struct DenyAllResolver;
-
-impl Resolve for DenyAllResolver {
-    fn resolve_all(&self, paths: Vec<ResolveTask>) {
-        paths
-            .into_iter()
-            .for_each(|p| p.reject(DenyAllResolverError))
-    }
 }

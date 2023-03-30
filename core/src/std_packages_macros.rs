@@ -88,7 +88,7 @@ macro_rules! define_native_packages {
 macro_rules! define_standard_package_loader {
     ($($name:expr),* $(,)?) => {
         #[cfg(all(feature = "bundle_std_packages", feature = "native", feature = "precompile_wasm"))]
-        pub fn load_standard_packages(mgr: &mut PackageManager, #[cfg(feature = "native")] engine: &Engine)
+        pub fn load_standard_packages(mgr: &mut PackageStore, #[cfg(feature = "native")] engine: &Engine)
             -> Result<(), CoreError> {
             $(
                 mgr.load_precompiled_standard_package(
@@ -108,7 +108,7 @@ macro_rules! define_standard_package_loader {
             Ok(())
         }
         #[cfg(all(feature = "bundle_std_packages", not(all(feature = "native", feature = "precompile_wasm"))))]
-        pub fn load_standard_packages(mgr: &mut PackageManager, #[cfg(feature = "native")] engine: &Engine)
+        pub fn load_standard_packages(mgr: &mut PackageStore, #[cfg(feature = "native")] engine: &Engine)
             -> Result<(), CoreError> {
             $(
                 #[cfg(feature = "native")]
@@ -144,7 +144,7 @@ macro_rules! define_standard_package_loader {
             Ok(())
         }
         #[cfg(not(feature = "bundle_std_packages"))]
-        pub fn load_standard_packages(_: &mut PackageManager, #[cfg(feature = "native")] engine: &Engine)
+        pub fn load_standard_packages(_: &mut PackageStore, #[cfg(feature = "native")] engine: &Engine)
             -> Result<(), CoreError> {
             Ok(())
         }

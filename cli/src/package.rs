@@ -7,10 +7,9 @@ use std::{
 
 use directories::ProjectDirs;
 use futures::future::join_all;
-use thiserror::Error;
 use tokio::sync::mpsc::Sender;
 
-use modmark_core::package_manager::{PackageID, PackageSource, Resolve, ResolveTask};
+use modmark_core::package_store::{PackageID, PackageSource, Resolve, ResolveTask};
 
 use crate::error::CliError;
 
@@ -36,14 +35,16 @@ impl Resolve for PackageManager {
             )
             .await;
             self_clone2.sender.send(()).await.unwrap();
-            println!("Sent!")
         });
     }
 }
 
 impl PackageManager {
     async fn resolve(&self, task: ResolveTask) {
-        let PackageID { name, target } = &task.package;
+        let PackageID {
+            name,
+            source: target,
+        } = &task.package;
         let result = match target {
             PackageSource::Local => self.fetch_local(name),
             PackageSource::Registry => self.fetch_registry(name).await,
