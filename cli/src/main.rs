@@ -307,7 +307,11 @@ async fn run_cli(args: Args) -> Result<(), CliError> {
 
     RECEIVER.set(Mutex::new(receiver)).unwrap();
     CTX.set(Mutex::new(
-        Context::new(PackageManager { registry, sender }, CliAccessManager::new(&args)).unwrap(),
+        Context::new(
+            PackageManager { registry, sender },
+            CliAccessManager::new(&args),
+        )
+        .unwrap(),
     ))
     .unwrap();
 

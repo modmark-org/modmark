@@ -11,6 +11,8 @@ use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::{spawn_local, JsFuture};
 use web_sys::{Request, RequestInit, Response, WorkerGlobalScope};
 
+use crate::read_file;
+
 pub struct WebResolve;
 
 impl Resolve for WebResolve {
@@ -43,6 +45,8 @@ pub enum WebResolveError {
     RegistryKey(String),
     #[error("Invalid registry JSON structure")]
     RegistryJSON,
+    #[error("Local file doesn't exist: '{0}'")]
+    File(String),
     #[error("This action is not implemented")]
     NotImplemented,
 }
@@ -51,7 +55,10 @@ pub fn resolve(task: ResolveTask) {
     let target = task.package.source.clone();
     match target {
         PackageSource::Local => {
-            task.reject(WebResolveError::NotImplemented);
+            spawn_local(async move {
+                let file = fetch_local(&task.package.name);
+                task.complete(file);
+            });
         }
         PackageSource::Registry => {
             spawn_local(async move {
@@ -68,6 +75,21 @@ pub fn resolve(task: ResolveTask) {
         PackageSource::Standard => {
             task.reject(WebResolveError::NotImplemented);
         }
+    }
+}
+
+fn fetch_local(name: &str) -> Result<Vec<u8>, WebResolveError> {
+    // Path must start at root
+    let path = if name.starts_with('/') {
+        name.to_string()
+    } else {
+        format!("/{name}")
+    };
+    let file = read_file(&path);
+    if file.is_empty() {
+        Err(WebResolveError::File(path))
+    } else {
+        Ok(file)
     }
 }
 
