@@ -5,7 +5,8 @@ use std::sync::{Arc, Mutex};
 use std::task::Poll;
 
 use js_sys::{ArrayBuffer, Date, Map, Object, Uint8Array};
-use modmark_core::Resolve;
+use modmark_core::package_manager::{PackageID, PackageSource, ResolveTask};
+use modmark_core::package_manager::Resolve;
 use thiserror::Error;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
@@ -19,29 +20,27 @@ pub struct WebResolve;
 pub struct FetchError(String);
 
 impl Resolve for WebResolve {
-    type Error = FetchError;
-
-    fn resolve(&self, path: &str) -> Result<Vec<u8>, Self::Error> {
-        web_sys::console::log_1(&("Making request".into()));
-        let x = fetch_and_send_all(&vec![path]).pop().unwrap();
-        web_sys::console::log_1(&("DONE!!!".into()));
-        x
-
-        /*if path.starts_with("https://") {
-            spawn_fetcher_and_loader(path)
-        } else {
-            web_sys::console::log_1(&("Can only fetch HTTPS packages atm".into()));
-            Ok(vec![])
-        }*/
+    fn resolve_all(&self, paths: Vec<ResolveTask>) {
+        paths.into_iter().for_each(resolve);
     }
+}
 
-    fn resolve_all(&self, paths: &[&str]) -> Vec<Result<Vec<u8>, Self::Error>> {
-        paths.iter().map(|url| spawn_fetcher_and_loader(url)).collect()
+#[derive(Error, Debug)]
+#[error("Web resolve err: {0:?}")]
+pub struct WebResolveErr(String);
 
-        /*web_sys::console::log_1(&("Making request".into()));
-        let x = fetch_and_send_all(paths);
-        web_sys::console::log_1(&("DONE!!!".into()));
-        x*/
+pub fn resolve(task: ResolveTask) {
+    let target = task.package.target.clone();
+    match target {
+        PackageSource::Local => { todo!() }
+        PackageSource::Registry => { todo!() }
+        PackageSource::Url => {
+            spawn_local(async move {
+                let result = fetch_bytes(&task.package.name).await
+                    .map_err(|e| WebResolveErr(e.js_typeof().as_string().unwrap()));
+                task.complete(result);
+            });
+        }
     }
 }
 

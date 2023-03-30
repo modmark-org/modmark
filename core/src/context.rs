@@ -204,7 +204,13 @@ where
     pub(crate) fn configure(&mut self, config: Option<Config>) -> Result<bool, CoreError> {
         let config = config.unwrap_or_default();
         let mut lock = self.package_manager.lock().unwrap();
+
+        #[cfg(feature = "native")]
         lock.finalize(&self.engine).unwrap();
+
+        #[cfg(feature = "web")]
+        lock.finalize().unwrap();
+
         let arc_mutex = Arc::clone(&self.package_manager);
         let missings = lock.get_missing_packages(arc_mutex, &config);
         println!("Missings: {:?}", missings);
@@ -533,15 +539,19 @@ impl<T, U> Context<T, U> {
     pub(crate) fn load_precompiled_package_from_wasm(
         &mut self,
         wasm_source: &[u8],
-    ) -> Result<&mut Package, CoreError> {
+    ) -> Result<(), CoreError> {
         let pkg = Package::new_precompiled(wasm_source, &self.engine)?;
 
         let name = pkg.info.name.as_str();
-        let entry = self.standard_packages.entry(name.to_string());
+        let mut lock = self.package_manager.lock().unwrap();
+        let entry = lock.standard_packages.entry(name.into());
 
         match entry {
             Entry::Occupied(_) => Err(CoreError::OccupiedName(name.to_string())),
-            Entry::Vacant(entry) => Ok(entry.insert(pkg)),
+            Entry::Vacant(entry) => {
+                entry.insert(pkg);
+                Ok(())
+            }
         }
     }
 
