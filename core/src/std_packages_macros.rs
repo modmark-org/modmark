@@ -46,8 +46,8 @@ macro_rules! define_native_packages {
             ]
         }
 
-        pub fn handle_native<T, U>(
-            ctx: &mut Context<T, U>,
+        pub fn handle_native<T>(
+            ctx: &mut Context<T>,
             package_name: &str,
             node_name: &str, // name of module or parent
             element: &Element,
@@ -88,9 +88,10 @@ macro_rules! define_native_packages {
 macro_rules! define_standard_package_loader {
     ($($name:expr),* $(,)?) => {
         #[cfg(all(feature = "bundle_std_packages", feature = "native", feature = "precompile_wasm"))]
-        pub fn load_standard_packages<T, U>(ctx: &mut Context<T, U>) -> Result<(), CoreError> {
+        pub fn load_standard_packages(mgr: &mut PackageManager, #[cfg(feature = "native")] engine: &Engine)
+            -> Result<(), CoreError> {
             $(
-                ctx.load_precompiled_package_from_wasm(
+                mgr.load_precompiled_standard_package(
                     include_bytes!(
                         concat!(
                             env!("OUT_DIR"),
@@ -100,15 +101,34 @@ macro_rules! define_standard_package_loader {
                             $name,
                             "-precompiled.wir"
                         )
-                    )
+                    ),
+                    engine
                 )?;
             )*
             Ok(())
         }
         #[cfg(all(feature = "bundle_std_packages", not(all(feature = "native", feature = "precompile_wasm"))))]
-        pub fn load_standard_packages<T, U>(ctx: &mut Context<T, U>) -> Result<(), CoreError> {
+        pub fn load_standard_packages(mgr: &mut PackageManager, #[cfg(feature = "native")] engine: &Engine)
+            -> Result<(), CoreError> {
             $(
-                ctx.load_standard_package(
+                #[cfg(feature = "native")]
+                mgr.load_standard_package(
+                    include_bytes!(
+                        concat!(
+                            env!("OUT_DIR"),
+                            "/",
+                            $name,
+                            "/wasm32-wasi/release/",
+                            $name,
+                            ".wasm"
+                        )
+                    ),
+                    engine
+                )?;
+            )*
+            $(
+                #[cfg(not(feature = "native"))]
+                mgr.load_standard_package(
                     include_bytes!(
                         concat!(
                             env!("OUT_DIR"),
@@ -124,7 +144,8 @@ macro_rules! define_standard_package_loader {
             Ok(())
         }
         #[cfg(not(feature = "bundle_std_packages"))]
-        pub fn load_standard_packages<T, U>(_: &mut Context<T, U>) -> Result<(), CoreError> {
+        pub fn load_standard_packages(_: &mut PackageManager, #[cfg(feature = "native")] engine: &Engine)
+            -> Result<(), CoreError> {
             Ok(())
         }
     };

@@ -100,7 +100,7 @@ async fn fetch_and_send(id: usize, url: String, callback: std::sync::mpsc::Sende
 }
 
 async fn fetch_and_load_module(url: String) -> Result<(), JsValue> {
-    web_sys::console::log_1(&("Fetching".into()));
+    /*web_sys::console::log_1(&("Fetching".into()));
     let bytes = fetch_bytes(&url).await?;
     web_sys::console::log_1(&("Fetched".into()));
     crate::CONTEXT.with(|x| {
@@ -116,7 +116,7 @@ async fn fetch_and_load_module(url: String) -> Result<(), JsValue> {
             }
             web_sys::console::log_1(&("Not Inserted".into()));
         }
-    });
+    });*/
     Ok(())
 }
 

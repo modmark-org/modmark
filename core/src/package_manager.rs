@@ -1,7 +1,9 @@
 use std::cell::RefCell;
+use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::convert::Infallible;
 use std::error::Error;
+use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
 use std::mem;
 use std::pin::Pin;
@@ -11,13 +13,30 @@ use std::sync::{Arc, Mutex};
 use thiserror::Error;
 #[cfg(feature = "native")]
 use wasmer::Engine;
+#[cfg(feature = "native")]
+use wasmer::{Cranelift, EngineBuilder};
 
 use parser::config::{Config, Hide, Import, ImportConfig};
 
 use crate::context::{ModuleImport, ModuleImportConfig, TransformVariant};
-use crate::{Context, CoreError, Package, Transform};
+use crate::package::PackageImplementation;
+use crate::{std_packages, Context, CoreError, OutputFormat, Package, Transform};
 
-#[derive(Debug, Default)]
+#[cfg(feature = "native")]
+macro_rules! package_new {
+    ($source:expr, $engine:tt) => {
+        Package::new($source, $engine)
+    };
+}
+
+#[cfg(not(feature = "native"))]
+macro_rules! package_new {
+    ($source:expr, $engine:expr) => {
+        Package::new($source)
+    };
+}
+
+#[derive(Debug)]
 pub struct PackageManager {
     pub(crate) native_packages: HashMap<String, Package>,
     pub(crate) standard_packages: HashMap<PackageID, Package>,
@@ -26,6 +45,20 @@ pub struct PackageManager {
     pub(crate) new_packages: HashMap<PackageID, Vec<u8>>,
     pub(crate) failed_packages: Vec<CoreError>,
     pub(crate) transforms: HashMap<String, TransformVariant>,
+}
+
+impl Default for PackageManager {
+    fn default() -> Self {
+        Self {
+            native_packages: Default::default(),
+            standard_packages: Default::default(),
+            external_packages: Default::default(),
+            awaited_packages: Default::default(),
+            new_packages: Default::default(),
+            failed_packages: Default::default(),
+            transforms: Default::default(),
+        }
+    }
 }
 
 impl PackageManager {
@@ -48,12 +81,7 @@ impl PackageManager {
         let result: Vec<(PackageID, Package)> = self
             .new_packages
             .drain()
-            .map(|(k, v)| {
-                #[cfg(feature = "native")]
-                return Package::new(v.as_slice(), engine).map(|p| (k, p));
-                #[cfg(feature = "web")]
-                return Package::new(v.as_slice()).map(|p| (k, p));
-            })
+            .map(|(k, v)| package_new!(v.as_slice(), engine).map(|p| (k, p)))
             .collect::<Result<Vec<_>, _>>()?;
 
         for (package_name, package) in result {
@@ -66,6 +94,128 @@ impl PackageManager {
         }
 
         Ok(())
+    }
+
+    /// This function loads the default packages to the Context. First, it loads all native
+    /// packages, retrieved from `std_packages::native_package_list()`, and then it loads all
+    /// standard packages by passing this Context to `std_packages::load_standard_packages()`. This
+    /// will be run when constructing the Context, and may only be run once.
+    pub(crate) fn load_default_packages(
+        &mut self,
+        #[cfg(feature = "native")] engine: &Engine,
+    ) -> Result<(), CoreError> {
+        for pkg in std_packages::native_package_list() {
+            self.load_native_package(Package::new_native(pkg)?)?
+        }
+        #[cfg(feature = "native")]
+        std_packages::load_standard_packages(self, engine)?;
+        #[cfg(not(feature = "native"))]
+        std_packages::load_standard_packages(self)?;
+        Ok(())
+    }
+
+    /// This function loads a package from the serialized format retrieved from Module::serialize.
+    /// This is only available on native when using the precompile_wasm feature.
+    #[cfg(all(feature = "native", feature = "precompile_wasm"))]
+    pub(crate) fn load_precompiled_standard_package(
+        &mut self,
+        wasm_source: &[u8],
+        engine: &Engine,
+    ) -> Result<(), CoreError> {
+        let pkg = Package::new_precompiled(wasm_source, engine)?;
+
+        let name = pkg.info.name.as_str();
+        let id = PackageID {
+            name: name.to_string(),
+            target: PackageSource::Standard,
+        };
+        let entry = self.standard_packages.entry(id);
+
+        match entry {
+            Entry::Occupied(_) => Err(CoreError::OccupiedName(name.to_string())),
+            Entry::Vacant(entry) => {
+                entry.insert(pkg);
+                Ok(())
+            }
+        }
+    }
+
+    /// This is a helper function to load a package directly from its wasm source. It will be
+    /// compiled using `Package::new` to become a `Package` and then loaded using `load_package`
+    #[allow(dead_code)]
+    pub(crate) fn load_standard_package(
+        &mut self,
+        wasm_source: &[u8],
+        #[cfg(feature = "native")] engine: &Engine,
+    ) -> Result<(), CoreError> {
+        let pkg = package_new!(wasm_source, engine)?;
+
+        let name = pkg.info.name.as_str();
+        let id = PackageID {
+            name: name.to_string(),
+            target: PackageSource::Standard,
+        };
+        let entry = self.standard_packages.entry(id);
+
+        match entry {
+            Entry::Occupied(_) => Err(CoreError::OccupiedName(name.to_string())),
+            Entry::Vacant(entry) => {
+                entry.insert(pkg);
+                Ok(())
+            }
+        }
+    }
+
+    pub fn load_native_package(&mut self, pkg: Package) -> Result<(), CoreError> {
+        debug_assert_eq!(pkg.implementation, PackageImplementation::Native);
+        let name = &pkg.info.as_ref().name;
+        let entry = self.native_packages.entry(name.to_string());
+
+        match entry {
+            Entry::Occupied(_) => return Err(CoreError::OccupiedName(name.to_string())),
+            Entry::Vacant(entry) => entry.insert(pkg),
+        };
+        Ok(())
+    }
+
+    /// This gets the transform info for a given element and output format. If a native package
+    /// supplies a transform for that element, that will be returned and the output format returned
+    pub fn get_transform_info(
+        &self,
+        element_name: &str,
+        output_format: &OutputFormat,
+    ) -> Option<Transform> {
+        self.get_transform_to(element_name, output_format)
+            .map(|(transform, _)| transform)
+    }
+
+    /// Gets the transform and package the transform is in, for a transform from a specific element
+    /// to a specific output format. Returns None if no such transform exists
+    pub fn get_transform_to(
+        &self,
+        element_name: &str,
+        output_format: &OutputFormat,
+    ) -> Option<(Transform, Package)> {
+        self.transforms
+            .get(element_name)
+            .and_then(|t| t.find_transform_to(output_format))
+            .cloned()
+    }
+
+    #[allow(unreachable_code)]
+    fn package_from_wasm(
+        &mut self,
+        wasm_source: &[u8],
+        #[cfg(feature = "native")] engine: &Engine,
+    ) -> Result<Package, CoreError> {
+        #[cfg(feature = "native")]
+        return Package::new(wasm_source, engine);
+
+        #[cfg(feature = "web")]
+        return Package::new(wasm_source);
+
+        #[cfg(not(any(feature = "native", feature = "web")))]
+        compile_error!("'native' and 'web' features are both disabled")
     }
 
     pub(crate) fn get_missing_packages(
