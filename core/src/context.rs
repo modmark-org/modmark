@@ -619,9 +619,7 @@ impl<T, U> Context<T, U> {
         let mut lock = self.package_manager.lock().unwrap();
         lock.native_packages
             .get(name)
-            .or(lock
-                .standard_packages
-                .get(&PackageID::from_str(name).unwrap()))
+            .or(lock.standard_packages.get(&name.into()))
             .map(|pkg| pkg.info.clone())
     }
 
