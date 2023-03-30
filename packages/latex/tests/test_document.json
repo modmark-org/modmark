@@ -24,7 +24,7 @@
   "__test_transform_to": "latex",
   "__test_expected_result": [
     {
-      "data": "\\documentclass{article}\n\n\\usepackage{ulem}\n\\usepackage[hidelinks]{hyperref}\n\\usepackage{float}\n\n\\begin{document}\n",
+      "data": "\\documentclass{article}\n\n\\usepackage[normalem]{ulem}\n\\usepackage{enumitem}\n\\usepackage[hidelinks]{hyperref}\n\\usepackage{float}\n\n\\begin{document}\n",
       "name": "raw"
     },
     {
