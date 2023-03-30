@@ -1,14 +1,12 @@
 use std::cell::RefCell;
 use std::path::Path;
 
-use modmark_core::{Context, CoreError, eval, eval_no_document, OutputFormat};
+use modmark_core::{eval, eval_no_document, Context, CoreError, OutputFormat};
 use parser::ParseError;
 use serde::Serialize;
 use thiserror::Error;
 use wasm_bindgen::prelude::*;
 use wasmer_vfs::FileSystem;
-
-use crate::web_resolve::try_fetch;
 
 mod web_resolve;
 
@@ -44,7 +42,6 @@ impl From<PlaygroundError> for JsValue {
 
 #[wasm_bindgen]
 pub fn ast(source: &str) -> Result<String, PlaygroundError> {
-    try_fetch();
     let document = parser::parse(source)?;
     Ok(document.tree_string())
 }
@@ -64,10 +61,11 @@ struct Transpile {
 
 #[wasm_bindgen]
 pub fn transpile(source: &str, format: &str) -> Result<String, PlaygroundError> {
-    let result = CONTEXT.with(|ctx| {
-        let mut ctx = ctx.borrow_mut();
-        eval(source, &mut ctx, &OutputFormat::new(format))
-    })?
+    let result = CONTEXT
+        .with(|ctx| {
+            let mut ctx = ctx.borrow_mut();
+            eval(source, &mut ctx, &OutputFormat::new(format))
+        })?
         .ok_or(PlaygroundError::NoResult)?;
 
     let warnings = result
@@ -93,10 +91,11 @@ pub fn transpile(source: &str, format: &str) -> Result<String, PlaygroundError> 
 #[wasm_bindgen]
 pub fn transpile_no_document(source: &str, format: &str) -> Result<String, PlaygroundError> {
     set_panic_hook();
-    let result = CONTEXT.with(|ctx| {
-        let mut ctx = ctx.borrow_mut();
-        eval_no_document(source, &mut ctx, &OutputFormat::new(format))
-    })?
+    let result = CONTEXT
+        .with(|ctx| {
+            let mut ctx = ctx.borrow_mut();
+            eval_no_document(source, &mut ctx, &OutputFormat::new(format))
+        })?
         .ok_or(PlaygroundError::NoResult)?;
 
     let warnings = result
