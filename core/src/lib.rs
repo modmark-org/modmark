@@ -212,7 +212,7 @@ mod tests {
     #[test]
     fn table_manifest_test() {
         let ctx = Context::new_without_resolver().unwrap();
-        let info = ctx.get_package_info("table").unwrap().clone();
+        let info = ctx.get_package_info("std:table").unwrap().clone();
 
         let foo = PackageInfo {
             name: "table".to_string(),
@@ -263,6 +263,6 @@ mod tests {
             }],
         };
 
-        assert_eq!(info, foo);
+        assert_eq!(info.as_ref(), &foo);
     }
 }
