@@ -51,11 +51,7 @@ pub fn resolve(task: ResolveTask) {
     let target = task.package.source.clone();
     match target {
         PackageSource::Local => {
-            // Note that these "simple rejects" must be called in async since otherwise we would
-            // get recursive mutex locks, and that isn't implemented in Wasm
-            spawn_local(async move {
-                task.reject(WebResolveError::NotImplemented);
-            });
+            task.reject(WebResolveError::NotImplemented);
         }
         PackageSource::Registry => {
             spawn_local(async move {
@@ -70,10 +66,7 @@ pub fn resolve(task: ResolveTask) {
             });
         }
         PackageSource::Standard => {
-            // See note for PackageSource::Local
-            spawn_local(async move {
-                task.reject(WebResolveError::NotImplemented);
-            });
+            task.reject(WebResolveError::NotImplemented);
         }
     }
 }

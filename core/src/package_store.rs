@@ -453,8 +453,7 @@ impl From<Hide> for PackageID {
 }
 
 pub trait Resolve {
-    /// The implementor should resolve the given tasks in an **asynchronous manner**. It is of
-    /// highest importance that this is isn't done synchronous, since that would give a dead-lock.
+    /// The implementor should resolve the given ResolveTasks, and may do so sync or async
     fn resolve_all(&self, paths: Vec<ResolveTask>);
 }
 

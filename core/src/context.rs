@@ -218,6 +218,7 @@ where
             lock.expose_transforms(config.try_into()?)?;
             Ok(true)
         } else {
+            drop(lock);
             self.resolver.resolve_all(missings);
             Ok(false)
         }
