@@ -1,11 +1,6 @@
 use std::collections::HashMap;
-use std::convert::Infallible;
-use std::future::Future;
-use std::pin::{pin, Pin};
-use std::sync::{Arc, Mutex};
-use std::task::Poll;
 
-use js_sys::{ArrayBuffer, Date, JsString, Map, Object, Uint8Array};
+use js_sys::{ArrayBuffer, JsString};
 use modmark_core::package_manager::Resolve;
 use modmark_core::package_manager::{PackageSource, ResolveTask};
 use once_cell::sync::OnceCell;
@@ -14,7 +9,7 @@ use thiserror::Error;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::{spawn_local, JsFuture};
-use web_sys::{Request, RequestInit, RequestMode, Response, WorkerGlobalScope};
+use web_sys::{Request, RequestInit, Response, WorkerGlobalScope};
 
 pub struct WebResolve;
 
@@ -33,13 +28,13 @@ thread_local! {
 }
 
 static REGISTRY: OnceCell<Registry> = OnceCell::new();
-static DEFAULT_REGISTRY: &'static str =
+static DEFAULT_REGISTRY: &str =
     "https://raw.githubusercontent.com/modmark-org/package-registry/main/package-registry.json";
 
 #[derive(Error, Debug)]
 pub enum WebResolveError {
     #[error("Invalid URL")]
-    URL(String),
+    Url(String),
     #[error("Failed to get URL {0}: {1}")]
     Fetch(String, String),
     #[error("Failed to get registry from URL {0}: {1}")]
@@ -111,47 +106,7 @@ async fn fetch_wasm_module(source: &str) -> Result<Vec<u8>, WebResolveError> {
 }
 
 async fn fetch_bytes(url: &str) -> Result<Vec<u8>, WebResolveError> {
-    // Since this is interfacing with JS api:s, we have to use dynamic casting and refer to
-    // API docs for knowing when it is safe or not. Comments will be added when appropriate.
-    let mut opts = RequestInit::new();
-    opts.method("GET");
-    // Somehow, it doesn't work if we do opts.mode(RequestMode::Cors); even though I think it should
-    // work, with the header Access-Control-Allow-Origin: *
-
-    // This only fails if we have credentials (user:password@url.com) in FF
-    let request = Request::new_with_str_and_init(&url, &opts)
-        .map_err(|_| WebResolveError::URL(url.to_string()))?;
-
-    // This only fails if we have an invalid header name
-    request
-        .headers()
-        .set("Accept", "application/octet-stream")
-        .unwrap();
-    // Allow redirects
-    // request.headers().set("Access-Control-Allow-Origin", "*").unwrap();
-    // Doesn't work, see earlier comment
-
-    // This doesn't fail on 404s, but does on invalid URL/headers/etc, see
-    // https://developer.mozilla.org/en-US/docs/Web/API/fetch#exceptions
-    let resp_value =
-        JsFuture::from(WORKER_SCOPE.with(|w| w.fetch_with_request_and_init(&request, &opts)))
-            .await
-            .unwrap();
-
-    // This should always succeed
-    debug_assert!(resp_value.is_instance_of::<Response>());
-
-    // Any valid response should be castable into Response. Promise failures are caught earlier
-    let resp: Response = resp_value.dyn_into().unwrap();
-
-    // If not 200, return early
-    let status = resp.status();
-    if status != 200 {
-        return Err(WebResolveError::Fetch(
-            url.to_string(),
-            format!("Status code {status}"),
-        ));
-    }
+    let resp = fetch_url(url).await?;
 
     // This should not fail (no exceptions listed in MDN docs)
     let buffer_value: JsValue = JsFuture::from(resp.array_buffer().unwrap()).await.unwrap();
@@ -167,6 +122,20 @@ async fn fetch_bytes(url: &str) -> Result<Vec<u8>, WebResolveError> {
 }
 
 async fn fetch_registry(url: &str) -> Result<Registry, WebResolveError> {
+    let resp = fetch_url(url).await?;
+
+    // This should not fail (no exceptions listed in MDN docs)
+    let content: JsValue = JsFuture::from(resp.text().unwrap()).await.unwrap();
+
+    // This should always succeed
+    debug_assert!(content.is_instance_of::<JsString>());
+    let string = content.as_string().unwrap();
+
+    // Try to parse registry
+    serde_json::from_str(&string).map_err(|_| WebResolveError::RegistryJSON)
+}
+
+async fn fetch_url(url: &str) -> Result<Response, WebResolveError> {
     // Since this is interfacing with JS api:s, we have to use dynamic casting and refer to
     // API docs for knowing when it is safe or not. Comments will be added when appropriate.
     let mut opts = RequestInit::new();
@@ -175,8 +144,8 @@ async fn fetch_registry(url: &str) -> Result<Registry, WebResolveError> {
     // it here as well
 
     // This only fails if we have credentials (user:password@url.com) in FF
-    let request = Request::new_with_str_and_init(&url, &opts)
-        .map_err(|_| WebResolveError::URL(url.to_string()))?;
+    let request = Request::new_with_str_and_init(url, &opts)
+        .map_err(|_| WebResolveError::Url(url.to_string()))?;
 
     // This only fails if we have an invalid header name
     request
@@ -205,16 +174,7 @@ async fn fetch_registry(url: &str) -> Result<Registry, WebResolveError> {
             format!("Status code {status}"),
         ));
     }
-
-    // This should not fail (no exceptions listed in MDN docs)
-    let content: JsValue = JsFuture::from(resp.text().unwrap()).await.unwrap();
-
-    // This should always succeed
-    debug_assert!(content.is_instance_of::<JsString>());
-    let string = content.as_string().unwrap();
-
-    // Try to parse registry
-    serde_json::from_str(&string).map_err(|_| WebResolveError::RegistryJSON)
+    Ok(resp)
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

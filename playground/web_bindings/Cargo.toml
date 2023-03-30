@@ -30,13 +30,8 @@ once_cell = "1.17.1"
 version = "0.3.61"
 features = [
     'Headers',
-    'Request',
     'RequestInit',
-    'RequestMode',
+    'Request',
     'Response',
     'WorkerGlobalScope',
-    'ReadableStream',
-    'ReadableStreamDefaultReader',
-    'Blob',
-    'console'
 ]
