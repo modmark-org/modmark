@@ -1,7 +1,9 @@
 use std::cell::RefCell;
 use std::path::Path;
 
-use modmark_core::{eval, eval_no_document, Context, CoreError, DenyAllResolver, OutputFormat};
+use modmark_core::{
+    eval, eval_no_document, Context, CoreError, DenyAllResolver, DefaultAccessManager, OutputFormat
+};
 use parser::ParseError;
 use serde::Serialize;
 use thiserror::Error;
@@ -9,7 +11,8 @@ use wasm_bindgen::prelude::*;
 use wasmer_vfs::FileSystem;
 
 thread_local! {
-    static CONTEXT: RefCell<Context<DenyAllResolver>> = RefCell::new(Context::new_without_resolver().unwrap())
+    static CONTEXT: RefCell<Context<DenyAllResolver, DefaultAccessManager>> =
+        RefCell::new(Context::new_with_defaults().unwrap())
 }
 
 #[derive(Error, Debug)]

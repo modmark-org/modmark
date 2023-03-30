@@ -31,6 +31,7 @@ use warp::{
     Filter, Rejection, Reply,
 };
 
+use crate::file_access::CliAccessManager;
 use error::CliError;
 use modmark_core::{context::CompilationState, eval, Context, CoreError, OutputFormat};
 use parser::{parse, Ast};
@@ -38,6 +39,7 @@ use parser::{parse, Ast};
 use crate::package::PackageManager;
 
 mod error;
+mod file_access;
 mod package;
 
 #[derive(Parser, Debug)]
@@ -71,6 +73,9 @@ struct Args {
     #[arg(long = "deny-write", help = "Disables write access for packages")]
     deny_write: bool,
 
+    #[arg(long = "deny-create", help = "Disables create access for packages")]
+    deny_create: bool,
+
     #[arg(
         long = "no-prompts",
         help = "Disables prompts for packages requesting file access"
@@ -78,7 +83,6 @@ struct Args {
     no_prompts: bool,
 
     #[arg(
-        short = 'a',
         long = "assets",
         help = "Specifies the relative path to the directory with external files"
     )]
@@ -136,7 +140,7 @@ impl Args {
 static DEFAULT_REGISTRY: &str =
     "https://raw.githubusercontent.com/modmark-org/package-registry/main/package-registry.json";
 
-static CTX: OnceCell<Mutex<Context<PackageManager>>> = OnceCell::new();
+static CTX: OnceCell<Mutex<Context<PackageManager, CliAccessManager>>> = OnceCell::new();
 static PREVIEW_PORT: OnceCell<Option<Port>> = OnceCell::new();
 static ABSOLUTE_OUTPUT_PATH: OnceCell<PathBuf> = OnceCell::new();
 static CONNECTION_ID_COUNTER: AtomicUsize = AtomicUsize::new(1);
@@ -275,16 +279,13 @@ async fn run_cli(args: Args) -> Result<(), CliError> {
         .to_string();
 
     CTX.set(Mutex::new(
-        Context::new_with_resolver(PackageManager { registry }).unwrap(),
+        Context::new(
+            PackageManager { registry },
+            CliAccessManager::new_with_args(&args),
+        )
+        .unwrap(),
     ))
     .unwrap();
-
-    CTX.get().unwrap().lock().unwrap().set_args(
-        &args.assets,
-        args.deny_read,
-        args.deny_write,
-        args.no_prompts,
-    );
 
     // Using html output format and watch flag
     // (or if the user never provided a output file at all)
