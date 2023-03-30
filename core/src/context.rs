@@ -25,7 +25,7 @@ use crate::fs::CoreFs;
 use crate::package::{ArgValue, PackageImplementation};
 use crate::package_store::{PackageID, PackageStore};
 use crate::{std_packages, AccessPolicy, Element, Resolve};
-use crate::{ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
+use crate::{ArgInfo, CoreError, OutputFormat, Package, Transform};
 
 pub struct Context<T, U> {
     pub package_manager: Arc<Mutex<PackageStore>>,
@@ -158,38 +158,6 @@ impl<T, U> Context<T, U>
 where
     T: Resolve,
 {
-    /*pub(crate) fn import_missing_packages(&mut self, config: &Config) -> Result<(), CoreError> {
-        let missing: Vec<&str> = config
-            .imports
-            .iter()
-            .map(|i| i.name.as_str())
-            .chain(config.hides.iter().map(|h| h.name.as_str()))
-            .filter(|&name| {
-                !self.standard_packages.contains_key(name)
-                    && !self.external_packages.contains_key(name)
-            })
-            .collect();
-
-        // The .enumerate()-.map() may seem ugly but it is needed to be able to retrieve the
-        // package which errored (first). Essentially, instead of having just an dyn Error, we have
-        // (idx, dyn Error) where idx is the idx to the package (in missing) that errored
-        let resolves: Vec<Vec<u8>> = self
-            .resolver
-            .resolve_all(&missing)
-            .into_iter()
-            .enumerate()
-            .map(|(idx, pkg)| pkg.map_err(|e| (idx, e)))
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|(idx, e)| CoreError::Resolve(missing[idx].to_string(), Box::new(e)))?;
-
-        let res: Result<Vec<()>, CoreError> = missing
-            .into_iter()
-            .zip(resolves.into_iter())
-            .map(|(name, data)| self.load_external_package(name, data.as_slice()))
-            .collect();
-        res.map(|_| ())
-    }*/
-
     // This function configures the context with the given config, so that it is appropriate to
     // evaluate a document having that configuration with it. It also resolves packages if needed
     // If this returns "true", it had everything it needed to compile, if "false" it is waiting for
@@ -473,27 +441,6 @@ impl<T, U> Context<T, U> {
         std_packages::handle_native(self, package_name, node_name, element, args, output_format)
     }
 
-    /// Borrow information about a package with a given name
-    pub fn get_package_info(&self, name: &str) -> Option<Arc<PackageInfo>> {
-        let lock = self.package_manager.lock().unwrap();
-        lock.native_packages
-            .get(name)
-            .or(lock.standard_packages.get(&name.into()))
-            .map(|pkg| pkg.info.clone())
-    }
-
-    /// Borrow a vector with PackageInfo from every loaded package
-    pub fn get_all_package_info(&self) -> Vec<Arc<PackageInfo>> {
-        let lock = self.package_manager.lock().unwrap();
-        lock.native_packages
-            .values()
-            .chain(lock.standard_packages.values())
-            .chain(lock.external_packages.values())
-            .map(|pkg| pkg.info.clone())
-            .collect::<Vec<_>>()
-            .clone()
-    }
-
     /// Serialize and element into a string that can be sent to a package
     pub fn serialize_element(
         &self,
@@ -613,23 +560,6 @@ impl<T, U> Context<T, U> {
         }
     }
 
-    /// Gets the `ArgInfo`s associated with an element targeting the given output format, if such
-    /// a transformation exists, otherwise generates an `MissingTransform` error. This is intended
-    /// for use in `collect_(parent/module)_arguments` to reduce repeated code.
-    fn get_args_info(
-        &self,
-        element_name: &str,
-        output_format: &OutputFormat,
-    ) -> Result<Vec<ArgInfo>, CoreError> {
-        let lock = self.package_manager.lock().unwrap();
-        lock.get_transform_info(element_name, output_format)
-            .map(|info| info.arguments.clone())
-            .ok_or(CoreError::MissingTransform(
-                element_name.to_string(),
-                output_format.0.to_string(),
-            ))
-    }
-
     fn collect_parent_arguments(
         &self,
         args: &HashMap<String, String>,
@@ -641,7 +571,9 @@ impl<T, U> Context<T, U> {
         let mut given_args = args.clone();
 
         // Get info about what args this parent node
-        let args_info = self.get_args_info(parent_name, output_format)?;
+        let lock = self.package_manager.lock().unwrap();
+        let args_info = lock.get_args_info(parent_name, output_format)?;
+        drop(lock);
 
         for arg_info in args_info {
             let ArgInfo {
@@ -687,7 +619,9 @@ impl<T, U> Context<T, U> {
         let mut collected_args = HashMap::new();
 
         // Get info about what args this parent node supports
-        let args_info = self.get_args_info(module_name, output_format)?;
+        let lock = self.package_manager.lock().unwrap();
+        let args_info = lock.get_args_info(module_name, output_format)?;
+        drop(lock);
 
         for arg_info in args_info {
             let ArgInfo {

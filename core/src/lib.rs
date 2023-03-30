@@ -219,7 +219,8 @@ mod tests {
     #[test]
     fn table_manifest_test() {
         let ctx = Context::new(UnimplementedResolver, DefaultAccessManager).unwrap();
-        let info = ctx.get_package_info("std:table").unwrap().clone();
+        let lock = ctx.package_manager.lock().unwrap();
+        let info = lock.get_package_info("std:table").unwrap().clone();
 
         let foo = PackageInfo {
             name: "table".to_string(),
