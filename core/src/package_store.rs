@@ -14,7 +14,7 @@ use parser::config::{Config, Hide, Import};
 
 use crate::context::{ModuleImport, ModuleImportConfig, TransformVariant};
 use crate::package::PackageImplementation;
-use crate::{std_packages, CoreError, OutputFormat, Package, Transform};
+use crate::{std_packages, ArgInfo, CoreError, OutputFormat, Package, PackageInfo, Transform};
 
 // The package_new allows us to run Package::new(source, [engine]) by supplying the identifier to
 // the engine that would have been used if we were compiling to native, which will be ignored
@@ -163,6 +163,25 @@ impl PackageStore {
         Ok(())
     }
 
+    /// Gets information about a package with a given name
+    pub fn get_package_info(&self, name: &str) -> Option<Arc<PackageInfo>> {
+        self.native_packages
+            .get(name)
+            .or(self.standard_packages.get(&name.into()))
+            .map(|pkg| pkg.info.clone())
+    }
+
+    /// Borrow a vector with PackageInfo from every loaded package
+    pub fn get_all_package_info(&self) -> Vec<Arc<PackageInfo>> {
+        self.native_packages
+            .values()
+            .chain(self.standard_packages.values())
+            .chain(self.external_packages.values())
+            .map(|pkg| pkg.info.clone())
+            .collect::<Vec<_>>()
+            .clone()
+    }
+
     /// This gets the transform info for a given element and output format. If a native package
     /// supplies a transform for that element, that will be returned and the output format returned
     pub fn get_transform_info(
@@ -172,6 +191,22 @@ impl PackageStore {
     ) -> Option<Transform> {
         self.get_transform_to(element_name, output_format)
             .map(|(transform, _)| transform)
+    }
+
+    /// Gets the `ArgInfo`s associated with an element targeting the given output format, if such
+    /// a transformation exists, otherwise generates an `MissingTransform` error. This is intended
+    /// for use in `collect_(parent/module)_arguments` to reduce repeated code.
+    pub(crate) fn get_args_info(
+        &self,
+        element_name: &str,
+        output_format: &OutputFormat,
+    ) -> Result<Vec<ArgInfo>, CoreError> {
+        self.get_transform_info(element_name, output_format)
+            .map(|info| info.arguments.clone())
+            .ok_or(CoreError::MissingTransform(
+                element_name.to_string(),
+                output_format.0.to_string(),
+            ))
     }
 
     /// Gets the transform and package the transform is in, for a transform from a specific element

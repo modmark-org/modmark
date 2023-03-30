@@ -159,7 +159,8 @@ pub fn json_output(source: &str) -> Result<String, PlaygroundError> {
 pub fn package_info() -> String {
     CONTEXT.with(|ctx| {
         let ctx = ctx.borrow();
-        serde_json::to_string(&ctx.get_all_package_info()).unwrap()
+        let lock = ctx.package_manager.lock().unwrap();
+        serde_json::to_string(&lock.get_all_package_info()).unwrap()
     })
 }
 
