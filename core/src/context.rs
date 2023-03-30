@@ -213,10 +213,10 @@ where
         let mut lock = self.package_manager.lock().unwrap();
 
         #[cfg(feature = "native")]
-        lock.finalize(&self.engine).unwrap();
+        lock.finalize(&self.engine)?;
 
         #[cfg(feature = "web")]
-        lock.finalize().unwrap();
+        lock.finalize()?;
 
         let arc_mutex = Arc::clone(&self.package_manager);
         let missings = lock.get_missing_packages(arc_mutex, &config);
