@@ -9,7 +9,7 @@ pub use context::Context;
 pub use element::Element;
 pub use error::CoreError;
 pub use package::{ArgInfo, Package, PackageInfo, Transform};
-use package_manager::Resolve;
+use package_store::Resolve;
 
 use crate::context::CompilationState;
 
@@ -18,7 +18,7 @@ mod element;
 mod error;
 mod fs;
 mod package;
-pub mod package_manager;
+pub mod package_store;
 mod std_packages;
 mod std_packages_macros;
 #[cfg(all(feature = "web", feature = "native"))]
@@ -98,7 +98,7 @@ pub fn eval<T, U>(
     source: &str,
     ctx: &mut Context<T, U>,
     format: &OutputFormat,
-) -> Result<Option<(String, CompilationState)>, CoreError>
+) -> Result<Option<(String, CompilationState)>, Vec<CoreError>>
 where
     T: Resolve,
     U: AccessPolicy + Send + Sync + 'static,
@@ -111,17 +111,17 @@ where
     // TODO: Move this out so that we have a flag in the CLI and a switch in the playground to
     //   do verbose errors or "debug mode" or similar
     ctx.state.verbose_errors = true;
-    let (doc_ast, config) = parser::parse_with_config(source)?;
-    let document = doc_ast.try_into()?;
+    let (doc_ast, config) = parser::parse_with_config(source).map_err(|e| vec![e.into()])?;
+    let document = doc_ast.try_into().map_err(|e| vec![e])?;
     let success = ctx.configure(config)?;
     if !success {
-        println!("No success");
         return Ok(None);
     }
 
     let res = eval_elem(document, ctx, format);
 
     res.map(|s| Some((s, ctx.take_state())))
+        .map_err(|e| vec![e])
 }
 
 /// Evaluates a document using the given context without a document element
@@ -129,7 +129,7 @@ pub fn eval_no_document<T, U>(
     source: &str,
     ctx: &mut Context<T, U>,
     format: &OutputFormat,
-) -> Result<Option<(String, CompilationState)>, CoreError>
+) -> Result<Option<(String, CompilationState)>, Vec<CoreError>>
 where
     T: Resolve,
     U: AccessPolicy + Send + Sync + 'static,
@@ -139,8 +139,8 @@ where
     // TODO: Move this out so that we have a flag in the CLI and a switch in the playground to
     //   do verbose errors or "debug mode" or similar
     ctx.state.verbose_errors = true;
-    let (doc_ast, config) = parser::parse_with_config(source)?;
-    let document: Element = doc_ast.try_into()?;
+    let (doc_ast, config) = parser::parse_with_config(source).map_err(|e| vec![e.into()])?;
+    let document: Element = doc_ast.try_into().map_err(|e| vec![e])?;
     let no_doc = if let Element::Parent {
         name: _,
         args: _,
@@ -149,7 +149,7 @@ where
     {
         Ok(Element::Compound(children))
     } else {
-        Err(CoreError::RootElementNotParent)
+        Err(vec![CoreError::RootElementNotParent])
     }?;
 
     let success = ctx.configure(config)?;
@@ -160,6 +160,7 @@ where
     let res = eval_elem(no_doc, ctx, format);
 
     res.map(|s| Some((s, ctx.take_state())))
+        .map_err(|e| vec![e])
 }
 
 pub fn eval_elem<T, U>(
@@ -205,12 +206,20 @@ mod tests {
     use serde_json::Value;
 
     use crate::package::{ArgType, PrimitiveArgType};
+    use crate::package_store::ResolveTask;
 
     use super::*;
 
+    struct UnimplementedResolver;
+    impl Resolve for UnimplementedResolver {
+        fn resolve_all(&self, paths: Vec<ResolveTask>) {
+            unimplemented!()
+        }
+    }
+
     #[test]
     fn table_manifest_test() {
-        let ctx = Context::new_without_resolver().unwrap();
+        let ctx = Context::new_with_resolver(UnimplementedResolver).unwrap();
         let info = ctx.get_package_info("std:table").unwrap().clone();
 
         let foo = PackageInfo {

@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use js_sys::{ArrayBuffer, JsString};
-use modmark_core::package_manager::Resolve;
-use modmark_core::package_manager::{PackageSource, ResolveTask};
+use modmark_core::package_store::Resolve;
+use modmark_core::package_store::{PackageSource, ResolveTask};
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -48,9 +48,11 @@ pub enum WebResolveError {
 }
 
 pub fn resolve(task: ResolveTask) {
-    let target = task.package.target.clone();
+    let target = task.package.source.clone();
     match target {
         PackageSource::Local => {
+            // Note that these "simple rejects" must be called in async since otherwise we would
+            // get recursive mutex locks, and that isn't implemented in Wasm
             spawn_local(async move {
                 task.reject(WebResolveError::NotImplemented);
             });
@@ -68,6 +70,7 @@ pub fn resolve(task: ResolveTask) {
             });
         }
         PackageSource::Standard => {
+            // See note for PackageSource::Local
             spawn_local(async move {
                 task.reject(WebResolveError::NotImplemented);
             });

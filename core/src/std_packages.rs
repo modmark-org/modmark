@@ -9,7 +9,7 @@ use wasmer::Engine;
 
 use crate::context::Issue;
 use crate::package::{ArgValue, PrimitiveArgType};
-use crate::package_manager::PackageManager;
+use crate::package_store::PackageStore;
 use crate::std_packages_macros::{define_native_packages, define_standard_package_loader};
 use crate::{ArgInfo, Context, CoreError, Element, OutputFormat, PackageInfo, Transform};
 

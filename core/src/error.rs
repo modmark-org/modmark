@@ -62,14 +62,12 @@ pub enum CoreError {
     NonModuleToNative(String, String),
     #[error("Root element is not a parent, cannot remove __document for playground")]
     RootElementNotParent,
-    #[error("Importing external packages is not allowed")]
-    DenyAllResolver,
     #[error("Error resolving {0}: {1:?}")]
     Resolve(String, Box<dyn Error + Send>),
-    #[error("Duplicate configurations for packages: '{0:?}'")]
-    DuplicateConfigs(Vec<String>),
-    #[error("Unused configurations for packages: '{0:?}'")]
-    UnusedConfigs(Vec<String>),
+    #[error("Duplicate configuration for package '{0}'")]
+    DuplicateConfig(String),
+    #[error("Unused configurations for package '{0}'")]
+    UnusedConfig(String),
     #[error("Config modules are only allowed once at the very top of the document")]
     UnexpectedConfigModule,
     #[error("Error serializing '{0}': {1}")]
@@ -88,6 +86,8 @@ pub enum CoreError {
     },
     #[error("A package request was dropped before resolving")]
     DroppedRequest,
+    #[error("Missing standard package named '{0}'")]
+    NoSuchStdPackage(String),
 }
 
 impl From<WasiError> for CoreError {

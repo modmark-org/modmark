@@ -154,12 +154,12 @@ static CONNECTION_ID_COUNTER: AtomicUsize = AtomicUsize::new(1);
 type PreviewConnections = Arc<RwLock<HashMap<usize, mpsc::UnboundedSender<Message>>>>;
 type PreviewDoc = Arc<Mutex<String>>;
 
-type CompilationResult = Result<(String, CompilationState, Ast), CoreError>;
+type CompilationResult = Result<(String, CompilationState, Ast), Vec<CoreError>>;
 
 /// Compile a file and return the transpiled content, compilation state and ast.
 async fn compile_file(input_file: &Path, output_format: &OutputFormat) -> CompilationResult {
-    let source = fs::read_to_string(input_file)?;
-    let ast = parse(&source)?;
+    let source = fs::read_to_string(input_file).map_err(|e| vec![e.into()])?;
+    let ast = parse(&source).map_err(|e| vec![e.into()])?;
     if let Some((output, state)) = eval(
         &source,
         &mut CTX.get().unwrap().lock().unwrap(),
@@ -199,12 +199,15 @@ fn print_result(result: &CompilationResult, args: &Args) -> Result<(), CliError>
 
     let (_, state, ast) = match result {
         Ok(result) => result,
-        Err(error) => {
+        Err(errors) => {
             stdout.execute(terminal::Clear(terminal::ClearType::All))?;
             stdout.execute(cursor::MoveTo(0, 0))?;
             stdout.execute(style::PrintStyledContent(
-                format!("Compilation error:\n{error}\n\n").red(),
+                format!("{} compilation error(s):\n", errors.len()).red(),
             ))?;
+            for error in errors {
+                stdout.execute(style::PrintStyledContent(format!("{error:?}\n").red()))?;
+            }
             return Ok(());
         }
     };

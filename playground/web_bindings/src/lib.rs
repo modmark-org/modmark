@@ -17,18 +17,28 @@ thread_local! {
 #[derive(Error, Debug)]
 pub enum PlaygroundError {
     #[error("Failed to evaluate the document")]
-    Core(#[from] CoreError),
+    Core(Vec<CoreError>),
     #[error("Failed to parse")]
     Parsing(#[from] ParseError),
     #[error("No result")]
     NoResult,
 }
 
+impl From<Vec<CoreError>> for PlaygroundError {
+    fn from(value: Vec<CoreError>) -> Self {
+        PlaygroundError::Core(value)
+    }
+}
+
 impl From<PlaygroundError> for JsValue {
     fn from(error: PlaygroundError) -> Self {
         match error {
-            PlaygroundError::Core(error) => {
-                JsValue::from_str(&format!("<p>{error}</p><pre>{error:#?}</pre>"))
+            PlaygroundError::Core(errors) => {
+                let mut str = String::new();
+                for error in errors {
+                    str.push_str(&format!("<p>{error}</p><pre>{error:#?}</pre>"));
+                }
+                JsValue::from_str(&str)
             }
             PlaygroundError::Parsing(error) => {
                 JsValue::from_str(&format!("<p>{error}</p><pre>{error:#?}</pre>"))
@@ -132,8 +142,10 @@ fn escape(text: String) -> String {
 pub fn json_output(source: &str) -> Result<String, PlaygroundError> {
     let result = CONTEXT.with(|ctx| {
         let ctx = ctx.borrow_mut();
-        let doc = parser::parse(source)?.try_into()?;
+        let doc = parser::parse(source)?.try_into().map_err(|e| vec![e])?;
         ctx.serialize_element(&doc, &OutputFormat::new("html"))
+            .map_err(|e| vec![e])
+            .map_err(|e| Into::<PlaygroundError>::into(e))
     })?;
 
     Ok(result)
