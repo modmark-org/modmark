@@ -48,7 +48,7 @@ impl Resolve for DenyAllResolver {
 }
 
 pub trait AccessPolicy: Send + Sync + 'static {
-    fn root(&self) -> String;
+    fn root(&self) -> Option<String>;
     fn allowed_to_read(&self) -> bool;
     fn allowed_to_write(&self) -> bool;
     fn allowed_to_create(&self) -> bool;
@@ -58,8 +58,8 @@ pub trait AccessPolicy: Send + Sync + 'static {
 pub struct DefaultAccessManager;
 
 impl AccessPolicy for DefaultAccessManager {
-    fn root(&self) -> String {
-        String::from("/")
+    fn root(&self) -> Option<String> {
+        Some(String::from("/"))
     }
 
     fn allowed_to_read(&self) -> bool {

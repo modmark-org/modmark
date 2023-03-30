@@ -310,7 +310,7 @@ where
         let fs = self.filesystem.clone_for_module(name.to_string());
 
         // check the access policy
-        let (read, write, create, root_path) = {
+        let (read, write, create, root) = {
             let policy = self.policy.lock().unwrap();
             (
                 policy.allowed_to_read(),
@@ -320,20 +320,31 @@ where
             )
         };
 
-        let wasi_env = WasiState::new("")
-            .stdin(Box::new(input))
-            .stdout(Box::new(output.clone()))
-            .stderr(Box::new(err_out.clone()))
-            .set_fs(Box::new(fs))
-            .preopen(|p| {
-                p.directory(Path::new(&root_path))
-                    .alias(".")
-                    .read(read)
-                    .write(write)
-                    .create(create)
-            })?
-            .args(["transform", name, &output_format.to_string()])
-            .finalize(&mut store)?;
+        let wasi_env;
+        if root.is_none() || !(read || write || create) {
+            wasi_env = WasiState::new("")
+                .stdin(Box::new(input))
+                .stdout(Box::new(output.clone()))
+                .stderr(Box::new(err_out.clone()))
+                .args(["transform", name, &output_format.to_string()])
+                .finalize(&mut store)?;
+        } else {
+            let path = Path::new(root.as_ref().unwrap());
+            wasi_env = WasiState::new("")
+                .stdin(Box::new(input))
+                .stdout(Box::new(output.clone()))
+                .stderr(Box::new(err_out.clone()))
+                .set_fs(Box::new(fs))
+                .preopen(|p|{
+                    p.directory(path)
+                        .alias(".")
+                        .read(read)
+                        .write(write)
+                        .create(create)
+                })?
+                .args(["transform", name, &output_format.to_string()])
+                .finalize(&mut store)?;
+        }
 
         let import_object = wasi_env.import_object(&mut store, module)?;
         let instance = Instance::new(&mut store, module, &import_object)?;
