@@ -138,21 +138,23 @@ where
     }
 
     // checking for duplicates here shouldn't be necessary since we'll overwrite if it exists
-    pub fn create_file(&self, path: &Path, data: &[u8]) -> std::io::Result<()> {
+    pub fn create_file(&self, path: &Path, data: &[u8]) -> Result<(), FsError> {
         let mut options = self.new_open_options();
         options.write(true).create_new(true);
-        let mut f = options.open(path).unwrap();
-        f.write_all(data)?;
-        Ok(())
+        options.open(path).and_then(|mut f| {
+            f.write_all(data)?;
+            Ok(())
+        })
     }
 
-    pub fn read_file(&self, path: &Path) -> std::io::Result<Vec<u8>> {
+    pub fn read_file(&self, path: &Path) -> Result<Vec<u8>, FsError> {
         let mut options = self.new_open_options();
         options.read(true);
-        let mut f = options.open(path).unwrap();
-        let mut buf = vec![];
-        f.read_to_end(&mut buf)?;
-        Ok(buf)
+        options.open(path).and_then(|mut f| {
+            let mut buf = vec![];
+            f.read_to_end(&mut buf)?;
+            Ok(buf)
+        })
     }
 }
 
