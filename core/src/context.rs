@@ -320,22 +320,21 @@ where
             )
         };
 
-        let wasi_env;
-        if root.is_none() || !(read || write || create) {
-            wasi_env = WasiState::new("")
+        let wasi_env = if root.is_none() || !(read || write || create) {
+            WasiState::new("")
                 .stdin(Box::new(input))
                 .stdout(Box::new(output.clone()))
                 .stderr(Box::new(err_out.clone()))
                 .args(["transform", name, &output_format.to_string()])
-                .finalize(&mut store)?;
+                .finalize(&mut store)?
         } else {
             let path = Path::new(root.as_ref().unwrap());
-            wasi_env = WasiState::new("")
+            WasiState::new("")
                 .stdin(Box::new(input))
                 .stdout(Box::new(output.clone()))
                 .stderr(Box::new(err_out.clone()))
                 .set_fs(Box::new(fs))
-                .preopen(|p|{
+                .preopen(|p| {
                     p.directory(path)
                         .alias(".")
                         .read(read)
@@ -343,8 +342,8 @@ where
                         .create(create)
                 })?
                 .args(["transform", name, &output_format.to_string()])
-                .finalize(&mut store)?;
-        }
+                .finalize(&mut store)?
+        };
 
         let import_object = wasi_env.import_object(&mut store, module)?;
         let instance = Instance::new(&mut store, module, &import_object)?;
