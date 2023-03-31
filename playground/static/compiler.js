@@ -4,7 +4,7 @@ importScripts("./pkg/web_bindings.js");
 let loaded = false;
 wasm_bindgen("./pkg/web_bindings_bg.wasm").then(() => {
     loaded = true;
-    postMessage({ type: "init" });
+    postMessage({type: "init"});
 });
 
 onmessage = (event) => {
@@ -53,9 +53,31 @@ onmessage = (event) => {
                 result = wasm_bindgen.get_file_list(event.data.path);
                 break;
         }
-        postMessage({ result: result, success: true, ...event.data });
+        postMessage({result: result, success: true, ...event.data});
     } catch (error) {
         console.log(error);
-        postMessage({ error: error, success: false, ...event.data })
+        recompileLaterIfNeeded();
+        postMessage({error: error, success: false, ...event.data})
     }
 };
+
+// How many seconds at most we may wait for a recompile
+const RECOMPILE_TIMEOUT = 5;
+// How many milliseconds between each poll to is_ready_for_recompile
+const POLL_INTERVAL = 200;
+
+function recompileLaterIfNeeded() {
+    if (!wasm_bindgen.is_ready_for_recompile()) {
+        setTimeout(() => recompileLater(1), POLL_INTERVAL);
+    }
+}
+
+function recompileLater(polls) {
+    if (polls > RECOMPILE_TIMEOUT * (1000 / POLL_INTERVAL)) return;
+
+    if (!wasm_bindgen.is_ready_for_recompile()) {
+        setTimeout(() => recompileLater(polls + 1), POLL_INTERVAL);
+    } else {
+        postMessage({type: "recompile_ready"});
+    }
+}
