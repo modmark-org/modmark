@@ -15,9 +15,9 @@ use web_sys::{Request, RequestInit, Response, WorkerGlobalScope};
 
 use crate::{read_file, recompile, REQUESTS_LEFT};
 
-pub struct WebResolve;
+pub struct WebResolver;
 
-impl Resolve for WebResolve {
+impl Resolve for WebResolver {
     fn resolve_all(&self, paths: Vec<ResolveTask>) {
         REQUESTS_LEFT.fetch_add(paths.len(), Ordering::Release);
         paths.into_iter().for_each(resolve);
@@ -50,8 +50,6 @@ pub enum WebResolveError {
     RegistryJSON,
     #[error("Local file doesn't exist: '{0}'")]
     File(String),
-    #[error("This action is not implemented")]
-    NotImplemented,
 }
 
 pub fn resolve(task: ResolveTask) {
