@@ -13,11 +13,12 @@ use wasm_bindgen::prelude::*;
 
 use wasmer_vfs::FileSystem;
 
-mod web_resolve;
+mod web_resolver;
+use web_resolver::WebResolver;
 
 thread_local! {
-    static CONTEXT: RefCell<Context<web_resolve::WebResolve, DefaultAccessManager>> =
-        RefCell::new(Context::new(web_resolve::WebResolve, DefaultAccessManager).unwrap())
+    static CONTEXT: RefCell<Context<WebResolver, DefaultAccessManager>> =
+        RefCell::new(Context::new(WebResolver, DefaultAccessManager).unwrap())
 }
 
 // AtomicUSize::default isn't const so we can't use Lazy::default
