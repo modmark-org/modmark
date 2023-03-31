@@ -80,10 +80,9 @@ impl CompilationState {
 impl<T, U> Debug for Context<T, U> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("Context")
-            //            .field("native packages", &self.native_packages)
-            //            .field("standard packages", &self.standard_packages)
-            //            .field("external packages", &self.external_packages)
-            //            .field("transforms", &self.transforms)
+            .field("package manager", &self.package_manager)
+            .field("compilation state", &self.state)
+            .field("filesystem", &self.filesystem)
             .finish()
     }
 }
@@ -125,6 +124,7 @@ impl TransformVariant {
 }
 
 impl<T, U> Context<T, U> {
+    /// Creates a new Context with the given resolver and policy
     pub fn new(resolver: T, policy: U) -> Result<Self, CoreError>
     where
         T: Resolve,
@@ -178,6 +178,9 @@ where
             lock.expose_transforms(config.try_into()?)?;
             Ok(true)
         } else {
+            // IMPORTANT: It is important that we drop the lock here. If resolve_all were to resolve
+            // the packages in this thread, they would need to acquire the lock, which is impossible
+            // if it isn't dropped here and would result in a dead-lock
             drop(lock);
             self.resolver.resolve_all(missings);
             Ok(false)

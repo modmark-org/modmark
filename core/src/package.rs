@@ -134,7 +134,7 @@ impl ArgType {
             ArgType::Enum(values) => value
                 .as_str()
                 .map(ToString::to_string)
-                .filter(|s| values.contains(&s))
+                .filter(|s| values.contains(s))
                 .map(ArgValue::EnumVariant)
                 .ok_or(CoreError::EnumVariant(values.clone(), value.to_string())),
             ArgType::Primitive(t) => t.try_from_value(value),

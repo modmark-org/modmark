@@ -19,7 +19,7 @@ pub enum CliError {
     #[error("Core error: {0}")]
     Core(#[from] CoreError),
 
-    #[error("Cannot infer output format, please specifiy --format")]
+    #[error("Cannot infer output format, please specify --format")]
     UnknownOutputFormat,
 
     #[error("Reqwest error '{0}'")]
@@ -36,9 +36,6 @@ pub enum CliError {
 
     #[error("Could not get registry source")]
     Registry,
-
-    #[error("Specifier '{0}' not supported")]
-    Specifier(String),
 
     #[error("Could not find local path to '{0}'")]
     Local(String),
