@@ -188,9 +188,9 @@ pub fn native_err<T, U>(
     // Push the issue to errors
     ctx.state.errors.push(Issue {
         source: source.to_string(),
-        target: target.to_string(),
+        target,
         description: body.to_string(),
-        input: input.map(|s| s.to_string()),
+        input,
     });
 
     // Check if we have an __error transform

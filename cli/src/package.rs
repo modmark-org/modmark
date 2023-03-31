@@ -21,20 +21,20 @@ pub struct PackageManager {
 
 impl Resolve for PackageManager {
     fn resolve_all(&self, paths: Vec<ResolveTask>) {
+        // I don't know how to get rid of all these clones...
         let self_clone = self.clone();
         tokio::spawn(async move {
-            let self_clone2 = self_clone.clone();
             join_all(
                 paths
                     .into_iter()
                     .map(|task| {
-                        let self_clone = self_clone.clone();
-                        tokio::spawn(async move { self_clone.clone().resolve(task).await })
+                        let another_self = self_clone.clone();
+                        tokio::spawn(async move { another_self.resolve(task).await })
                     })
                     .collect::<Vec<_>>(),
             )
             .await;
-            self_clone2.sender.send(()).await.unwrap();
+            self_clone.sender.send(()).await.unwrap();
         });
     }
 }

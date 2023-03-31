@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::{
     collections::HashMap,
     env,
@@ -35,11 +34,11 @@ use warp::{
     Filter, Rejection, Reply,
 };
 
-use crate::file_access::CliAccessManager;
 use error::CliError;
 use modmark_core::{context::CompilationState, eval, Context, CoreError, OutputFormat};
 use parser::{parse, Ast};
 
+use crate::file_access::CliAccessManager;
 use crate::package::PackageManager;
 
 mod error;
@@ -150,6 +149,7 @@ static RECEIVER: OnceCell<Mutex<Receiver<()>>> = OnceCell::new();
 static PREVIEW_PORT: OnceCell<Option<Port>> = OnceCell::new();
 static ABSOLUTE_OUTPUT_PATH: OnceCell<PathBuf> = OnceCell::new();
 static CONNECTION_ID_COUNTER: AtomicUsize = AtomicUsize::new(1);
+static MAX_COMPILATION_TRIES: usize = 3;
 
 type PreviewConnections = Arc<RwLock<HashMap<usize, mpsc::UnboundedSender<Message>>>>;
 type PreviewDoc = Arc<Mutex<String>>;
@@ -160,31 +160,27 @@ type CompilationResult = Result<(String, CompilationState, Ast), Vec<CoreError>>
 async fn compile_file(input_file: &Path, output_format: &OutputFormat) -> CompilationResult {
     let source = fs::read_to_string(input_file).map_err(|e| vec![e.into()])?;
     let ast = parse(&source).map_err(|e| vec![e.into()])?;
-    if let Some((output, state)) = eval(
-        &source,
-        &mut CTX.get().unwrap().lock().unwrap(),
-        output_format,
-    )? {
-        return Ok((output, state, ast));
+
+    for i in 1..=MAX_COMPILATION_TRIES {
+        if let Some((output, state)) = eval(
+            &source,
+            &mut CTX.get().unwrap().lock().unwrap(),
+            output_format,
+        )? {
+            return Ok((output, state, ast));
+        }
+
+        if i != MAX_COMPILATION_TRIES {
+            spawn_blocking(|| {
+                RECEIVER.get().unwrap().lock().unwrap().blocking_recv();
+            })
+            .await
+            .unwrap();
+        }
     }
 
-    spawn_blocking(|| {
-        RECEIVER.get().unwrap().lock().unwrap().blocking_recv();
-    })
-    .await
-    .unwrap();
-
-    if let Some((output, state)) = eval(
-        &source,
-        &mut CTX.get().unwrap().lock().unwrap(),
-        output_format,
-    )? {
-        return Ok((output, state, ast));
-    }
-
-    panic!("Something went wrong!!!")
+    Err(vec![])
 }
-
 fn print_compiling_message() -> Result<(), CliError> {
     let mut stdout = stdout();
     stdout.execute(terminal::Clear(terminal::ClearType::All))?;
@@ -202,11 +198,23 @@ fn print_result(result: &CompilationResult, args: &Args) -> Result<(), CliError>
         Err(errors) => {
             stdout.execute(terminal::Clear(terminal::ClearType::All))?;
             stdout.execute(cursor::MoveTo(0, 0))?;
-            stdout.execute(style::PrintStyledContent(
-                format!("{} compilation error(s):\n", errors.len()).red(),
-            ))?;
-            for error in errors {
-                stdout.execute(style::PrintStyledContent(format!("{error:?}\n").red()))?;
+            let num_errors = errors.len();
+            if num_errors == 0 {
+                stdout.execute(style::PrintStyledContent(
+                    "No result retrieved from compiler\n".red(),
+                ))?;
+            } else if num_errors == 1 {
+                let error = errors.first().unwrap();
+                stdout.execute(style::PrintStyledContent(
+                    format!("1 compilation error:\n{error}\n").red(),
+                ))?;
+            } else {
+                stdout.execute(style::PrintStyledContent(
+                    format!("{} compilation errors:\n", num_errors).red(),
+                ))?;
+                for error in errors {
+                    stdout.execute(style::PrintStyledContent(format!("{error:?}\n").red()))?;
+                }
             }
             return Ok(());
         }

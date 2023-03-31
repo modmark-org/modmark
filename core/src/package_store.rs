@@ -179,7 +179,6 @@ impl PackageStore {
             .chain(self.external_packages.values())
             .map(|pkg| pkg.info.clone())
             .collect::<Vec<_>>()
-            .clone()
     }
 
     /// This gets the transform info for a given element and output format. If a native package
@@ -202,7 +201,7 @@ impl PackageStore {
         output_format: &OutputFormat,
     ) -> Result<Vec<ArgInfo>, CoreError> {
         self.get_transform_info(element_name, output_format)
-            .map(|info| info.arguments.clone())
+            .map(|info| info.arguments)
             .ok_or(CoreError::MissingTransform(
                 element_name.to_string(),
                 output_format.0.to_string(),
@@ -254,7 +253,7 @@ impl PackageStore {
             })
             .map(|id| ResolveTask {
                 manager: Arc::clone(&arc_mutex),
-                package: id.clone(),
+                package: id,
                 resolved: false,
             })
             .collect();
@@ -345,8 +344,8 @@ impl PackageStore {
         }
 
         mem::take(&mut config.0)
-            .into_iter()
-            .map(|(id, _)| CoreError::UnusedConfig(id.name))
+            .into_keys()
+            .map(|id| CoreError::UnusedConfig(id.name))
             .for_each(|e| errors.push(e));
 
         if errors.is_empty() {
@@ -401,7 +400,7 @@ impl PackageStore {
         Ok(())
     }
 
-    pub(crate) fn is_missing_packages(&self) -> bool {
+    pub fn is_missing_packages(&self) -> bool {
         !self.awaited_packages.is_empty()
     }
 
@@ -491,10 +490,6 @@ pub trait Resolve {
     fn resolve_all(&self, paths: Vec<ResolveTask>);
 }
 
-pub struct ResolveWrapper {
-    task: ResolveTask,
-}
-
 #[derive(Debug)]
 pub struct ResolveTask {
     manager: Arc<Mutex<PackageStore>>,
@@ -536,8 +531,15 @@ impl Drop for ResolveTask {
         if !self.resolved {
             let mut manager = self.manager.lock().unwrap();
             let package = mem::take(&mut self.package);
-            manager.reject_request(package.clone(), CoreError::DroppedRequest);
+            manager.reject_request(package, CoreError::DroppedRequest);
         }
+    }
+}
+
+pub struct DenyAllResolver;
+impl Resolve for DenyAllResolver {
+    fn resolve_all(&self, _paths: Vec<ResolveTask>) {
+        // Dropping the tasks should reject them
     }
 }
 
