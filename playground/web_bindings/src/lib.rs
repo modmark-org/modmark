@@ -1,9 +1,11 @@
 use std::cell::RefCell;
 use std::path::Path;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use modmark_core::{
     eval, eval_no_document, Context, CoreError, DefaultAccessManager, OutputFormat,
 };
+use once_cell::sync::Lazy;
 use parser::ParseError;
 use serde::Serialize;
 use thiserror::Error;
@@ -17,6 +19,9 @@ thread_local! {
     static CONTEXT: RefCell<Context<web_resolve::WebResolve, DefaultAccessManager>> =
         RefCell::new(Context::new(web_resolve::WebResolve, DefaultAccessManager).unwrap())
 }
+
+// AtomicUSize::default isn't const so we can't use Lazy::default
+pub static REQUESTS_LEFT: Lazy<AtomicUsize> = Lazy::new(AtomicUsize::default);
 
 #[derive(Error, Debug)]
 pub enum PlaygroundError {
@@ -52,6 +57,22 @@ impl From<PlaygroundError> for JsValue {
             }
         }
     }
+}
+
+pub fn recompile() {
+    // We want to send back a message telling the Playground it is ready to recompile
+    // I haven't figured out how to get the current ServiceWorker to be able to make a message
+    // So the current implementation polls is_ready_for_recompile function
+}
+
+#[wasm_bindgen]
+pub fn get_req_left() -> usize {
+    REQUESTS_LEFT.fetch_add(0, Ordering::Acquire)
+}
+
+#[wasm_bindgen]
+pub fn is_ready_for_recompile() -> bool {
+    REQUESTS_LEFT.fetch_add(0, Ordering::Acquire) == 0
 }
 
 #[wasm_bindgen]

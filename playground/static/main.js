@@ -11,6 +11,10 @@ compiler.onmessage = (event) => {
         return;
     }
 
+    if (event.data.type === "recompile_ready") {
+        updateOutput(editor.getValue());
+    }
+
     if (event.data.seq !== seq) return;
     if (event.data.success) {
         compiler_callback(event.data.result);
@@ -24,7 +28,7 @@ async function compilerAction(action) {
         compiler_callback = res;
         compiler_failure = rej;
     });
-    compiler.postMessage({ seq: ++seq, ...action });
+    compiler.postMessage({seq: ++seq, ...action});
     return promise;
 }
 
@@ -179,7 +183,7 @@ function toggleView() {
 }
 
 async function loadPackageInfo() {
-    const info = JSON.parse(await compilerAction({ type: "package_info" }));
+    const info = JSON.parse(await compilerAction({type: "package_info"}));
 
     const type_annotation = (type) => {
         let type_name = type;
@@ -187,13 +191,13 @@ async function loadPackageInfo() {
         if (Array.isArray(type)) {
             type_name = type.join("/");
             color = "#90A959";
-        } else if (type == "String") {
+        } else if (type === "String") {
             color = "#2A6041";
-        } else if (type == "Unsigned integer") {
+        } else if (type === "Unsigned integer") {
             color = "#3581B8";
-        } else if (type == "Integer") {
+        } else if (type === "Integer") {
             color = "#8B85C1";
-        } else if (type == "Float") {
+        } else if (type === "Float") {
             color = "#C3423F";
         }
 
@@ -201,7 +205,7 @@ async function loadPackageInfo() {
     }
 
     const escape_default = (type, default_value) => {
-        if (Array.isArray(type) || type == "String") {
+        if (Array.isArray(type) || type === "String") {
             return `"${default_value}"`;
         } else {
             return default_value;
@@ -228,7 +232,7 @@ async function loadPackageInfo() {
         </div> `
     };
 
-    const createElem = ({ name, version, description, transforms }) => {
+    const createElem = ({name, version, description, transforms}) => {
         let expanded = false;
 
         let container = document.createElement("div");
@@ -301,7 +305,7 @@ async function handleFileUpload() {
                 await updateFileList();
             }
         ).catch(
-            function(error) {
+            function (error) {
                 console.log(error);
             }
         )
@@ -321,7 +325,7 @@ async function addFolder() {
 }
 
 async function renameEntry() {
-    const msg = await compilerAction( {
+    const msg = await compilerAction({
         type: "rename_entry",
         from: currentPath + selectedEntry,
         to: currentPath + this.value,
@@ -448,7 +452,7 @@ function visitDir() {
 function leaveDir() {
     if (currentPath.length > 1) {
         const trimmed = currentPath.slice(0, -1);
-        currentPath = trimmed.slice(0, trimmed.lastIndexOf("/")+1);
+        currentPath = trimmed.slice(0, trimmed.lastIndexOf("/") + 1);
         updateFileList();
     }
 }
@@ -480,7 +484,7 @@ async function updateOutput(input) {
                 overleafButton.style.display = "none";
 
                 debugEditor.session.setMode("");
-                debugEditor.setValue(await compilerAction({ type: "ast", source: input }));
+                debugEditor.setValue(await compilerAction({type: "ast", source: input}));
                 debugEditor.getSession().selection.clearSelection()
                 break;
             case "ast-debug":
@@ -490,7 +494,7 @@ async function updateOutput(input) {
                 overleafButton.style.display = "none";
 
                 debugEditor.session.setMode("");
-                debugEditor.setValue(await compilerAction({ type: "ast_debug", source: input }));
+                debugEditor.setValue(await compilerAction({type: "ast_debug", source: input}));
                 debugEditor.getSession().selection.clearSelection();
                 break;
             case "json-output":
@@ -500,11 +504,11 @@ async function updateOutput(input) {
                 overleafButton.style.display = "none";
 
                 debugEditor.session.setMode("ace/mode/json");
-                debugEditor.setValue(await compilerAction({ type: "json_output", source: input }));
+                debugEditor.setValue(await compilerAction({type: "json_output", source: input}));
                 debugEditor.getSession().selection.clearSelection();
                 break;
             case "transpile-other": {
-                let { content, warnings, errors } = JSON.parse(await compilerAction({
+                let {content, warnings, errors} = JSON.parse(await compilerAction({
                     type: "transpile",
                     source: input,
                     format: formatInput.value
@@ -524,7 +528,7 @@ async function updateOutput(input) {
             }
                 break;
             case "latex":
-                let { content, warnings, errors } = JSON.parse(await compilerAction({
+                let {content, warnings, errors} = JSON.parse(await compilerAction({
                     type: "transpile",
                     source: input,
                     format: "latex"
@@ -544,8 +548,8 @@ async function updateOutput(input) {
             case "transpile":
             case "render-iframe":
             case "render": {
-                let type = selector.value == "render" ? "transpile_no_document" : "transpile";
-                let { content, warnings, errors } = JSON.parse(await compilerAction({
+                let type = selector.value === "render" ? "transpile_no_document" : "transpile";
+                let {content, warnings, errors} = JSON.parse(await compilerAction({
                     type,
                     source: input,
                     format: "html"

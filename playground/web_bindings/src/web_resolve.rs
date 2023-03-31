@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::sync::atomic::Ordering;
+use std::sync::atomic::Ordering::Release;
 
 use js_sys::{ArrayBuffer, JsString};
 use modmark_core::package_store::Resolve;
@@ -11,12 +13,13 @@ use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::{spawn_local, JsFuture};
 use web_sys::{Request, RequestInit, Response, WorkerGlobalScope};
 
-use crate::read_file;
+use crate::{read_file, recompile, REQUESTS_LEFT};
 
 pub struct WebResolve;
 
 impl Resolve for WebResolve {
     fn resolve_all(&self, paths: Vec<ResolveTask>) {
+        REQUESTS_LEFT.fetch_add(paths.len(), Ordering::Release);
         paths.into_iter().for_each(resolve);
     }
 }
@@ -58,23 +61,34 @@ pub fn resolve(task: ResolveTask) {
             spawn_local(async move {
                 let file = fetch_local(&task.package.name);
                 task.complete(file);
+                request_done();
             });
         }
         PackageSource::Registry => {
             spawn_local(async move {
                 let result = resolve_registry(&task.package.name, DEFAULT_REGISTRY).await;
                 task.complete(result);
+                request_done();
             });
         }
         PackageSource::Url => {
             spawn_local(async move {
                 let result = resolve_url(&task.package.name).await;
                 task.complete(result);
+                request_done();
             });
         }
         PackageSource::Standard => {
-            task.reject(WebResolveError::NotImplemented);
+            // This case can't occur
+            unreachable!()
         }
+    }
+}
+
+fn request_done() {
+    if REQUESTS_LEFT.fetch_sub(1, Release) == 1 {
+        // If previous value was 1 request left, we now have 0 requests left
+        recompile();
     }
 }
 
