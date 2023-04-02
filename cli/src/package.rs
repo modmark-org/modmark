@@ -16,7 +16,7 @@ use crate::error::CliError;
 #[derive(Clone)]
 pub struct PackageManager {
     pub(crate) registry: String,
-    pub(crate) sender: Sender<()>,
+    pub(crate) complete_tx: Sender<()>,
 }
 
 impl Resolve for PackageManager {
@@ -34,7 +34,7 @@ impl Resolve for PackageManager {
                     .collect::<Vec<_>>(),
             )
             .await;
-            self_clone.sender.send(()).await.unwrap();
+            self_clone.complete_tx.send(()).await.unwrap();
         });
     }
 }
@@ -44,7 +44,7 @@ impl PackageManager {
         let PackageID {
             name,
             source: target,
-        } = &task.package;
+        } = &task.package_id;
         let result = match target {
             PackageSource::Local => self.fetch_local(name),
             PackageSource::Registry => self.fetch_registry(name).await,

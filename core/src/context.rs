@@ -28,7 +28,7 @@ use crate::{std_packages, AccessPolicy, Element, Resolve};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, Transform};
 
 pub struct Context<T, U> {
-    pub package_manager: Arc<Mutex<PackageStore>>,
+    pub package_store: Arc<Mutex<PackageStore>>,
     pub(crate) resolver: T,
     #[cfg(feature = "native")]
     engine: Engine,
@@ -80,7 +80,7 @@ impl CompilationState {
 impl<T, U> Debug for Context<T, U> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("Context")
-            .field("package manager", &self.package_manager)
+            .field("package store", &self.package_store)
             .field("compilation state", &self.state)
             .field("filesystem", &self.filesystem)
             .finish()
@@ -132,7 +132,7 @@ impl<T, U> Context<T, U> {
     {
         let policy = Arc::new(Mutex::new(policy));
         let ctx = Context {
-            package_manager: Arc::default(),
+            package_store: Arc::default(),
             resolver,
             #[cfg(feature = "native")]
             engine: EngineBuilder::new(Cranelift::new()).engine(),
@@ -141,15 +141,12 @@ impl<T, U> Context<T, U> {
             policy,
         };
         #[cfg(feature = "native")]
-        ctx.package_manager
+        ctx.package_store
             .lock()
             .unwrap()
             .load_default_packages(&ctx.engine)?;
         #[cfg(not(feature = "native"))]
-        ctx.package_manager
-            .lock()
-            .unwrap()
-            .load_default_packages()?;
+        ctx.package_store.lock().unwrap().load_default_packages()?;
         Ok(ctx)
     }
 }
@@ -164,25 +161,25 @@ where
     // more packages
     pub(crate) fn configure(&mut self, config: Option<Config>) -> Result<bool, Vec<CoreError>> {
         let config = config.unwrap_or_default();
-        let mut lock = self.package_manager.lock().unwrap();
+        let mut store_guard = self.package_store.lock().unwrap();
 
         #[cfg(feature = "native")]
-        lock.finalize(&self.engine)?;
+        store_guard.register_resolved_packages(&self.engine)?;
 
         #[cfg(feature = "web")]
-        lock.finalize()?;
+        store_guard.register_resolved_packages()?;
 
-        let arc_mutex = Arc::clone(&self.package_manager);
-        let missings = lock.get_missing_packages(arc_mutex, &config)?;
-        if missings.is_empty() {
-            lock.expose_transforms(config.try_into()?)?;
+        let arc_mutex = Arc::clone(&self.package_store);
+        let resolve_tasks = store_guard.generate_resolve_tasks(arc_mutex, &config)?;
+        if resolve_tasks.is_empty() {
+            store_guard.expose_transforms(config.try_into()?)?;
             Ok(true)
         } else {
             // IMPORTANT: It is important that we drop the lock here. If resolve_all were to resolve
             // the packages in this thread, they would need to acquire the lock, which is impossible
             // if it isn't dropped here and would result in a dead-lock
-            drop(lock);
-            self.resolver.resolve_all(missings);
+            drop(store_guard);
+            self.resolver.resolve_all(resolve_tasks);
             Ok(false)
         }
     }
@@ -214,11 +211,13 @@ where
                 body: _,
                 inline: _,
             } => {
-                let lock = self.package_manager.lock().unwrap();
-                let Some((_, package)) = lock.get_transform_to(name, output_format) else {
+                let Some(package) = ({
+                    let store_guard = self.package_store.lock().unwrap();
+                    store_guard.find_transform(name, output_format)
+                        .map(|(_, package)| package)
+                }) else {
                     return Err(CoreError::MissingTransform(name.clone(), output_format.to_string()));
                 };
-                drop(lock);
 
                 match &package.implementation {
                     PackageImplementation::Wasm(wasm_module) => {
@@ -574,9 +573,10 @@ impl<T, U> Context<T, U> {
         let mut given_args = args.clone();
 
         // Get info about what args this parent node
-        let lock = self.package_manager.lock().unwrap();
-        let args_info = lock.get_args_info(parent_name, output_format)?;
-        drop(lock);
+        let args_info = {
+            let store_guard = self.package_store.lock().unwrap();
+            store_guard.get_args_info(parent_name, output_format)?
+        };
 
         for arg_info in args_info {
             let ArgInfo {
@@ -622,9 +622,10 @@ impl<T, U> Context<T, U> {
         let mut collected_args = HashMap::new();
 
         // Get info about what args this parent node supports
-        let lock = self.package_manager.lock().unwrap();
-        let args_info = lock.get_args_info(module_name, output_format)?;
-        drop(lock);
+        let args_info = {
+            let store_guard = self.package_store.lock().unwrap();
+            store_guard.get_args_info(module_name, output_format)?
+        };
 
         for arg_info in args_info {
             let ArgInfo {

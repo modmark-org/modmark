@@ -62,21 +62,21 @@ onmessage = (event) => {
 };
 
 // How many seconds at most we may wait for a recompile
-const RECOMPILE_TIMEOUT = 5;
+const RECOMPILE_TIMEOUT_S = 5;
 // How many milliseconds between each poll to is_ready_for_recompile
-const POLL_INTERVAL = 200;
+const POLL_INTERVAL_MS = 200;
 
 function recompileLaterIfNeeded() {
     if (!wasm_bindgen.is_ready_for_recompile()) {
-        setTimeout(() => recompileLater(1), POLL_INTERVAL);
+        setTimeout(() => recompileLater(1), POLL_INTERVAL_MS);
     }
 }
 
 function recompileLater(polls) {
-    if (polls > RECOMPILE_TIMEOUT * (1000 / POLL_INTERVAL)) return;
+    if (polls > RECOMPILE_TIMEOUT_S * (1000 / POLL_INTERVAL_MS)) return;
 
     if (!wasm_bindgen.is_ready_for_recompile()) {
-        setTimeout(() => recompileLater(polls + 1), POLL_INTERVAL);
+        setTimeout(() => recompileLater(polls + 1), POLL_INTERVAL_MS);
     } else {
         postMessage({type: "recompile_ready"});
     }

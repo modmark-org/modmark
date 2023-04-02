@@ -53,25 +53,25 @@ pub enum WebResolveError {
 }
 
 pub fn resolve(task: ResolveTask) {
-    let target = task.package.source.clone();
+    let target = task.package_id.source.clone();
     match target {
         PackageSource::Local => {
             spawn_local(async move {
-                let file = fetch_local(&task.package.name);
+                let file = fetch_local(&task.package_id.name);
                 task.complete(file);
                 request_done();
             });
         }
         PackageSource::Registry => {
             spawn_local(async move {
-                let result = resolve_registry(&task.package.name, DEFAULT_REGISTRY).await;
+                let result = resolve_registry(&task.package_id.name, DEFAULT_REGISTRY).await;
                 task.complete(result);
                 request_done();
             });
         }
         PackageSource::Url => {
             spawn_local(async move {
-                let result = resolve_url(&task.package.name).await;
+                let result = resolve_url(&task.package_id.name).await;
                 task.complete(result);
                 request_done();
             });
