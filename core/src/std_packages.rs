@@ -195,7 +195,7 @@ pub fn native_err<T, U>(
 
     // Check if we have an __error transform
     if ctx
-        .package_manager
+        .package_store
         .lock()
         .unwrap()
         .transforms

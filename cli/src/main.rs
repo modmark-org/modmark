@@ -25,8 +25,10 @@ use notify_debouncer_mini::{
 };
 use once_cell::sync::OnceCell;
 use portpicker::Port;
-use tokio::sync::mpsc::{channel, Receiver};
-use tokio::sync::{mpsc, RwLock};
+use tokio::sync::{
+    mpsc::{self, channel, Receiver},
+    RwLock,
+};
 use tokio::task::spawn_blocking;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::{
@@ -145,7 +147,7 @@ static DEFAULT_REGISTRY: &str =
     "https://raw.githubusercontent.com/modmark-org/package-registry/main/package-registry.json";
 
 static CTX: OnceCell<Mutex<Context<PackageManager, CliAccessManager>>> = OnceCell::new();
-static RECEIVER: OnceCell<Mutex<Receiver<()>>> = OnceCell::new();
+static RESOLVE_COMPLETE_RX: OnceCell<Mutex<Receiver<()>>> = OnceCell::new();
 static PREVIEW_PORT: OnceCell<Option<Port>> = OnceCell::new();
 static ABSOLUTE_OUTPUT_PATH: OnceCell<PathBuf> = OnceCell::new();
 static CONNECTION_ID_COUNTER: AtomicUsize = AtomicUsize::new(1);
@@ -172,7 +174,12 @@ async fn compile_file(input_file: &Path, output_format: &OutputFormat) -> Compil
 
         if i != MAX_COMPILATION_TRIES {
             spawn_blocking(|| {
-                RECEIVER.get().unwrap().lock().unwrap().blocking_recv();
+                RESOLVE_COMPLETE_RX
+                    .get()
+                    .unwrap()
+                    .lock()
+                    .unwrap()
+                    .blocking_recv();
             })
             .await
             .unwrap();
@@ -311,12 +318,15 @@ async fn run_cli(args: Args) -> Result<(), CliError> {
         .unwrap_or(DEFAULT_REGISTRY)
         .to_string();
 
-    let (sender, receiver) = channel::<()>(1);
+    let (tx, rx) = channel::<()>(1);
 
-    RECEIVER.set(Mutex::new(receiver)).unwrap();
+    RESOLVE_COMPLETE_RX.set(Mutex::new(rx)).unwrap();
     CTX.set(Mutex::new(
         Context::new(
-            PackageManager { registry, sender },
+            PackageManager {
+                registry,
+                complete_tx: tx,
+            },
             CliAccessManager::new(&args),
         )
         .unwrap(),

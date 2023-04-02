@@ -40,21 +40,25 @@ pub struct PackageStore {
     pub(crate) external_packages: HashMap<PackageID, Package>,
     pub(crate) awaited_packages: HashSet<PackageID>,
     pub(crate) new_packages: HashMap<PackageID, Vec<u8>>,
-    pub(crate) failed_packages: Vec<CoreError>,
+    pub(crate) package_task_failures: Vec<CoreError>,
     pub(crate) transforms: HashMap<String, TransformVariant>,
 }
 
 impl PackageStore {
     /// Clears the loaded external packages and transforms, possibly saving memory, forcing the
     /// Resolve to fetch any external packages again, essentially clearing the internal package
-    /// cache of the Context
+    /// cache of the PackageStore
     pub fn clear_packages(&mut self) {
-        self.transforms = Default::default();
-        self.external_packages = Default::default();
+        self.transforms.clear();
+        self.external_packages.clear();
     }
 
-    // Might want to change this to Vec<CoreError>?
-    pub fn finalize(
+    /// This function takes all packages that has been resolved but not registered yet, that are
+    /// currently stored in `new_packages`, and compiles them using `Package::new` and adds them to
+    /// the list of registered external packages. If any of those packages fails to compile, this
+    /// function will return `Err()` with all the errors. All successfully compiled packages will
+    /// still be added to the `external_packages` map.
+    pub fn register_resolved_packages(
         &mut self,
         #[cfg(feature = "native")] engine: &Engine,
     ) -> Result<(), Vec<CoreError>> {
@@ -83,7 +87,7 @@ impl PackageStore {
 
         // Then, clear all failed packages and if any failed, return that error
         // Note that "drain" here drains all errors, not just the one we (possibly) return
-        let failed = mem::take(&mut self.failed_packages);
+        let failed = mem::take(&mut self.package_task_failures);
         if failed.is_empty() {
             Ok(())
         } else {
@@ -91,10 +95,10 @@ impl PackageStore {
         }
     }
 
-    /// This function loads the default packages to the Context. First, it loads all native
+    /// This function loads the default packages to the PackageStore. First, it loads all native
     /// packages, retrieved from `std_packages::native_package_list()`, and then it loads all
-    /// standard packages by passing this Context to `std_packages::load_standard_packages()`. This
-    /// will be run when constructing the Context, and may only be run once.
+    /// standard packages by passing this PackageStore to `std_packages::load_standard_packages()`. This
+    /// will be run when constructing the PackageStore, and may only be run once.
     pub(crate) fn load_default_packages(
         &mut self,
         #[cfg(feature = "native")] engine: &Engine,
@@ -181,17 +185,6 @@ impl PackageStore {
             .collect::<Vec<_>>()
     }
 
-    /// This gets the transform info for a given element and output format. If a native package
-    /// supplies a transform for that element, that will be returned and the output format returned
-    pub fn get_transform_info(
-        &self,
-        element_name: &str,
-        output_format: &OutputFormat,
-    ) -> Option<Transform> {
-        self.get_transform_to(element_name, output_format)
-            .map(|(transform, _)| transform)
-    }
-
     /// Gets the `ArgInfo`s associated with an element targeting the given output format, if such
     /// a transformation exists, otherwise generates an `MissingTransform` error. This is intended
     /// for use in `collect_(parent/module)_arguments` to reduce repeated code.
@@ -200,8 +193,8 @@ impl PackageStore {
         element_name: &str,
         output_format: &OutputFormat,
     ) -> Result<Vec<ArgInfo>, CoreError> {
-        self.get_transform_info(element_name, output_format)
-            .map(|info| info.arguments)
+        self.find_transform(element_name, output_format)
+            .map(|(transform, _)| transform.arguments)
             .ok_or(CoreError::MissingTransform(
                 element_name.to_string(),
                 output_format.0.to_string(),
@@ -210,7 +203,7 @@ impl PackageStore {
 
     /// Gets the transform and package the transform is in, for a transform from a specific element
     /// to a specific output format. Returns None if no such transform exists
-    pub fn get_transform_to(
+    pub fn find_transform(
         &self,
         element_name: &str,
         output_format: &OutputFormat,
@@ -221,12 +214,12 @@ impl PackageStore {
             .cloned()
     }
 
-    pub(crate) fn get_missing_packages(
+    pub(crate) fn generate_resolve_tasks(
         &mut self,
         arc_mutex: Arc<Mutex<Self>>,
         config: &Config,
     ) -> Result<Vec<ResolveTask>, Vec<CoreError>> {
-        let missings: Vec<PackageID> = config
+        let missing_pkgs: Vec<PackageID> = config
             .imports
             .iter()
             .map(|i| i.into())
@@ -236,7 +229,7 @@ impl PackageStore {
                     && !self.external_packages.contains_key(name)
             })
             .collect();
-        let missing_std: Vec<_> = missings
+        let missing_std: Vec<_> = missing_pkgs
             .iter()
             .filter_map(|id| {
                 (id.source == PackageSource::Standard)
@@ -246,14 +239,14 @@ impl PackageStore {
         if !missing_std.is_empty() {
             return Err(missing_std);
         }
-        let missing_externals: Vec<_> = missings
+        let missing_externals: Vec<_> = missing_pkgs
             .into_iter()
             .inspect(|id| {
                 self.awaited_packages.insert(id.clone());
             })
             .map(|id| ResolveTask {
-                manager: Arc::clone(&arc_mutex),
-                package: id,
+                package_store: Arc::clone(&arc_mutex),
+                package_id: id,
                 resolved: false,
             })
             .collect();
@@ -273,20 +266,14 @@ impl PackageStore {
         // First, expose all native packages
         for (name, pkg) in &self.native_packages {
             for transform in &pkg.info.transforms {
-                let Transform {
-                    from,
-                    to: _,
-                    description: _,
-                    arguments: _,
-                } = transform;
-                if self.transforms.contains_key(from) {
+                if self.transforms.contains_key(&transform.from) {
                     errors.push(CoreError::OccupiedNativeTransform(
-                        from.clone(),
+                        transform.from.clone(),
                         name.clone(),
                     ));
                 } else {
                     self.transforms.insert(
-                        from.to_string(),
+                        transform.from.to_string(),
                         TransformVariant::Native((transform.clone(), pkg.clone())),
                     );
                 }
@@ -404,18 +391,18 @@ impl PackageStore {
         !self.awaited_packages.is_empty()
     }
 
-    pub(crate) fn resolve_request(&mut self, request: PackageID, response: Vec<u8>) {
+    pub(crate) fn resolve_task(&mut self, request: PackageID, response: Vec<u8>) {
         if self.awaited_packages.remove(&request) {
             self.new_packages.insert(request, response);
         }
     }
 
-    pub(crate) fn reject_request<E>(&mut self, request: PackageID, response: E)
+    pub(crate) fn reject_task<E>(&mut self, request: PackageID, response: E)
     where
         E: Error + Send + 'static,
     {
         if self.awaited_packages.remove(&request) {
-            self.failed_packages
+            self.package_task_failures
                 .push(CoreError::Resolve(request.name.clone(), Box::new(response)));
         }
     }
@@ -429,10 +416,11 @@ impl From<&str> for PackageID {
                 .then(|| (s.split_at(prefix.len()).1, t))
         }
 
+        // See issue #203, these identifiers will be changed as a result of that
         let (name, target) = None
-            .or(prefix(s, "pkg:", PackageSource::Registry))
+            //.or(prefix(s, "pkg:", PackageSource::Registry))
             .or(prefix(s, "pkgs:", PackageSource::Registry))
-            .or(prefix(s, "prelude:", PackageSource::Standard))
+            //.or(prefix(s, "prelude:", PackageSource::Standard))
             .or(prefix(s, "std:", PackageSource::Standard))
             .or_else(|| {
                 (s.starts_with("http://") | s.starts_with("https://"))
@@ -487,13 +475,13 @@ impl From<Hide> for PackageID {
 
 pub trait Resolve {
     /// The implementor should resolve the given ResolveTasks, and may do so sync or async
-    fn resolve_all(&self, paths: Vec<ResolveTask>);
+    fn resolve_all(&self, tasks: Vec<ResolveTask>);
 }
 
 #[derive(Debug)]
 pub struct ResolveTask {
-    manager: Arc<Mutex<PackageStore>>,
-    pub package: PackageID,
+    package_store: Arc<Mutex<PackageStore>>,
+    pub package_id: PackageID,
     resolved: bool,
 }
 
@@ -510,9 +498,9 @@ impl ResolveTask {
 
     pub fn resolve(mut self, result: Vec<u8>) {
         self.resolved = true;
-        let mut manager = self.manager.lock().unwrap();
-        let package = mem::take(&mut self.package);
-        manager.resolve_request(package, result);
+        let mut store_guard = self.package_store.lock().unwrap();
+        let package = mem::take(&mut self.package_id);
+        store_guard.resolve_task(package, result);
     }
 
     pub fn reject<E>(mut self, error: E)
@@ -520,18 +508,18 @@ impl ResolveTask {
         E: Error + Send + 'static,
     {
         self.resolved = true;
-        let mut manager = self.manager.lock().unwrap();
-        let package = mem::take(&mut self.package);
-        manager.reject_request(package, error);
+        let mut store_guard = self.package_store.lock().unwrap();
+        let package = mem::take(&mut self.package_id);
+        store_guard.reject_task(package, error);
     }
 }
 
 impl Drop for ResolveTask {
     fn drop(&mut self) {
         if !self.resolved {
-            let mut manager = self.manager.lock().unwrap();
-            let package = mem::take(&mut self.package);
-            manager.reject_request(package, CoreError::DroppedRequest);
+            let mut store_guard = self.package_store.lock().unwrap();
+            let package = mem::take(&mut self.package_id);
+            store_guard.reject_task(package, CoreError::DroppedRequest);
         }
     }
 }

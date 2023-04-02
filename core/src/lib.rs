@@ -92,7 +92,11 @@ impl FromStr for OutputFormat {
     }
 }
 
-/// Evaluates a document using the given context
+/// Evaluates a document using the given context. If this function returns Ok(Some), we got a
+/// document, but if it returns Ok(None), we are waiting for some packages to be resolved. This is
+/// distinct from the Err(...) case since in the Err(...)-case, something has actually went wrong,
+/// while in the Ok(None) case, the Context is simply not ready to evaluate the document since it
+/// hasn't got all required packages resolved yet
 pub fn eval<T, U>(
     source: &str,
     ctx: &mut Context<T, U>,
@@ -123,7 +127,12 @@ where
         .map_err(|e| vec![e])
 }
 
-/// Evaluates a document using the given context without a document element
+/// Evaluates a document using the given context without a document element.
+/// If this function returns Ok(Some), we got a document, but if it returns Ok(None), we are waiting
+/// for some packages to be resolved. This is distinct from the Err(...) case since in the
+/// Err(...)-case, something has actually went wrong, while in the Ok(None) case, the Context is
+/// simply not ready to evaluate the document since it hasn't got all required packages resolved yet
+
 pub fn eval_no_document<T, U>(
     source: &str,
     ctx: &mut Context<T, U>,
@@ -219,7 +228,7 @@ mod tests {
     #[test]
     fn table_manifest_test() {
         let ctx = Context::new(UnimplementedResolver, DefaultAccessManager).unwrap();
-        let lock = ctx.package_manager.lock().unwrap();
+        let lock = ctx.package_store.lock().unwrap();
         let info = lock.get_package_info("std:table").unwrap().clone();
 
         let foo = PackageInfo {
