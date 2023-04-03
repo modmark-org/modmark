@@ -23,20 +23,20 @@
 /// }
 /// ```
 macro_rules! define_native_packages {
-    ($($name:expr => { $($transform:expr, $arg_info:expr => $handler:ident),* $(,)? };)*) => {
+    ($($name:expr, $desc:expr => { $($transform:expr, $tdesc:expr, $arg_info:expr => $handler:ident),* $(,)? };)*) => {
         pub fn native_package_list() -> Vec<PackageInfo> {
             vec![
                 $(
                     (PackageInfo {
                         name: $name.to_string(),
                         version: "1".to_string(),
-                        description: "A native package supporting native modules".to_string(),
+                        description: $desc.to_string(),
                         transforms: vec![
                             $(
                                 (Transform {
                                     from: $transform.to_string(),
                                     to: vec![],
-                                    description: None,
+                                    description: Some($tdesc.to_string()),
                                     arguments: $arg_info,
                                 }),
                             )*
