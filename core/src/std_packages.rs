@@ -2,10 +2,10 @@ use std::collections::HashMap;
 
 use either::Either::{self, Left, Right};
 use serde_json::Value;
-
-use parser::ModuleArguments;
 #[cfg(feature = "native")]
 use wasmer::Engine;
+
+use parser::ModuleArguments;
 
 use crate::context::Issue;
 use crate::package::{ArgValue, PrimitiveArgType};
@@ -33,9 +33,14 @@ define_standard_package_loader! {
 // one being a function returning the manifests for those packages, and the other
 // being the entry point to run these packages.
 define_native_packages! {
-    "core" => {
-        "raw", vec![] => native_raw,
-        "warning", vec![
+    "core",
+    "Provides core functionality such as raw output, errors and warnings" => {
+        "raw",
+        "Outputs the body text as-is into the output document",
+        vec![] => native_raw,
+        "warning",
+        "Adds a compilation warning to the list of all warnings that have occurred during compilation",
+        vec![
             ArgInfo {
                 name: "source".to_string(),
                 default: Some(Value::String("<unknown>".to_string())),
@@ -55,7 +60,9 @@ define_native_packages! {
                 r#type: PrimitiveArgType::String.into()
             },
         ] => native_warn,
-        "error", vec![
+        "error",
+        "Adds a compilation error to the list of all errors that have occurred during compilation",
+        vec![
             ArgInfo {
                 name: "source".to_string(),
                 default: Some(Value::String("<unknown>".to_string())),
@@ -76,12 +83,20 @@ define_native_packages! {
             },
         ] => native_err
     };
-    "reparse" => {
-        "inline_content", vec![] => native_inline_content,
-        "block_content", vec![] => native_block_content,
+    "reparse",
+    "Provides an interface to the built-in ModMark parser" => {
+        "inline_content",
+        "Parses the content as inline-content, as if it was in a paragraph. The result may contain text, smart punctuation, inline module expressions and tags",
+        vec![] => native_inline_content,
+        "block_content",
+        "Parses the content as block-content, as if it was in the body of the document. The result may contain paragraphs containing inline content and multiline module expressions",
+        vec![] => native_block_content,
     };
-    "env" => {
-        "set-env", vec![
+    "env",
+    "[Temporary] Provides access to setting environment variables" => {
+        "set-env",
+        "Sets an environment variable",
+        vec![
             ArgInfo {
                 name: "key".to_string(),
                 default: None,
