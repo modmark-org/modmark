@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use either::Either::{self, Left, Right};
+use granular_id::GranularId;
 use serde_json::Value;
 #[cfg(feature = "native")]
 use wasmer::Engine;
@@ -115,6 +116,7 @@ pub fn native_raw<T, U>(
     _args: HashMap<String, ArgValue>,
     _inline: bool,
     _output_format: &OutputFormat,
+    _id: &GranularId<u32>,
 ) -> Result<Either<Element, String>, CoreError> {
     Ok(Right(body.to_owned()))
 }
@@ -127,11 +129,13 @@ pub fn native_inline_content<T, U>(
     _args: HashMap<String, ArgValue>,
     _inline: bool,
     _output_format: &OutputFormat,
+    id: &GranularId<u32>,
 ) -> Result<Either<Element, String>, CoreError> {
     let elements = parser::parse_inline(body)?
         .into_iter()
-        .map(TryInto::try_into)
-        .collect::<Result<Vec<Element>, _>>()?;
+        .zip(id.children())
+        .map(|(ast, id)| Element::try_from_ast(ast, id))
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(Left(Element::Compound(elements)))
 }
@@ -144,11 +148,13 @@ pub fn native_block_content<T, U>(
     _args: HashMap<String, ArgValue>,
     _inline: bool,
     _output_format: &OutputFormat,
+    id: &GranularId<u32>,
 ) -> Result<Either<Element, String>, CoreError> {
     let elements = parser::parse_blocks(body)?
         .into_iter()
-        .map(TryInto::try_into)
-        .collect::<Result<Vec<Element>, _>>()?;
+        .zip(id.children())
+        .map(|(ast, id)| Element::try_from_ast(ast, id))
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(Left(Element::Compound(elements)))
 }
@@ -160,6 +166,7 @@ pub fn native_set_env<T, U>(
     _args: HashMap<String, ArgValue>,
     _inline: bool,
     _output_format: &OutputFormat,
+    _id: &GranularId<u32>,
 ) -> Result<Either<Element, String>, CoreError> {
     unimplemented!("native_set_env")
 }
@@ -170,6 +177,7 @@ pub fn native_warn<T, U>(
     mut args: HashMap<String, ArgValue>,
     _inline: bool,
     _output_format: &OutputFormat,
+    _id: &GranularId<u32>,
 ) -> Result<Either<Element, String>, CoreError> {
     // Push the issue to warnings
     ctx.state.warnings.push(Issue {
@@ -192,6 +200,7 @@ pub fn native_err<T, U>(
     args: HashMap<String, ArgValue>,
     inline: bool,
     output_format: &OutputFormat,
+    id: &GranularId<u32>,
 ) -> Result<Either<Element, String>, CoreError> {
     let source = args.get("source").unwrap().clone().get_string().unwrap();
     let target = args.get("target").unwrap().clone().get_string().unwrap();
@@ -241,6 +250,7 @@ pub fn native_err<T, U>(
                 named: Some(args),
             },
             inline,
+            id: id.clone(),
         }))
     }
 }

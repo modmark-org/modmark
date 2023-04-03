@@ -5,7 +5,8 @@
 ///
 /// The native module handlers should have the signature:
 /// `pub fn fn_name(ctx: &mut Context, body: &str, args: HashMap<String, String>,
-///     inline: bool, output_format: &OutputFormat) -> Result<Either<Element, String>, CoreError>;`
+///     inline: bool, output_format: &OutputFormat, id: &GranularId<u32>)
+///     -> Result<Either<Element, String>, CoreError>;`
 ///
 /// Example usage:
 /// ```rust,ignore
@@ -64,7 +65,8 @@ macro_rules! define_native_packages {
                                     args: _,
                                     body,
                                     inline,
-                                } => $handler(ctx, body, args, *inline, output_format),
+                                    id,
+                                } => $handler(ctx, body, args, *inline, output_format, id),
                                 _ => Err(
                                     CoreError::NonModuleToNative(
                                         package_name.to_string(),

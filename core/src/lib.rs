@@ -3,6 +3,7 @@ use std::path::Path;
 use std::str::FromStr;
 
 use either::Either::{Left, Right};
+use granular_id::GranularId;
 use serde::{Deserialize, Serialize};
 
 pub use context::Context;
@@ -115,7 +116,8 @@ where
     //   do verbose errors or "debug mode" or similar
     ctx.state.verbose_errors = true;
     let (doc_ast, config) = parser::parse_with_config(source).map_err(|e| vec![e.into()])?;
-    let document = doc_ast.try_into().map_err(|e| vec![e])?;
+    let document: Element =
+        Element::try_from_ast(doc_ast, GranularId::root()).map_err(|e| vec![e])?;
     let success = ctx.configure(config)?;
     if !success {
         return Ok(None);
@@ -148,13 +150,9 @@ where
     //   do verbose errors or "debug mode" or similar
     ctx.state.verbose_errors = true;
     let (doc_ast, config) = parser::parse_with_config(source).map_err(|e| vec![e.into()])?;
-    let document: Element = doc_ast.try_into().map_err(|e| vec![e])?;
-    let no_doc = if let Element::Parent {
-        name: _,
-        args: _,
-        children,
-    } = document
-    {
+    let document: Element =
+        Element::try_from_ast(doc_ast, GranularId::root()).map_err(|e| vec![e])?;
+    let no_doc = if let Element::Parent { children, .. } = document {
         Ok(Element::Compound(children))
     } else {
         Err(vec![CoreError::RootElementNotParent])
@@ -189,17 +187,7 @@ where
             }
             Ok(raw_content)
         }
-        Module {
-            name: _,
-            args: _,
-            body: _,
-            inline: _,
-        }
-        | Parent {
-            name: _,
-            args: _,
-            children: _,
-        } => {
+        Module { .. } | Parent { .. } => {
             let either = ctx.transform(&root, format)?;
             match either {
                 Left(elem) => eval_elem(elem, ctx, format),
