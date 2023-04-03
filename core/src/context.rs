@@ -11,6 +11,7 @@ use std::{
 };
 
 use either::{Either, Left};
+use granular_id::GranularId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 #[cfg(feature = "native")]
@@ -204,12 +205,14 @@ where
                 name,
                 args: _,
                 children: _,
+                id,
             }
             | Module {
                 name,
                 args: _,
                 body: _,
                 inline: _,
+                id,
             } => {
                 let Some(package) = ({
                     let store_guard = self.package_store.lock().unwrap();
@@ -222,7 +225,7 @@ where
                 match &package.implementation {
                     PackageImplementation::Wasm(wasm_module) => {
                         // note: cloning modules is cheap
-                        self.transform_from_wasm(wasm_module, name, from, output_format)
+                        self.transform_from_wasm(wasm_module, id, name, from, output_format)
                     }
                     PackageImplementation::Native => self.transform_from_native(
                         &package.info.name.clone(),
@@ -240,6 +243,7 @@ where
     fn transform_from_wasm(
         &self,
         module: &Module,
+        module_id: &GranularId<u32>,
         name: &str,
         from: &Element,
         output_format: &OutputFormat,
@@ -285,6 +289,7 @@ where
                 },
                 body,
                 inline: false,
+                id: module_id.clone(),
             }
         };
 
@@ -364,7 +369,7 @@ where
         let result = {
             let mut buffer = String::new();
             output.read_to_string(&mut buffer)?;
-            Self::deserialize_compound(&buffer)
+            Self::deserialize_compound(&buffer, module_id.clone())
         };
 
         // If we have no stderr, just return the result early
@@ -430,12 +435,14 @@ impl<T, U> Context<T, U> {
                 name,
                 args,
                 children: _,
+                id: _,
             } => self.collect_parent_arguments(args, name, output_format),
             Element::Module {
                 name,
                 args,
                 body: _,
                 inline: _,
+                id: _,
             } => self.collect_module_arguments(args, name, output_format),
             Element::Compound(_) => unreachable!("Cannot transform compound"),
         }?;
@@ -454,7 +461,7 @@ impl<T, U> Context<T, U> {
     }
 
     /// Deserialize a compound (i.e a list of `JsonEntries`) that are received from a package
-    pub fn deserialize_compound(input: &str) -> Result<Element, CoreError> {
+    pub fn deserialize_compound(input: &str, id: GranularId<u32>) -> Result<Element, CoreError> {
         let entries: Vec<JsonEntry> =
             serde_json::from_str(input).map_err(|error| CoreError::DeserializationError {
                 string: input.to_string(),
@@ -462,12 +469,16 @@ impl<T, U> Context<T, U> {
             })?;
 
         // Convert the parsed entries into real Elements
-        let elements: Vec<Element> = entries.into_iter().map(Self::entry_to_element).collect();
+        let elements: Vec<Element> = entries
+            .into_iter()
+            .zip(id.children())
+            .map(|(entry, id)| Self::entry_to_element(entry, id))
+            .collect();
         Ok(Element::Compound(elements))
     }
 
     /// Convert a `JsonEntry` to an `Element`
-    fn entry_to_element(entry: JsonEntry) -> Element {
+    fn entry_to_element(entry: JsonEntry, id: GranularId<u32>) -> Element {
         let type_erase = |mut map: HashMap<String, Value>| {
             map.drain()
                 .map(|(k, v)| {
@@ -491,7 +502,12 @@ impl<T, U> Context<T, U> {
             } => Element::Parent {
                 name,
                 args: type_erase(arguments),
-                children: children.into_iter().map(Self::entry_to_element).collect(),
+                children: children
+                    .into_iter()
+                    .zip(id.children())
+                    .map(|(elem, id)| Self::entry_to_element(elem, id))
+                    .collect(),
+                id,
             },
             JsonEntry::Module {
                 name,
@@ -506,6 +522,7 @@ impl<T, U> Context<T, U> {
                 },
                 body: data,
                 inline,
+                id,
             },
         }
     }
@@ -524,6 +541,7 @@ impl<T, U> Context<T, U> {
                 name,
                 args,
                 children,
+                id,
             } => {
                 let converted_children: Result<Vec<JsonEntry>, CoreError> = children
                     .iter()
@@ -546,6 +564,7 @@ impl<T, U> Context<T, U> {
                 args,
                 body,
                 inline: one_line,
+                id: _,
             } => {
                 let mut collected_args =
                     self.collect_module_arguments(args, name, output_format)
