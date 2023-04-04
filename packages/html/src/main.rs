@@ -73,7 +73,7 @@ fn transform_document(doc: Value) -> String {
 
     write!(result, "{},", raw!("<style>")).unwrap();
     write!(result, "{},", raw!(include_str!("templates/html.css"))).unwrap();
-    write!(result, "{},", raw!("</style></head><body>")).unwrap();
+    write!(result, "{},", raw!("</style></head><body><article>")).unwrap();
 
     if let Value::Array(children) = &doc["children"] {
         for child in children {
@@ -82,7 +82,7 @@ fn transform_document(doc: Value) -> String {
         }
     }
 
-    write!(result, "{}", raw!("</body></html>")).unwrap();
+    write!(result, "{}", raw!("</article></body></html>")).unwrap();
     result.push(']');
 
     result

@@ -1,6 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body,
+h1,
+h2,
+h3,
+h4,
+p,
+figure,
+blockquote,
+dl,
+dd {
+  margin: 0;
+}
+
 :root {
   --color-dark: #252525;
-  --color-light: #efefef;
+  --color-light: #fafafa;
   --color-primary: #1a8fe3;
   --size-step-0: clamp(1rem, calc(0.96rem + 0.22vw), 1.13rem);
   --size-step-1: clamp(1.25rem, calc(1.16rem + 0.43vw), 1.5rem);
@@ -9,11 +30,15 @@
   --size-step-4: clamp(2.44rem, calc(2.05rem + 1.93vw), 3.55rem);
 }
 
-h1,
-h2,
-h3 {
-  font-weight: 800;
-  line-height: 1.1;
+body {
+  background: var(--color-light);
+  color: var(--color-dark);
+  padding: 2em;
+  font-family: 'Lora', serif;
+  font-size: var(--size-step-0);
+  min-height: 100vh;
+  text-rendering: optimizeSpeed;
+  line-height: 1.7;
 }
 
 a {
@@ -23,59 +48,32 @@ a {
   text-underline-offset: 0.3ex;
 }
 
-.lede {
-  font-size: var(--size-step-1);
-  max-width: 50ch;
-  font-style: italic;
-}
-
-
-blockquote {
-  max-width: 50ch;
+h1,
+h2,
+h3 {
+  font-weight: 800;
+  line-height: 1.1;
 }
 
 h1 {
+  font-size: var(--size-step-4);
   max-width: 20ch;
 }
 
-h2,
-h3 {
+h2 {
+  font-size: var(--size-step-3);
   max-width: 28ch;
 }
 
-body {
-  background: var(--color-light);
-  color: var(--color-dark);
-  padding: 2em;
-  font-family: Georgia, serif;
-  font-size: var(--size-step-0);
-  line-height: 1.7;
-  min-height: 100vh;
-  text-rendering: optimizeSpeed;
-  padding: 2rem 10rem;
+h3 {
+  font-size: var(--size-step-2);
+  max-width: 28ch;
 }
 
 
-:is(h1, h2, h3, blockquote) {
-  --flow-space: 1.5em;
-}
-
-.lede {
-  font-size: var(--size-step-1);
-  font-style: italic;
-  max-width: 50ch;
-}
-
-.lede+* {
-  --flow-space: 2em;
-}
-
-:is(h1, h2, h3)+* {
-  --flow-space: 0.5em;
-}
-
-.flow>*+* {
-  margin-block-start: var(--flow-space, 1em);
+ul,
+ol {
+  padding-inline-start: 1em;
 }
 
 blockquote {
@@ -83,23 +81,33 @@ blockquote {
   border-inline-start: 0.3em solid;
   font-style: italic;
   font-size: var(--size-step-1);
+  max-width: 50ch;
 }
 
-h1 {
-  font-size: var(--size-step-4);
+html:focus-within {
+  scroll-behavior: smooth;
 }
 
-h2 {
-  font-size: var(--size-step-3);
+article {
+  margin-inline: auto;
+  max-width: 70ch;
 }
 
-h3 {
-  font-size: var(--size-step-2);
+article>*+* {
+  margin-block-start: var(--flow-space, 1em);
+  max-width: 70ch;
 }
 
-ul,
-ol {
-  padding-inline-start: 1em;
+:is(h1, h2, h3, blockquote) {
+  --flow-space: 1.5em;
+}
+
+:is(h1, h2, h3)+* {
+  --flow-space: 0.5em;
+}
+
+a:not([class]) {
+  text-decoration-skip-ink: auto;
 }
 
 img,
@@ -130,49 +138,16 @@ select {
   }
 }
 
-ul[role='list'],
-ol[role='list'] {
-  list-style: none;
-}
-
-/* Set core root defaults */
-html:focus-within {
-  scroll-behavior: smooth;
-}
-
-body,
-h1,
-h2,
-h3,
-h4,
-p,
-figure,
-blockquote,
-dl,
-dd {
-  margin: 0;
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-article>* {
-  max-width: 65ch;
-  margin-inline: auto;
-}
-
 table {
   border-collapse: collapse;
 }
 
-th, td {
+th,
+td {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #ccc;
+  border: 1px solid #e4e4e4;
 }
 
 tbody tr:nth-child(even) {
-  background: #ccc;
+  background: #e4e4e4;
 }
