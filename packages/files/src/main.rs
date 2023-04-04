@@ -27,7 +27,7 @@ fn manifest() {
             "transforms": [
                 {
                     "from": "textfile",
-                    "to": ["html"],
+                    "to": ["html", "latex"],
                     "arguments": [],
                 },
                 {
@@ -36,8 +36,36 @@ fn manifest() {
                     "arguments": [],
                 },
                 {
+                    "from": "image",
+                    "to": ["latex"],
+                    "arguments": [
+                        {
+                            "name": "type",
+                            "default": "image",
+                            "type": ["image", "svg"],
+                            "description": "The type of source file"
+                        },
+                        {
+                            "name": "caption",
+                            "default": "",
+                            "description": "The caption for the image"
+                        },
+                        {
+                            "name": "label",
+                            "default": "",
+                            "description": "The label to use for the image, to be able to refer to it from the document"
+                        },
+                        {
+                            "name": "width",
+                            "default": 1.0,
+                            "type": "f64",
+                            "description": "The width the image is scaled to, given as a ratio to the document's text area width"
+                        },
+                    ],
+                },
+                {
                     "from": "include",
-                    "to": ["html"],
+                    "to": ["html", "latex"],
                     "arguments": [],
                 }
             ]
@@ -56,7 +84,7 @@ fn transform(from: &str, to: &str) {
     match from {
         "textfile" => transform_text(input, to),
         "image" => transform_image(input, to),
-        "include" => transform_include(input, to),
+        "include" => transform_include(input),
         other => {
             eprintln!("Package does not support {other}");
         }
@@ -65,12 +93,16 @@ fn transform(from: &str, to: &str) {
 
 fn transform_text(input: Value, to: &str) {
     match to {
-        "html" => {
+        "html" | "latex" => {
             let path = input["data"].as_str().unwrap().trim();
             match fs::read_to_string(path) {
                 Ok(contents) => {
-                    let html = format!("<p>{contents}</p>");
-                    let json = json!({"name": "raw", "data": html}).to_string();
+                    let data = if to == "html" {
+                        format!("<p>{contents}</p>")
+                    } else {
+                        format!("{contents}")
+                    };
+                    let json = json!({"name": "raw", "data": data}).to_string();
                     print!("[{json}]");
                 }
                 _ => {
@@ -104,30 +136,51 @@ fn transform_image(input: Value, to: &str) {
                 }
             }
         }
+        "latex" => {
+            let path = input["data"].as_str().unwrap().trim();
+            let file_type = input["arguments"]["type"].as_str().unwrap();
+            let width = input["arguments"]["width"].as_f64().unwrap();
+            let caption = input["arguments"]["caption"].as_str().unwrap();
+            let label = input["arguments"]["label"].as_str().unwrap();
+
+            let mut v = vec![];
+
+            v.push(String::from("\\begin{figure}[H]"));
+            v.push(String::from("\\centering"));
+            v.push(match file_type {
+                "image" => format!("\\includegraphics[width={width}\\textwidth]{path}"),
+                "svg" => format!("\\includesvg[width={width}\\textwidth]{path}"),
+                _ => panic!("Unexpected value for argument \"type\""),
+            });
+            if !caption.is_empty() {
+                v.push(format!("\\caption{}{}{}", "{", caption, "}"));
+            }
+            if !label.is_empty() {
+                v.push(format!("\\caption{}{}{}", "{", label, "}"));
+            }
+            v.push(String::from("\\end{figure}"));
+
+            let json = json!({"name": "raw", "data": v.join("\n")}).to_string();
+            print!("[{json}]");
+        }
         other => {
             eprintln!("Cannot convert file to {other}");
         }
     }
 }
 
-fn transform_include(input: Value, to: &str) {
-    match to {
-        "html" => {
-            let path = input["data"].as_str().unwrap().trim();
-            match fs::read_to_string(path) {
-                Ok(contents) => {
-                    let json = json!({"name": "block_content", "data": contents}).to_string();
-                    print!("[{json}]");
-                }
-                _ => {
-                    let json = json!({"name": "raw", "data": ""}).to_string();
-                    print!("[{json}]");
-                    eprintln!("File could not be accessed at {path}")
-                }
-            }
+// Because everything inside is reparsed, we do not match against output format
+fn transform_include(input: Value) {
+    let path = input["data"].as_str().unwrap().trim();
+    match fs::read_to_string(path) {
+        Ok(contents) => {
+            let json = json!({"name": "block_content", "data": contents}).to_string();
+            print!("[{json}]");
         }
-        other => {
-            eprintln!("Cannot convert file to {other}");
+        _ => {
+            let json = json!({"name": "raw", "data": ""}).to_string();
+            print!("[{json}]");
+            eprintln!("File could not be accessed at {path}")
         }
     }
 }
