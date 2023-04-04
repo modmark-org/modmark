@@ -135,13 +135,26 @@ fn highlight_latex(code: &str, lang: &String, tm: &str) -> (String, Option<Color
         let mut h = HighlightLines::new(syntax, theme);
         let incl_bg = IncludeBackground::No;
         let mut regions = Vec::new();
+        let mut result = String::new();
+        let background_color = theme.settings.background.unwrap();
+        let r = background_color.r;
+        let g = background_color.g;
+        let b = background_color.b;
         // avoiding lines() here because we want to include the final newline
+        write!(result, r#"\colorbox[RGB]{{{r},{g},{b}}}{{"#).unwrap();
         for line in code.split('\n').map(|s| s.trim_end_matches('\r')) {
             regions = h.highlight_line(line, &ss).unwrap();
-            
+            let (colors, words): (Vec<_>, Vec<_>) = regions.into_iter().map(|(a, b)| (a.foreground, b)).unzip();
+            for i in 0..words.len() {
+                let r = colors[i].r;
+                let g = colors[i].g;
+                let b = colors[i].b;
+                let word = words[i];
+                write!(result, r#"\textcolor[RGB]{{{r},{g},{b}}}{{{word}}}"#).unwrap();
+            }
         }
-        let (x, y): (Vec<_>, Vec<_>) = regions.into_iter().map(|(a, b)| (a, b)).unzip();
-        (y.join(r" "), theme.settings.background)
+        result.push_str("}");
+        (result, None)
     } else {
         eprintln!("Invalid language: {lang}");
         let html = code
@@ -194,7 +207,7 @@ fn get_highlighted_html(code: &str, lang: &String, tm: &str) -> (String, Option<
         "ocean_dark" => &ts.themes["base16-ocean.dark"],
         "ocean_light" => &ts.themes["base16-ocean.light"],
         "mocha" => &ts.themes["base16-mocha.dark"],
-        "eighties" => &ts.themes["base16-eighties.dark"],
+        "eighties" => &ts.themes["bget_argase16-eighties.dark"],
         "github" => &ts.themes["InspiredGitHub"],
         "solar_dark" => &ts.themes["Solarized (dark)"],
         "solar_light" => &ts.themes["Solarized (light)"],
