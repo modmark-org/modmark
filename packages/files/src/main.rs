@@ -32,19 +32,8 @@ fn manifest() {
                 },
                 {
                     "from": "image",
-                    "to": ["html"],
-                    "arguments": [],
-                },
-                {
-                    "from": "image",
-                    "to": ["latex"],
+                    "to": ["html", "latex"],
                     "arguments": [
-                        {
-                            "name": "type",
-                            "default": "image",
-                            "type": ["image", "svg"],
-                            "description": "The type of source file"
-                        },
                         {
                             "name": "caption",
                             "default": "",
@@ -56,10 +45,21 @@ fn manifest() {
                             "description": "The label to use for the image, to be able to refer to it from the document"
                         },
                         {
+                            "name": "type",
+                            "type": ["image", "svg"],
+                            "default": "image",
+                            "description": "The type of source file. SVG is currently only supported in LaTeX output."
+                        },
+                        {
                             "name": "width",
                             "default": 1.0,
                             "type": "f64",
-                            "description": "The width the image is scaled to, given as a ratio to the document's text area width"
+                            "description":
+                                "\
+                                The width of the image resulting image. \
+                                For LaTeX this is ratio to the document's text area width. \
+                                For HTML this is ratio to the width of the surrounding figure tag (created automatically).\
+                                "
                         },
                     ],
                 },
@@ -100,7 +100,7 @@ fn transform_text(input: Value, to: &str) {
                     let data = if to == "html" {
                         format!("<p>{contents}</p>")
                     } else {
-                        format!("{contents}")
+                        contents
                     };
                     let json = json!({"name": "raw", "data": data}).to_string();
                     print!("[{json}]");
@@ -125,8 +125,31 @@ fn transform_image(input: Value, to: &str) {
             match fs::read(path) {
                 Ok(contents) => {
                     let encoded: String = general_purpose::STANDARD_NO_PAD.encode(contents);
-                    let html = format!("<img src=\"data:image/png;base64, {encoded} \"/>");
-                    let json = json!({"name": "raw", "data": html}).to_string();
+                    let width = input["arguments"]["width"].as_f64().unwrap();
+                    let caption = input["arguments"]["caption"].as_str().unwrap();
+                    let label = input["arguments"]["label"].as_str().unwrap();
+
+                    let id = if label.is_empty() {
+                        String::new()
+                    } else {
+                        format!("id=\"{label}\"")
+                    };
+
+                    let percentage = (width * 100.0).round() as i32;
+                    let style = format!("style=\"width:{percentage}%\"");
+
+                    let mut v = vec![];
+
+                    v.push(String::from("<figure>"));
+                    v.push(format!(
+                        "<img src=\"data:image/png;base64,{encoded}\" {id} {style}/>"
+                    ));
+                    if !caption.is_empty() {
+                        v.push(format!("<figcaption>{caption}</figcaption>"))
+                    }
+                    v.push(String::from("</figure>"));
+
+                    let json = json!({"name": "raw", "data": v.join("\n")}).to_string();
                     print!("[{json}]");
                 }
                 _ => {
@@ -156,7 +179,7 @@ fn transform_image(input: Value, to: &str) {
                 v.push(format!("\\caption{}{}{}", "{", caption, "}"));
             }
             if !label.is_empty() {
-                v.push(format!("\\caption{}{}{}", "{", label, "}"));
+                v.push(format!("\\label{}{}{}", "{", label, "}"));
             }
             v.push(String::from("\\end{figure}"));
 
