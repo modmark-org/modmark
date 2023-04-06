@@ -35,6 +35,14 @@ define_standard_package_loader! {
 define_native_packages! {
     "core",
     "Provides core functionality such as raw output, errors and warnings" => {
+        "if",
+        "Conditionally include content based on the output format",
+        vec![ArgInfo {
+            name: "format".to_string(),
+            default: Some(Value::String("".to_string())),
+            description: "The output format".to_string(),
+            r#type: PrimitiveArgType::String.into()
+        }] => native_if,
         "raw",
         "Outputs the body text as-is into the output document",
         vec![] => native_raw,
@@ -117,6 +125,45 @@ pub fn native_raw<T, U>(
     _output_format: &OutputFormat,
 ) -> Result<Either<Element, String>, CoreError> {
     Ok(Right(body.to_owned()))
+}
+
+/// ifdef style conditional compilation based on the output format
+/// FIXME: move this into a normal standard module once we support the any output type
+/// see issue GH-128.
+pub fn native_if<T, U>(
+    _ctx: &mut Context<T, U>,
+    body: &str,
+    args: HashMap<String, ArgValue>,
+    inline: bool,
+    output_format: &OutputFormat,
+) -> Result<Either<Element, String>, CoreError> {
+    let cmp_format = args.get("format");
+
+    if let Some(cmp_format) = cmp_format {
+        let cmp_format = cmp_format.as_str().unwrap_or("");
+
+        if !cmp_format.is_empty() && &OutputFormat::new(cmp_format) != output_format {
+            // Maybe we could return an empty Element::Compund instead?
+            // revist after the evalutor rewrite
+            return Ok(Right("".to_string()));
+        }
+    }
+
+    let parser = if inline {
+        "inline_content"
+    } else {
+        "block_content"
+    };
+
+    Ok(Left(Element::Module {
+        name: parser.to_string(),
+        args: ModuleArguments {
+            positioned: None,
+            named: None,
+        },
+        body: body.to_string(),
+        inline,
+    }))
 }
 
 /// Re-parses the content as block content (a paragraph with tags, modules etc) and
