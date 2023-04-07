@@ -108,7 +108,7 @@ fn transform_code(to: &str) {
             }
         }
         "latex" => {
-            print!("{}", highlight_latex(code, lang, theme));  
+            print!("{}", highlight_latex(code, lang, theme, tab_size));  
         }
         other => {
             eprintln!("Cannot convert code to {other}");
@@ -116,7 +116,7 @@ fn transform_code(to: &str) {
     }
 }
 
-fn highlight_latex(code: &str, lang: &String, tm: &str) -> String {
+fn highlight_latex(code: &str, lang: &String, tm: &str, tab_size: &str) -> String {
     let ss = SyntaxSet::load_defaults_newlines();
     let ts = ThemeSet::load_defaults();
     let theme = match tm {
@@ -150,7 +150,7 @@ fn highlight_latex(code: &str, lang: &String, tm: &str) -> String {
                 let g = colors[i].g;
                 let b = colors[i].b;
                 let word = words[i];
-                let escaped = escape_latex_text(word.to_string());
+                let escaped = escape_latex_text(word.to_string(), tab_size);
                 write!(result, "{}", json!({
                     "name": "raw",
                     "data": format!(r"\textcolor[RGB]{{{r},{g},{b}}}{{{word}}}", r=r, g=g, b=b, word=escaped)
@@ -168,7 +168,7 @@ fn highlight_latex(code: &str, lang: &String, tm: &str) -> String {
     }
 }
 
-fn escape_latex_text(text: String) -> String {
+fn escape_latex_text(text: String, tab_size: &str) -> String {
     let s = text
         .split('\\')
         .map(|t| t.replace('{', r"\{").replace('}', r"\}"))
@@ -182,7 +182,8 @@ fn escape_latex_text(text: String) -> String {
         .replace('<', r"\textless{}")
         .replace('>', r"\textgreater{}")
         .replace('~', r"\textasciitilde{}")
-        .replace('^', r"\textasciicircum{}");
+        .replace('^', r"\textasciicircum{}")
+        .replace("    ", &format!(r"\hspace*{{{tab_size}mm}}"));
     s
 }
 
