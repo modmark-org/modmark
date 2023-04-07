@@ -108,8 +108,7 @@ fn transform_code(to: &str) {
             }
         }
         "latex" => {
-            let (highlighted, default_bg) = highlight_latex(code, lang, theme);
-            print!("[{}]", json!({"name": "raw", "data": highlighted}));
+            print!("{}", highlight_latex(code, lang, theme));  
         }
         other => {
             eprintln!("Cannot convert code to {other}");
@@ -117,7 +116,7 @@ fn transform_code(to: &str) {
     }
 }
 
-fn highlight_latex(code: &str, lang: &String, tm: &str) -> (String, Option<Color>){
+fn highlight_latex(code: &str, lang: &String, tm: &str) -> String {
     let ss = SyntaxSet::load_defaults_newlines();
     let ts = ThemeSet::load_defaults();
     let theme = match tm {
@@ -140,8 +139,9 @@ fn highlight_latex(code: &str, lang: &String, tm: &str) -> (String, Option<Color
         let r = background_color.r;
         let g = background_color.g;
         let b = background_color.b;
-        // avoiding lines() here because we want to include the final newline
-        write!(result, r#"\colorbox[RGB]{{{r},{g},{b}}}{{"#).unwrap();
+        result.push('[');
+        write!(result, r#"{{"name": "raw", "data": "\\definecolor{{background}}{{RGB}}{{{r},{g},{b}}}\n"}},"#).unwrap();
+        write!(result, r#"{{"name": "raw", "data": "\\begin{{mycolorbox}}[colback=background]\n"}},"#).unwrap();
         for line in code.split('\n').map(|s| s.trim_end_matches('\r')) {
             regions = h.highlight_line(line, &ss).unwrap();
             let (colors, words): (Vec<_>, Vec<_>) = regions.into_iter().map(|(a, b)| (a.foreground, b)).unzip();
@@ -150,29 +150,41 @@ fn highlight_latex(code: &str, lang: &String, tm: &str) -> (String, Option<Color
                 let g = colors[i].g;
                 let b = colors[i].b;
                 let word = words[i];
-                write!(result, r#"\textcolor[RGB]{{{r},{g},{b}}}{{{word}}}"#).unwrap();
+                let escaped = escape_latex_text(word.to_string());
+                write!(result, "{}", json!({
+                    "name": "raw",
+                    "data": format!(r"\textcolor[RGB]{{{r},{g},{b}}}{{{word}}}", r=r, g=g, b=b, word=escaped)
+                })).unwrap();
+                result.push(',');
             }
+            write!(result, r#"{{"name": "raw", "data": "\n\\\\"}},"#).unwrap();
         }
-        result.push_str("}");
-        (result, None)
+        write!(result, r#"{{"name": "raw", "data": "\\end{{mycolorbox}}"}}"#).unwrap();
+        result.push(']');
+        result
     } else {
         eprintln!("Invalid language: {lang}");
-        let html = code
-            .split('\n')
-            .map(|s| s.trim_end_matches('\r'))
-            .collect::<Vec<&str>>();
-        (
-            html.join("<br>"),
-            Some(Color {
-                r: 200,
-                g: 200,
-                b: 200,
-                a: 255,
-            }),
-        )
+        code.to_string()
     }
 }
 
+fn escape_latex_text(text: String) -> String {
+    let s = text
+        .split('\\')
+        .map(|t| t.replace('{', r"\{").replace('}', r"\}"))
+        .collect::<Vec<String>>()
+        .join(r"\textbacklash{}")
+        .replace('#', r"\#")
+        .replace('$', r"\$")
+        .replace('%', r"\%")
+        .replace('&', r"\&")
+        .replace('_', r"\_")
+        .replace('<', r"\textless{}")
+        .replace('>', r"\textgreater{}")
+        .replace('~', r"\textasciitilde{}")
+        .replace('^', r"\textasciicircum{}");
+    s
+}
 
 fn get_style_html(
     inline: &bool,
