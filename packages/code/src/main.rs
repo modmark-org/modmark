@@ -151,10 +151,17 @@ fn highlight_latex(code: &str, lang: &String, tm: &str, tab_size: &str) -> Strin
                 let b = colors[i].b;
                 let word = words[i];
                 let escaped = escape_latex_text(word.to_string(), tab_size);
-                write!(result, "{}", json!({
-                    "name": "raw",
-                    "data": format!(r"\textcolor[RGB]{{{r},{g},{b}}}{{{word}}}", r=r, g=g, b=b, word=escaped)
-                })).unwrap();
+                if escaped == " " {
+                    write!(result, "{}", json!({
+                        "name": "raw",
+                        "data": " "
+                    })).unwrap();
+                }else{
+                    write!(result, "{}", json!({
+                        "name": "raw",
+                        "data": format!(r"\textcolor[RGB]{{{r},{g},{b}}}{{{word}}}", r=r, g=g, b=b, word=escaped)
+                    })).unwrap();
+                }
                 result.push(',');
             }
             write!(result, r#"{{"name": "raw", "data": "\n\\\\"}},"#).unwrap();
