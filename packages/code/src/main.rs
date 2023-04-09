@@ -34,8 +34,8 @@ fn manifest() {
                     {"name": "lang", "default": "txt", "description":
                         "The language to be highlighted. For available languages, see \
                         https://github.com/sublimehq/Packages"},
-                    {"name": "font_size", "default": 12, "description": "The size of the font", "type": "uint"},
-                    {"name": "tab_size", "default": 4, "description": "The size tabs will be adjusted to", "type": "uint"},
+                    {"name": "font_size", "default": "12", "description": "The size of the font"},
+                    {"name": "tab_size", "default": "4", "description": "The size tabs will be adjusted to"},
                     {"name": "theme", "default": "mocha", "description":
                         "Theme of the code section. For available themes, see \
                         https://docs.rs/syntect/latest/syntect/highlighting/struct.ThemeSet.html#method.load_defaults"},
@@ -82,20 +82,7 @@ fn transform_code(to: &str) {
 
     match to {
         "html" => {
-            let input: Value = {
-                let mut buffer = String::new();
-                io::stdin().read_to_string(&mut buffer).unwrap();
-                serde_json::from_str(&buffer).unwrap()
-            };
-
-            let code = input["data"].as_str().unwrap();
-            let lang = get_arg!(input, "lang");
-            let font_size = input["arguments"]["font_size"].as_u64().unwrap();
-            let tab_size = input["arguments"]["tab_size"].as_u64().unwrap();
-            let theme = get_arg!(input, "theme");
-            let bg = get_arg!(input, "bg");
-
-            let (highlighted, default_bg) = get_highlighted(code, lang, theme);
+            let (highlighted, default_bg) = get_highlighted_html(code, lang, theme);
 
             if let Value::Bool(inline) = &input["inline"] {
                 let style = get_style_html(inline, font_size, tab_size, bg, default_bg);
@@ -108,7 +95,7 @@ fn transform_code(to: &str) {
             }
         }
         "latex" => {
-            print!("{}", highlight_latex(code, lang, theme, tab_size));  
+            print!("{}", highlight_latex(code, lang, theme, tab_size));
         }
         other => {
             eprintln!("Cannot convert code to {other}");
@@ -132,19 +119,26 @@ fn highlight_latex(code: &str, lang: &String, tm: &str, tab_size: &str) -> Strin
 
     if let Some(syntax) = ss.find_syntax_by_token(lang) {
         let mut h = HighlightLines::new(syntax, theme);
-        let incl_bg = IncludeBackground::No;
-        let mut regions = Vec::new();
         let mut result = String::new();
         let background_color = theme.settings.background.unwrap();
         let r = background_color.r;
         let g = background_color.g;
         let b = background_color.b;
         result.push('[');
-        write!(result, r#"{{"name": "raw", "data": "\\definecolor{{background}}{{RGB}}{{{r},{g},{b}}}\n"}},"#).unwrap();
-        write!(result, r#"{{"name": "raw", "data": "\\begin{{mycolorbox}}[colback=background]\n"}},"#).unwrap();
+        write!(
+            result,
+            r#"{{"name": "raw", "data": "\\definecolor{{background}}{{RGB}}{{{r},{g},{b}}}\n"}},"#
+        )
+        .unwrap();
+        write!(
+            result,
+            r#"{{"name": "raw", "data": "\\begin{{mycolorbox}}[colback=background]\n"}},"#
+        )
+        .unwrap();
         for line in code.split('\n').map(|s| s.trim_end_matches('\r')) {
-            regions = h.highlight_line(line, &ss).unwrap();
-            let (colors, words): (Vec<_>, Vec<_>) = regions.into_iter().map(|(a, b)| (a.foreground, b)).unzip();
+            let regions = h.highlight_line(line, &ss).unwrap();
+            let (colors, words): (Vec<_>, Vec<_>) =
+                regions.into_iter().map(|(a, b)| (a.foreground, b)).unzip();
             for i in 0..words.len() {
                 let r = colors[i].r;
                 let g = colors[i].g;
@@ -152,11 +146,16 @@ fn highlight_latex(code: &str, lang: &String, tm: &str, tab_size: &str) -> Strin
                 let word = words[i];
                 let escaped = escape_latex_text(word.to_string(), tab_size);
                 if escaped == " " {
-                    write!(result, "{}", json!({
-                        "name": "raw",
-                        "data": " "
-                    })).unwrap();
-                }else{
+                    write!(
+                        result,
+                        "{}",
+                        json!({
+                            "name": "raw",
+                            "data": " "
+                        })
+                    )
+                    .unwrap();
+                } else {
                     write!(result, "{}", json!({
                         "name": "raw",
                         "data": format!(r"\textcolor[RGB]{{{r},{g},{b}}}{{{word}}}", r=r, g=g, b=b, word=escaped)
@@ -166,7 +165,11 @@ fn highlight_latex(code: &str, lang: &String, tm: &str, tab_size: &str) -> Strin
             }
             write!(result, r#"{{"name": "raw", "data": "\n\\\\"}},"#).unwrap();
         }
-        write!(result, r#"{{"name": "raw", "data": "\\end{{mycolorbox}}"}}"#).unwrap();
+        write!(
+            result,
+            r#"{{"name": "raw", "data": "\\end{{mycolorbox}}"}}"#
+        )
+        .unwrap();
         result.push(']');
         result
     } else {
@@ -196,8 +199,8 @@ fn escape_latex_text(text: String, tab_size: &str) -> String {
 
 fn get_style_html(
     inline: &bool,
-    font_size: u64,
-    tab_size: u64,
+    font_size: &String,
+    tab_size: &String,
     bg: &String,
     default_bg: Option<Color>,
 ) -> String {
