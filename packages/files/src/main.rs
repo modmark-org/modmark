@@ -1,8 +1,10 @@
 use base64::{engine::general_purpose, Engine as _};
 use serde_json::{json, Value};
 use std::env;
+use std::ffi::OsStr;
 use std::fs;
 use std::io::{self, Read};
+use std::path::Path;
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -23,7 +25,7 @@ fn manifest() {
             {
             "name": "files",
             "version": "0.1",
-            "description": "This package provides file access",
+            "description": "This package provides file access.",
             "transforms": [
                 {
                     "from": "textfile",
@@ -37,18 +39,12 @@ fn manifest() {
                         {
                             "name": "caption",
                             "default": "",
-                            "description": "The caption for the image"
+                            "description": "The caption for the image."
                         },
                         {
                             "name": "label",
                             "default": "",
-                            "description": "The label to use for the image, to be able to refer to it from the document"
-                        },
-                        {
-                            "name": "type",
-                            "type": ["image", "svg"],
-                            "default": "image",
-                            "description": "The type of source file. SVG is currently only supported in LaTeX output."
+                            "description": "The label to use for the image, to be able to refer to it from the document."
                         },
                         {
                             "name": "width",
@@ -60,6 +56,12 @@ fn manifest() {
                                 For LaTeX this is ratio to the document's text area width. \
                                 For HTML this is ratio to the width of the surrounding figure tag (created automatically).\
                                 "
+                        },
+                        {
+                            "name": "embed",
+                            "default": "false",
+                            "type": ["true", "false"],
+                            "description": "Decides if the provided image should be embedded in the HTML document."
                         },
                     ],
                 },
@@ -122,59 +124,87 @@ fn transform_image(input: Value, to: &str) {
     match to {
         "html" => {
             let path = input["data"].as_str().unwrap().trim();
-            match fs::read(path) {
-                Ok(contents) => {
-                    let encoded: String = general_purpose::STANDARD_NO_PAD.encode(contents);
-                    let width = input["arguments"]["width"].as_f64().unwrap();
-                    let caption = input["arguments"]["caption"].as_str().unwrap();
-                    let label = input["arguments"]["label"].as_str().unwrap();
-
-                    let id = if label.is_empty() {
-                        String::new()
-                    } else {
-                        format!("id=\"{label}\"")
-                    };
-
-                    let percentage = (width * 100.0).round() as i32;
-                    let style = format!("style=\"width:{percentage}%\"");
-
-                    let mut v = vec![];
-
-                    v.push(String::from("<figure>"));
-                    v.push(format!(
-                        "<img src=\"data:image/png;base64,{encoded}\" {id} {style}/>"
-                    ));
-                    if !caption.is_empty() {
-                        v.push(format!("<figcaption>{caption}</figcaption>"))
-                    }
-                    v.push(String::from("</figure>"));
-
-                    let json = json!({"name": "raw", "data": v.join("\n")}).to_string();
-                    print!("[{json}]");
-                }
-                _ => {
-                    let json = json!({"name": "raw", "data": ""}).to_string();
-                    print!("[{json}]");
-                    eprintln!("File could not be accessed at {path}")
-                }
-            }
-        }
-        "latex" => {
-            let path = input["data"].as_str().unwrap().trim();
-            let file_type = input["arguments"]["type"].as_str().unwrap();
             let width = input["arguments"]["width"].as_f64().unwrap();
             let caption = input["arguments"]["caption"].as_str().unwrap();
             let label = input["arguments"]["label"].as_str().unwrap();
+            let embed = input["arguments"]["embed"].as_str().unwrap();
+
+            let percentage = (width * 100.0).round() as i32;
+            let style = format!("style=\"width:{percentage}%\"");
+            let id = if label.is_empty() {
+                String::new()
+            } else {
+                format!("id=\"{label}\"")
+            };
+
+            let img_src = if embed == "false" {
+                String::from(path)
+            } else {
+                let read_res = fs::read(path);
+                let ext_opt = Path::new(path).extension().and_then(OsStr::to_str);
+                if let Ok(contents) = read_res {
+                    let encoded: String = general_purpose::STANDARD_NO_PAD.encode(contents);
+                    if let Some(ext) = ext_opt {
+                        match ext {
+                            "svg" => format!("data:image/svg+xml;base64,{encoded}"),
+                            "jpg" | "jpeg" | "png" => format!("data:image/png;base64,{encoded}"),
+                            _ => {
+                                eprintln!("Unexpected file extension.");
+                                format!("data:image/png;base64,{encoded}")
+                            }
+                        }
+                    } else {
+                        eprintln!("File type could not be inferred from path.");
+                        format!("data:image/png;base64,{encoded}")
+                    }
+                } else {
+                    eprintln!("File could not be accessed at {path}.");
+                    return;
+                }
+            };
+            let img_str = format!("<img src=\"{img_src}\" {id} {style}/>\n");
+
+            let mut v = vec![];
+            v.push(json!({"name": "raw", "data": "<figure>\n"}));
+            v.push(json!({"name": "raw", "data": img_str}));
+            if !caption.is_empty() {
+                v.push(json!({"name": "raw", "data": "<figcaption>"}));
+                v.push(json!({"name": "inline_content", "data": caption}));
+                v.push(json!({"name": "raw", "data": "</figcaption>\n"}));
+            }
+            v.push(json!({"name": "raw", "data": "</figure>\n"}));
+
+            print!("{}", json!(v));
+        }
+        "latex" => {
+            let path = input["data"].as_str().unwrap().trim();
+            let width = input["arguments"]["width"].as_f64().unwrap();
+            let caption = input["arguments"]["caption"].as_str().unwrap();
+            let label = input["arguments"]["label"].as_str().unwrap();
+
+            let img_str = {
+                if let Some(ext) = Path::new(path).extension().and_then(OsStr::to_str) {
+                    match ext {
+                        "svg" => format!("\\includesvg[width={width}\\textwidth]{path}\n"),
+                        "png" | "jpg" | "jpeg" => {
+                            format!("\\includegraphics[width={width}\\textwidth]{path}\n")
+                        },
+                        _ => {
+                            eprintln!("Unexpected file extension.");
+                            format!("\\includegraphics[width={width}\\textwidth]{path}\n")
+                        }
+                    }
+                } else {
+                    eprintln!("File type could not be inferred from the provided path.");
+                    format!("\\includegraphics[width={width}\\textwidth]{path}\n")
+                }
+            };
 
             let mut v = vec![];
 
             v.push(String::from("\\begin{figure}[H]"));
             v.push(String::from("\\centering"));
-            v.push(match file_type {
-                "image" => format!("\\includegraphics[width={width}\\textwidth]{path}"),
-                "svg" => format!("\\includesvg[width={width}\\textwidth]{path}"),
-                _ => panic!("Unexpected value for argument \"type\""),
-            });
+            v.push(img_str);
             if !caption.is_empty() {
                 v.push(format!("\\caption{}{}{}", "{", caption, "}"));
             }
