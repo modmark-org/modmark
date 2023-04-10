@@ -13,6 +13,7 @@ pub use package::{ArgInfo, Package, PackageInfo, Transform};
 use package_store::Resolve;
 
 use crate::context::CompilationState;
+use crate::schedule::Schedule;
 
 pub mod context;
 mod element;
@@ -20,8 +21,10 @@ mod error;
 mod fs;
 mod package;
 pub mod package_store;
+mod schedule;
 mod std_packages;
 mod std_packages_macros;
+mod variables;
 #[cfg(all(feature = "web", feature = "native"))]
 compile_error!("feature \"native\" and feature \"web\" cannot be enabled at the same time");
 
@@ -167,6 +170,25 @@ where
 
     res.map(|s| Some((s, ctx.take_state())))
         .map_err(|e| vec![e])
+}
+
+pub fn eval2<T, U>(
+    root: Element,
+    ctx: &mut Context<T, U>,
+    format: &OutputFormat,
+) -> Result<String, CoreError>
+where
+    U: AccessPolicy + Send + Sync + 'static,
+{
+    let mut schedule = Schedule::default();
+    schedule.add_element(&root, &ctx);
+    while let Some(id) = schedule.pop() {
+        let elem = root.get_by_id(id).unwrap();
+        ctx.transform(&elem, format)?;
+    }
+
+    //TODO: Add check here if the schedule isn't empty
+    Ok(String::new())
 }
 
 pub fn eval_elem<T, U>(

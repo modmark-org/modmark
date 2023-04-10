@@ -5,7 +5,7 @@
 ///
 /// The native module handlers should have the signature:
 /// `pub fn fn_name(ctx: &mut Context, body: &str, args: HashMap<String, String>,
-///     inline: bool, output_format: &OutputFormat, id: &GranularId<u32>)
+///     inline: bool, output_format: &OutputFormat, id: &GranId)
 ///     -> Result<Either<Element, String>, CoreError>;`
 ///
 /// Example usage:
