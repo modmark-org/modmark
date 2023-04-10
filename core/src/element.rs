@@ -6,26 +6,84 @@ use parser::{Ast, MaybeArgs, ModuleArguments};
 
 use crate::CoreError;
 
+pub type GranId = GranularId<usize>;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Element {
     Parent {
         name: String,
         args: HashMap<String, String>,
         children: Vec<Element>,
-        id: GranularId<u32>,
+        id: GranId,
     },
     Module {
         name: String,
         args: ModuleArguments,
         body: String,
         inline: bool,
-        id: GranularId<u32>,
+        id: GranId,
     },
     Compound(Vec<Self>),
 }
 
 impl Element {
-    pub(crate) fn id(&self) -> Option<&GranularId<u32>> {
+    pub fn get_by_id(&self, id: GranId) -> Option<Self> {
+        let components: Vec<u32> = id.into();
+        components
+            .into_iter()
+            .fold(Some(self), |current, id| {
+                current.and_then(|c| match c {
+                    Element::Parent { children, .. } => children.get(id as usize),
+                    Element::Compound(children) => children.get(id as usize),
+                    _ => None,
+                })
+            })
+            .cloned()
+    }
+
+    pub fn get_by_id_mut(&mut self, id: GranId) -> Option<&mut Self> {
+        let components: Vec<u32> = id.into();
+        components.into_iter().fold(Some(self), |current, id| {
+            current.and_then(|c| match c {
+                Element::Parent { children, .. } => children.get_mut(id as usize),
+                Element::Compound(children) => children.get_mut(id as usize),
+                _ => None,
+            })
+        })
+    }
+
+    /*fn with_id(mut self, new_id: GranId) -> Self {
+        match self {
+            Element::Parent(ref mut id, _, _) => *id = new_id,
+            Element::Module(ref mut id, _) => *id = new_id,
+            Element::Compound(ref mut id, _) => *id = new_id,
+            Element::Raw(ref mut id, _) => *id = new_id,
+        }
+        self
+    }*/
+
+    /// Attempt to flatten the element by merging raw elements and compounds
+    pub fn flatten(self) -> Option<Vec<String>> {
+        match self {
+            Element::Compound(children) => children.into_iter().map(Self::flatten).fold(
+                Some(Vec::new()),
+                |mut vec, mut flat| {
+                    if let Some(ref mut v) = flat {
+                        vec.as_mut().map(|x| x.append(v));
+                    }
+                    vec
+                },
+            ),
+            // TODO: Add a raw kind
+            Element::Raw(_, value) => Some(vec![value]),
+            // Parent and module nodes can't be flattened and must be evaluated
+            _ => None,
+        }
+    }
+}
+
+impl Element {
+    pub(crate) fn id(&self) -> Option<&GranId> {
         if let Element::Parent { id, .. } | Element::Module { id, .. } = self {
             Some(id)
         } else {
@@ -33,7 +91,7 @@ impl Element {
         }
     }
 
-    pub(crate) fn try_from_ast(value: Ast, id: GranularId<u32>) -> Result<Self, CoreError> {
+    pub(crate) fn try_from_ast(value: Ast, id: GranId) -> Result<Self, CoreError> {
         macro_rules! zip_elems {
             ($elems:expr, $id:expr) => {
                 $elems

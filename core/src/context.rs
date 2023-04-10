@@ -22,9 +22,11 @@ use wasmer_wasi::{Pipe, WasiState};
 use parser::config::{Config, HideConfig, ImportConfig};
 use parser::ModuleArguments;
 
+use crate::element::GranId;
 use crate::fs::CoreFs;
 use crate::package::{ArgValue, PackageImplementation};
 use crate::package_store::{PackageID, PackageStore};
+use crate::variables::{VarAccess, Variable};
 use crate::{std_packages, AccessPolicy, Element, Resolve};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, Transform};
 
@@ -186,6 +188,13 @@ where
     }
 }
 
+impl<T, U> Context<T, U> {
+    pub fn get_variable_accesses(&self, name: &str) -> Option<Vec<(Variable, VarAccess)>> {
+        // FIXME: add impl here
+        Some(vec![])
+    }
+}
+
 impl<T, U> Context<T, U>
 where
     U: AccessPolicy,
@@ -243,7 +252,7 @@ where
     fn transform_from_wasm(
         &self,
         module: &Module,
-        module_id: &GranularId<u32>,
+        module_id: &GranId,
         name: &str,
         from: &Element,
         output_format: &OutputFormat,
@@ -461,7 +470,7 @@ impl<T, U> Context<T, U> {
     }
 
     /// Deserialize a compound (i.e a list of `JsonEntries`) that are received from a package
-    pub fn deserialize_compound(input: &str, id: GranularId<u32>) -> Result<Element, CoreError> {
+    pub fn deserialize_compound(input: &str, id: GranId) -> Result<Element, CoreError> {
         let entries: Vec<JsonEntry> =
             serde_json::from_str(input).map_err(|error| CoreError::DeserializationError {
                 string: input.to_string(),
@@ -478,7 +487,7 @@ impl<T, U> Context<T, U> {
     }
 
     /// Convert a `JsonEntry` to an `Element`
-    fn entry_to_element(entry: JsonEntry, id: GranularId<u32>) -> Element {
+    fn entry_to_element(entry: JsonEntry, id: GranId) -> Element {
         let type_erase = |mut map: HashMap<String, Value>| {
             map.drain()
                 .map(|(k, v)| {
@@ -541,7 +550,7 @@ impl<T, U> Context<T, U> {
                 name,
                 args,
                 children,
-                id,
+                id: _,
             } => {
                 let converted_children: Result<Vec<JsonEntry>, CoreError> = children
                     .iter()
