@@ -6,6 +6,15 @@ use std::fs;
 use std::io::{self, Read};
 use std::path::Path;
 
+macro_rules! raw {
+    ($expr:expr) => {
+        json!({
+            "name": "raw",
+            "data": $expr
+        })
+    }
+}
+
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
     let action = &args[0];
@@ -115,7 +124,7 @@ fn transform_image(input: Value, to: &str) {
     match to {
         "html" => {
             let path = input["data"].as_str().unwrap().trim();
-            let width = input["arguments"]["width"].as_f64().unwrap();
+            let width = input["arguments"]["width"].as_f64().unwrap().clamp(0.0, f64::MAX);
             let caption = input["arguments"]["caption"].as_str().unwrap();
             let label = input["arguments"]["label"].as_str().unwrap();
             let embed = input["arguments"]["embed"].as_str().unwrap();
@@ -156,56 +165,59 @@ fn transform_image(input: Value, to: &str) {
             let img_str = format!("<img src=\"{img_src}\" {id} {style}/>\n");
 
             let mut v = vec![];
-            v.push(json!({"name": "raw", "data": "<figure>\n"}));
-            v.push(json!({"name": "raw", "data": img_str}));
+            v.push(raw!("<figure>\n"));
+            v.push(raw!(img_str));
             if !caption.is_empty() {
-                v.push(json!({"name": "raw", "data": "<figcaption>"}));
+                v.push(raw!("<figcaption>"));
                 v.push(json!({"name": "inline_content", "data": caption}));
-                v.push(json!({"name": "raw", "data": "</figcaption>\n"}));
+                v.push(raw!("</figcaption>\n"));
             }
-            v.push(json!({"name": "raw", "data": "</figure>\n"}));
+            v.push(raw!("</figure>\n"));
 
             print!("{}", json!(v));
         }
         "latex" => {
             let path = input["data"].as_str().unwrap().trim();
-            let width = input["arguments"]["width"].as_f64().unwrap();
+            let width = input["arguments"]["width"].as_f64().unwrap().clamp(0.0, f64::MAX);
             let caption = input["arguments"]["caption"].as_str().unwrap();
             let label = input["arguments"]["label"].as_str().unwrap();
 
             let img_str = {
                 if let Some(ext) = Path::new(path).extension().and_then(OsStr::to_str) {
                     match ext {
-                        "svg" => format!("\\includesvg[width={width}\\textwidth]{path}\n"),
+                        "svg" => format!("\\includesvg[width={width}\\textwidth]{{{path}}}\n"),
                         "png" | "jpg" | "jpeg" => {
-                            format!("\\includegraphics[width={width}\\textwidth]{path}\n")
+                            format!("\\includegraphics[width={width}\\textwidth]{{{path}}}\n")
                         },
                         _ => {
                             eprintln!("Unexpected file extension.");
-                            format!("\\includegraphics[width={width}\\textwidth]{path}\n")
+                            format!("\\includegraphics[width={width}\\textwidth]{{{path}}}\n")
                         }
                     }
                 } else {
                     eprintln!("File type could not be inferred from the provided path.");
-                    format!("\\includegraphics[width={width}\\textwidth]{path}\n")
+                    format!("\\includegraphics[width={width}\\textwidth]{{{path}}}\n")
                 }
             };
 
             let mut v = vec![];
 
-            v.push(String::from("\\begin{figure}[H]"));
-            v.push(String::from("\\centering"));
-            v.push(img_str);
+            v.push(raw!("\\begin{figure}[H]\n"));
+            v.push(raw!("\\centering\n"));
+            v.push(raw!(img_str));
             if !caption.is_empty() {
-                v.push(format!("\\caption{}{}{}", "{", caption, "}"));
+                v.push(raw!("\\caption{"));
+                v.push(json!({"name": "inline_content", "data": caption}));
+                v.push(raw!("}\n"));
             }
             if !label.is_empty() {
-                v.push(format!("\\label{}{}{}", "{", label, "}"));
+                v.push(raw!("\\label{"));
+                v.push(json!({"name": "inline_content", "data": label}));
+                v.push(raw!("}\n"))
             }
-            v.push(String::from("\\end{figure}"));
+            v.push(raw!("\\end{figure}\n"));
 
-            let json = json!({"name": "raw", "data": v.join("\n")}).to_string();
-            print!("[{json}]");
+            print!("{}", json!(v));
         }
         other => {
             eprintln!("Cannot convert file to {other}");
