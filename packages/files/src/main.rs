@@ -97,21 +97,12 @@ fn transform_text(input: Value, to: &str) {
     match to {
         "html" | "latex" => {
             let path = input["data"].as_str().unwrap().trim();
-            match fs::read_to_string(path) {
-                Ok(contents) => {
-                    let data = if to == "html" {
-                        format!("<p>{contents}</p>")
-                    } else {
-                        contents
-                    };
-                    let json = json!({"name": "raw", "data": data}).to_string();
-                    print!("[{json}]");
-                }
-                _ => {
-                    let json = json!({"name": "raw", "data": ""}).to_string();
-                    print!("[{json}]");
-                    eprintln!("File could not be accessed at {path}")
-                }
+            if let Ok(contents) = fs::read_to_string(path) {
+                let text = json!([{"name": "__text", "data": contents}]);
+                let json = json!({"name": "__paragraph", "arguments": {}, "children": text}).to_string();
+                print!("[{json}]");
+            } else {
+                eprintln!("File could not be accessed at {path}");
             }
         }
         other => {
@@ -225,15 +216,10 @@ fn transform_image(input: Value, to: &str) {
 // Because everything inside is reparsed, we do not match against output format
 fn transform_include(input: Value) {
     let path = input["data"].as_str().unwrap().trim();
-    match fs::read_to_string(path) {
-        Ok(contents) => {
-            let json = json!({"name": "block_content", "data": contents}).to_string();
-            print!("[{json}]");
-        }
-        _ => {
-            let json = json!({"name": "raw", "data": ""}).to_string();
-            print!("[{json}]");
-            eprintln!("File could not be accessed at {path}")
-        }
+    if let Ok(contents) = fs::read_to_string(path) {
+        let json = json!({"name": "block_content", "data": contents}).to_string();
+        print!("[{json}]");
+    } else {
+        eprintln!("File could not be accessed at {path}");
     }
 }
