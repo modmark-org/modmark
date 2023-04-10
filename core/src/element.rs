@@ -24,11 +24,12 @@ pub enum Element {
         id: GranId,
     },
     Compound(Vec<Self>),
+    Raw(String),
 }
 
 impl Element {
     pub fn get_by_id(&self, id: GranId) -> Option<Self> {
-        let components: Vec<u32> = id.into();
+        let components: Vec<usize> = id.into();
         components
             .into_iter()
             .fold(Some(self), |current, id| {
@@ -42,7 +43,7 @@ impl Element {
     }
 
     pub fn get_by_id_mut(&mut self, id: GranId) -> Option<&mut Self> {
-        let components: Vec<u32> = id.into();
+        let components: Vec<usize> = id.into();
         components.into_iter().fold(Some(self), |current, id| {
             current.and_then(|c| match c {
                 Element::Parent { children, .. } => children.get_mut(id as usize),
@@ -52,30 +53,26 @@ impl Element {
         })
     }
 
-    /*fn with_id(mut self, new_id: GranId) -> Self {
+    pub fn is_flat(&self) -> bool {
         match self {
-            Element::Parent(ref mut id, _, _) => *id = new_id,
-            Element::Module(ref mut id, _) => *id = new_id,
-            Element::Compound(ref mut id, _) => *id = new_id,
-            Element::Raw(ref mut id, _) => *id = new_id,
+            Element::Parent { .. } | Element::Module { .. } => false,
+            Element::Compound(c) => c.iter().all(Element::is_flat),
+            Element::Raw(_) => true,
         }
-        self
-    }*/
+    }
 
-    /// Attempt to flatten the element by merging raw elements and compounds
+    /// Attempt to flatten the element by merging raw elements and compounds. If any other element
+    /// is in the structure, this function returns `None`
     pub fn flatten(self) -> Option<Vec<String>> {
         match self {
-            Element::Compound(children) => children.into_iter().map(Self::flatten).fold(
-                Some(Vec::new()),
-                |mut vec, mut flat| {
-                    if let Some(ref mut v) = flat {
-                        vec.as_mut().map(|x| x.append(v));
-                    }
-                    vec
-                },
-            ),
-            // TODO: Add a raw kind
-            Element::Raw(_, value) => Some(vec![value]),
+            // Note that the collect ensures we have an early return if any of the elements can't
+            // be flattened
+            Element::Compound(children) => children
+                .into_iter()
+                .map(Self::flatten)
+                .collect::<Option<Vec<Vec<String>>>>()
+                .map(|x| x.into_iter().flatten().collect()),
+            Element::Raw(s) => Some(vec![s]),
             // Parent and module nodes can't be flattened and must be evaluated
             _ => None,
         }
@@ -91,7 +88,7 @@ impl Element {
         }
     }
 
-    pub(crate) fn try_from_ast(value: Ast, id: GranId) -> Result<Self, CoreError> {
+    pub fn try_from_ast(value: Ast, id: GranId) -> Result<Self, CoreError> {
         macro_rules! zip_elems {
             ($elems:expr, $id:expr) => {
                 $elems

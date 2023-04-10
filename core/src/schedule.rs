@@ -70,6 +70,7 @@ impl Schedule {
                 .left_range(&gran_id..&end_range)
                 .map(|(_gran, trash)| *trash)
                 .collect::<Vec<_>>();
+            println!("Removing {} ids", removed_ids.len());
             // For each ID that is removed, remove it from the ID map and from all dep infos
             removed_ids.into_iter().for_each(|id| {
                 // By removing the ID from the map, it becomes a "tombstone id" and won't be
@@ -91,6 +92,13 @@ impl Schedule {
     }
 
     pub fn add_element<T, U>(&mut self, element: &Element, ctx: &Context<T, U>) {
+        if let Element::Compound(children) = element {
+            for child in children {
+                self.add_element(child, &ctx);
+            }
+            return;
+        }
+
         let (
             Element::Parent{
                 name, id: this_id, ..
@@ -101,8 +109,10 @@ impl Schedule {
             }
         ) = element else {
             // Handle raw and compound
+            // NOTE: compound handled above
             return;
         };
+        println!("Adding elem {name}; before: {} ids", self.id_map.len());
 
         // Get new TrashId
         let this_trashid = self.id_iter.next().unwrap();
@@ -163,11 +173,13 @@ impl Schedule {
             }
         }
 
+        println!("Adding {name}; after: {} ids", self.id_map.len());
         // If the element is a parent, also add the children
         if let Element::Parent { children, .. } = element {
             children
                 .iter()
                 .for_each(|child| self.add_element(child, ctx));
         }
+        println!("Adding {name}s children; after: {} ids", self.id_map.len());
     }
 }

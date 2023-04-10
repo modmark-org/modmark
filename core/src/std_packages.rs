@@ -118,8 +118,8 @@ pub fn native_raw<T, U>(
     _inline: bool,
     _output_format: &OutputFormat,
     _id: &GranId,
-) -> Result<Either<Element, String>, CoreError> {
-    Ok(Right(body.to_owned()))
+) -> Result<Element, CoreError> {
+    Ok(Element::Raw(body.to_owned()))
 }
 
 /// Re-parses the content as block content (a paragraph with tags, modules etc) and
@@ -131,14 +131,14 @@ pub fn native_inline_content<T, U>(
     _inline: bool,
     _output_format: &OutputFormat,
     id: &GranId,
-) -> Result<Either<Element, String>, CoreError> {
+) -> Result<Element, CoreError> {
     let elements = parser::parse_inline(body)?
         .into_iter()
         .zip(id.children())
         .map(|(ast, id)| Element::try_from_ast(ast, id))
         .collect::<Result<Vec<_>, _>>()?;
 
-    Ok(Left(Element::Compound(elements)))
+    Ok(Element::Compound(elements))
 }
 
 /// Re-parses the content as block content (multiple paragraph or multiline module invocations) and
@@ -150,14 +150,14 @@ pub fn native_block_content<T, U>(
     _inline: bool,
     _output_format: &OutputFormat,
     id: &GranId,
-) -> Result<Either<Element, String>, CoreError> {
+) -> Result<Element, CoreError> {
     let elements = parser::parse_blocks(body)?
         .into_iter()
         .zip(id.children())
         .map(|(ast, id)| Element::try_from_ast(ast, id))
         .collect::<Result<Vec<_>, _>>()?;
 
-    Ok(Left(Element::Compound(elements)))
+    Ok(Element::Compound(elements))
 }
 
 /// Example function for setting environment variables, currently unimplemented
@@ -168,7 +168,7 @@ pub fn native_set_env<T, U>(
     _inline: bool,
     _output_format: &OutputFormat,
     _id: &GranId,
-) -> Result<Either<Element, String>, CoreError> {
+) -> Result<Element, CoreError> {
     unimplemented!("native_set_env")
 }
 
@@ -179,7 +179,7 @@ pub fn native_warn<T, U>(
     _inline: bool,
     _output_format: &OutputFormat,
     _id: &GranId,
-) -> Result<Either<Element, String>, CoreError> {
+) -> Result<Element, CoreError> {
     // Push the issue to warnings
     ctx.state.warnings.push(Issue {
         source: args.remove("source").unwrap().get_string().unwrap(),
@@ -192,7 +192,7 @@ pub fn native_warn<T, U>(
     });
 
     // Return no new nodes
-    Ok(Left(Element::Compound(vec![])))
+    Ok(Element::Compound(vec![]))
 }
 
 pub fn native_err<T, U>(
@@ -202,7 +202,7 @@ pub fn native_err<T, U>(
     inline: bool,
     output_format: &OutputFormat,
     id: &GranId,
-) -> Result<Either<Element, String>, CoreError> {
+) -> Result<Element, CoreError> {
     let source = args.get("source").unwrap().clone().get_string().unwrap();
     let target = args.get("target").unwrap().clone().get_string().unwrap();
     let input = args
@@ -232,7 +232,7 @@ pub fn native_err<T, U>(
         // If we don't have, don't add an __error parent since that would yield an CoreError
         // Also if the error did originate from an error module itself, don't generate more and
         // crash
-        Ok(Left(Element::Compound(vec![])))
+        Ok(Element::Compound(vec![]))
     } else {
         let type_erase = |mut map: HashMap<String, ArgValue>| {
             map.drain()
@@ -243,7 +243,7 @@ pub fn native_err<T, U>(
         let args = type_erase(args);
 
         // If we do, add an __error parent since our output format should
-        Ok(Left(Element::Module {
+        Ok(Element::Module {
             name: "__error".to_string(),
             body: body.to_string(),
             args: ModuleArguments {
@@ -252,6 +252,6 @@ pub fn native_err<T, U>(
             },
             inline,
             id: id.clone(),
-        }))
+        })
     }
 }

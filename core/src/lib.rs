@@ -126,7 +126,7 @@ where
         return Ok(None);
     }
 
-    let res = eval_elem(document, ctx, format);
+    let res = eval2(document, ctx, format);
 
     res.map(|s| Some((s, ctx.take_state())))
         .map_err(|e| vec![e])
@@ -166,14 +166,14 @@ where
         return Ok(None);
     }
 
-    let res = eval_elem(no_doc, ctx, format);
+    let res = eval2(no_doc, ctx, format);
 
     res.map(|s| Some((s, ctx.take_state())))
         .map_err(|e| vec![e])
 }
 
 pub fn eval2<T, U>(
-    root: Element,
+    mut root: Element,
     ctx: &mut Context<T, U>,
     format: &OutputFormat,
 ) -> Result<String, CoreError>
@@ -183,12 +183,17 @@ where
     let mut schedule = Schedule::default();
     schedule.add_element(&root, &ctx);
     while let Some(id) = schedule.pop() {
-        let elem = root.get_by_id(id).unwrap();
-        ctx.transform(&elem, format)?;
+        let elem = root.get_by_id(id.clone()).unwrap();
+        let new_elem = ctx.transform(&elem, format)?;
+        schedule.add_element(&new_elem, &ctx);
+        *root.get_by_id_mut(id).unwrap() = new_elem;
     }
 
     //TODO: Add check here if the schedule isn't empty
-    Ok(String::new())
+    debug_assert!(schedule.is_empty());
+    debug_assert!(dbg!(&root).is_flat());
+    let result = root.flatten().map(|s| s.join("")).unwrap();
+    Ok(result)
 }
 
 pub fn eval_elem<T, U>(
@@ -199,8 +204,9 @@ pub fn eval_elem<T, U>(
 where
     U: AccessPolicy + Send + Sync + 'static,
 {
-    use Element::{Compound, Module, Parent};
-    match root {
+    unimplemented!("Outdated");
+    use Element::{Compound, Module, Parent, Raw};
+    /*match root {
         Compound(children) => {
             let mut raw_content = String::new();
 
@@ -216,7 +222,8 @@ where
                 Right(res) => Ok(res),
             }
         }
-    }
+        Raw(s) => todo!("This is gonna get removed anyways")
+    }*/
 }
 
 #[cfg(test)]

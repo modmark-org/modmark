@@ -1,21 +1,17 @@
-use std::cell::RefCell;
-use std::path::Path;
-use std::sync::atomic::{AtomicUsize, Ordering};
-
-use modmark_core::{
-    eval, eval_no_document, Context, CoreError, DefaultAccessManager, OutputFormat,
-};
+use modmark_core::{Context, CoreError, DefaultAccessManager, Element, eval, eval_no_document, OutputFormat};
 use once_cell::sync::Lazy;
 use parser::ParseError;
 use serde::Serialize;
+use std::cell::RefCell;
+use std::path::Path;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use thiserror::Error;
 use wasm_bindgen::prelude::*;
-
 use wasmer_vfs::FileSystem;
+use web_resolver::WebResolver;
+use granular_id::GranularId;
 
 mod web_resolver;
-use web_resolver::WebResolver;
-
 thread_local! {
     static CONTEXT: RefCell<Context<WebResolver, DefaultAccessManager>> =
         RefCell::new(Context::new(WebResolver, DefaultAccessManager).unwrap())
@@ -168,7 +164,7 @@ fn escape(text: String) -> String {
 pub fn json_output(source: &str) -> Result<String, PlaygroundError> {
     let result = CONTEXT.with(|ctx| {
         let ctx = ctx.borrow_mut();
-        let doc = parser::parse(source)?.try_into().map_err(|e| vec![e])?;
+        let doc = Element::try_from_ast(parser::parse(source)?, GranularId::root()).map_err(|e| vec![e])?;
         ctx.serialize_element(&doc, &OutputFormat::new("html"))
             .map_err(|e| vec![e])
             .map_err(|e| Into::<PlaygroundError>::into(e))
