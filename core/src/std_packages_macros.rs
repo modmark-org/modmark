@@ -6,7 +6,7 @@
 /// The native module handlers should have the signature:
 /// `pub fn fn_name(ctx: &mut Context, body: &str, args: HashMap<String, String>,
 ///     inline: bool, output_format: &OutputFormat, id: &GranId)
-///     -> Result<Either<Element, String>, CoreError>;`
+///     -> Result<Element, CoreError>;`
 ///
 /// Example usage:
 /// ```rust,ignore
@@ -54,7 +54,7 @@ macro_rules! define_native_packages {
             element: &Element,
             args: HashMap<String, ArgValue>,
             output_format: &OutputFormat
-        ) -> Result<Either<Element, String>, CoreError> {
+        ) -> Result<Element, CoreError> {
             match package_name {
                 $(
                     $name => match node_name {

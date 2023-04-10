@@ -205,10 +205,11 @@ where
         &mut self,
         from: &Element,
         output_format: &OutputFormat,
-    ) -> Result<Either<Element, String>, CoreError> {
-        use Element::{Compound, Module, Parent};
+    ) -> Result<Element, CoreError> {
+        use Element::{Compound, Module, Parent, Raw};
 
         match from {
+            Raw(_) => unreachable!("Should not transform raw element"),
             Compound(_) => unreachable!("Should not transform compound element"),
             Parent {
                 name,
@@ -256,7 +257,7 @@ where
         name: &str,
         from: &Element,
         output_format: &OutputFormat,
-    ) -> Result<Either<Element, String>, CoreError> {
+    ) -> Result<Element, CoreError> {
         // Create a new store
         #[cfg(feature = "native")]
         let mut store = Store::new(&self.engine);
@@ -360,11 +361,11 @@ where
             if !error_msg.contains("WASI exited with code: 0") {
                 // An error occurred when executing Wasm module =>
                 // it probably crashed, so just insert an error node
-                return Ok(Left(create_issue(
+                return Ok(create_issue(
                     true,
                     format!("Wasm module crash: {error_msg}"),
                     &input_data,
-                )));
+                ));
             }
         }
 
@@ -386,15 +387,15 @@ where
             return match result {
                 // This is the only fully successful exit point, where we have a result and no
                 // stderr => no errors/warnings logged
-                Ok(res) => Ok(Left(res)),
+                Ok(res) => Ok(res),
                 // If there is an issue in "result", the result was deserialized incorrectly.
                 // The CoreError error message is misleading so we skip printing it and only print
                 // our custom message
-                Err(_) => Ok(Left(create_issue(
+                Err(_) => Ok(create_issue(
                     true,
                     "Error deserializing result from module".to_string(),
                     &input_data,
-                ))),
+                )),
             };
         }
 
@@ -408,13 +409,13 @@ where
                 // Here, in the warnings case, chain the result and emit it as well
                 .chain(once(elem))
                 .collect();
-            Ok(Left(Element::Compound(elems)))
+            Ok(Element::Compound(elems))
         } else {
             let errors = err_str
                 .lines()
                 .map(|line| create_issue(true, format!("Logged error: {line}"), &input_data))
                 .collect();
-            Ok(Left(Element::Compound(errors)))
+            Ok(Element::Compound(errors))
         }
     }
 }
@@ -438,7 +439,7 @@ impl<T, U> Context<T, U> {
         node_name: &str, // name of module or parent
         element: &Element,
         output_format: &OutputFormat,
-    ) -> Result<Either<Element, String>, CoreError> {
+    ) -> Result<Element, CoreError> {
         let args = match element {
             Element::Parent {
                 name,
@@ -454,6 +455,7 @@ impl<T, U> Context<T, U> {
                 id: _,
             } => self.collect_module_arguments(args, name, output_format),
             Element::Compound(_) => unreachable!("Cannot transform compound"),
+            Element::Raw(_) => unreachable!("Cannot transform raw"),
         }?;
 
         std_packages::handle_native(self, package_name, node_name, element, args, output_format)
@@ -504,6 +506,13 @@ impl<T, U> Context<T, U> {
         };
 
         match entry {
+            JsonEntry::Compound(elems) => Element::Compound(
+                elems
+                    .into_iter()
+                    .zip(id.children())
+                    .map(|(elem, id)| Self::entry_to_element(elem, id))
+                    .collect(),
+            ),
             JsonEntry::ParentNode {
                 name,
                 arguments,
@@ -533,6 +542,7 @@ impl<T, U> Context<T, U> {
                 inline,
                 id,
             },
+            JsonEntry::Raw(string) => Element::Raw(string),
         }
     }
 
@@ -543,9 +553,12 @@ impl<T, U> Context<T, U> {
         output_format: &OutputFormat,
     ) -> Result<JsonEntry, CoreError> {
         match element {
-            // When the eval function naively evaluates all children before a parent compound
-            // nodes should never be present here. This may however change in the future.
-            Element::Compound(_) => unreachable!(),
+            Element::Compound(elems) => Ok(JsonEntry::Compound(
+                elems
+                    .iter()
+                    .map(|e| self.element_to_entry(e, output_format))
+                    .collect::<Result<Vec<_>, CoreError>>()?,
+            )),
             Element::Parent {
                 name,
                 args,
@@ -587,6 +600,7 @@ impl<T, U> Context<T, U> {
                     inline: *one_line,
                 })
             }
+            Element::Raw(string) => Ok(JsonEntry::Raw(string.clone())),
         }
     }
 
@@ -733,6 +747,8 @@ enum JsonEntry {
         #[serde(default = "default_inline")]
         inline: bool,
     },
+    Compound(Vec<Self>),
+    Raw(String),
 }
 
 #[derive(Default)]
