@@ -10,7 +10,6 @@ use std::{
     io::{Read, Write},
 };
 
-use granular_id::GranularId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 #[cfg(feature = "native")]
@@ -188,8 +187,29 @@ where
 }
 
 impl<T, U> Context<T, U> {
-    pub fn get_variable_accesses(&self, name: &str) -> Option<Vec<(Variable, VarAccess)>> {
+    /// This function returns the "variable accesses", which is all variables the transform
+    /// requires. This is used to schedule when the transform may run in relations to each other.
+    // Note to implementers: this most likely requires reading the PackageStore. This function will
+    // be called once for each element in the entire document tree, and when a Parent is evaluated,
+    // it will be called one additional time. Since it isn't done in parallel, however, and this
+    // is the only thing that only needs read access (afaik, or at least, other things that may
+    // happen in parallel often require write access), I don't think it is worth changing Mutex to
+    // RwLock (which allows multiple readers).
+    // Another note: It may or may not be good to have something more than "name" to identify the
+    // variable accesses, like also passing "args" and possibly have variable accesses dependent
+    // on variables. It is fully possible and will work since this is called once per each element.
+    #[allow(unused_variables)] // Remove this when doing the actual impl
+    pub fn get_variable_accesses(
+        &self,
+        name: &str,
+        args: Option<&ModuleArguments>,
+        format: &OutputFormat,
+    ) -> Option<Vec<(Variable, VarAccess)>> {
         // FIXME: add impl here
+        // Note that the var accesses may be dependent on argument, so if we are looking up a
+        // module, args is Some with the module arguments. This is important if we do a
+        // [set-env], which will have its accesses dependent on arguments. In addition to this,
+        // since arguments are dependent on output format, we also get the format passed here
         Some(vec![])
     }
 }
