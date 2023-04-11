@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use either::Either::{self, Left, Right};
-use granular_id::GranularId;
 use serde_json::Value;
 #[cfg(feature = "native")]
 use wasmer::Engine;
