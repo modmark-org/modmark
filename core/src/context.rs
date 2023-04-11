@@ -10,7 +10,6 @@ use std::{
     io::{Read, Write},
 };
 
-use either::{Either, Left};
 use granular_id::GranularId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

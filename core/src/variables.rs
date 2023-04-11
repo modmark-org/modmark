@@ -70,7 +70,7 @@ impl PartialOrd for VarAccess {
 // Note we can have two different variables with the same name
 // if they have different types
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
-pub struct Variable(String, VarType);
+pub struct Variable(pub String, pub VarType);
 
 // The ordering of these is very important. For determining what variable access types must occur
 // before others, VarAccess::partial_cmp is used which in turn uses the ordering of this accesses.

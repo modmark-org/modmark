@@ -1,6 +1,6 @@
 /// This macro defines takes a declaration of native packages, and generates two functions,
 /// `pub fn native_package_list() -> Vec<PackageInfo>` returning a list of PackageInfos for the
-/// packages, and `pub fn handle_native(...) -> Result<Either<Element, String>, CoreError>` which
+/// packages, and `pub fn handle_native(...) -> Result<Element, CoreError>` which
 /// takes a call to a native module and calls it by the handle given in the declaration.
 ///
 /// The native module handlers should have the signature:
@@ -146,7 +146,7 @@ macro_rules! define_standard_package_loader {
             Ok(())
         }
         #[cfg(not(feature = "bundle_std_packages"))]
-        pub fn load_standard_packages(_: &mut PackageStore, #[cfg(feature = "native")] engine: &Engine)
+        pub fn load_standard_packages(_: &mut PackageStore, #[cfg(feature = "native")] _: &Engine)
             -> Result<(), CoreError> {
             Ok(())
         }

@@ -53,6 +53,8 @@ impl Element {
         })
     }
 
+    /// Checks if this element can be flattened to a string using `flatten`. If this returns `true`,
+    /// `flatten` will result in `Some`.
     pub fn is_flat(&self) -> bool {
         match self {
             Element::Parent { .. } | Element::Module { .. } => false,

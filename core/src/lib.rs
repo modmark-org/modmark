@@ -2,7 +2,6 @@ use std::hash::{Hash, Hasher};
 use std::path::Path;
 use std::str::FromStr;
 
-use either::Either::{Left, Right};
 use granular_id::GranularId;
 use serde::{Deserialize, Serialize};
 
@@ -126,7 +125,7 @@ where
         return Ok(None);
     }
 
-    let res = eval2(document, ctx, format);
+    let res = evaluate_scheduled(document, ctx, format);
 
     res.map(|s| Some((s, ctx.take_state())))
         .map_err(|e| vec![e])
@@ -166,19 +165,23 @@ where
         return Ok(None);
     }
 
-    let res = eval2(no_doc, ctx, format);
+    let res = evaluate_scheduled(no_doc, ctx, format);
 
     res.map(|s| Some((s, ctx.take_state())))
         .map_err(|e| vec![e])
 }
 
-pub fn eval2<T, U>(
+/// This function evaluates an element and all its children by creating a schedule, adding all the
+/// children to that schedule, and letting the schedule determine what element to evaluate next.
+/// This ensures that dependencies are handled in a correct manner. The function errors if the
+/// schedule wasn't cleared after evaluation (which means that there is possibly a loop)
+pub fn evaluate_scheduled<T, U>(
     mut root: Element,
     ctx: &mut Context<T, U>,
     format: &OutputFormat,
 ) -> Result<String, CoreError>
 where
-    U: AccessPolicy + Send + Sync + 'static,
+    U: AccessPolicy,
 {
     let mut schedule = Schedule::default();
     schedule.add_element(&root, &ctx);
@@ -189,41 +192,11 @@ where
         *root.get_by_id_mut(id).unwrap() = new_elem;
     }
 
-    //TODO: Add check here if the schedule isn't empty
-    debug_assert!(schedule.is_empty());
-    debug_assert!(dbg!(&root).is_flat());
-    let result = root.flatten().map(|s| s.join("")).unwrap();
-    Ok(result)
-}
-
-pub fn eval_elem<T, U>(
-    root: Element,
-    ctx: &mut Context<T, U>,
-    format: &OutputFormat,
-) -> Result<String, CoreError>
-where
-    U: AccessPolicy + Send + Sync + 'static,
-{
-    unimplemented!("Outdated");
-    use Element::{Compound, Module, Parent, Raw};
-    /*match root {
-        Compound(children) => {
-            let mut raw_content = String::new();
-
-            for child in children {
-                raw_content.push_str(&eval_elem(child, ctx, format)?);
-            }
-            Ok(raw_content)
-        }
-        Module { .. } | Parent { .. } => {
-            let either = ctx.transform(&root, format)?;
-            match either {
-                Left(elem) => eval_elem(elem, ctx, format),
-                Right(res) => Ok(res),
-            }
-        }
-        Raw(s) => todo!("This is gonna get removed anyways")
-    }*/
+    if !schedule.is_empty() {
+        Err(CoreError::Schedule)
+    } else {
+        root.flatten().map(|s| s.join("")).ok_or(CoreError::Flat)
+    }
 }
 
 #[cfg(test)]
