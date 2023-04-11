@@ -184,11 +184,11 @@ where
     U: AccessPolicy,
 {
     let mut schedule = Schedule::default();
-    schedule.add_element(&root, &ctx);
+    schedule.add_element(&root, ctx, format);
     while let Some(id) = schedule.pop() {
         let elem = root.get_by_id(id.clone()).unwrap();
         let new_elem = ctx.transform(&elem, format)?;
-        schedule.add_element(&new_elem, &ctx);
+        schedule.add_element(&new_elem, ctx, format);
         *root.get_by_id_mut(id).unwrap() = new_elem;
     }
 

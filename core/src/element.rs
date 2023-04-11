@@ -34,8 +34,8 @@ impl Element {
             .into_iter()
             .fold(Some(self), |current, id| {
                 current.and_then(|c| match c {
-                    Element::Parent { children, .. } => children.get(id as usize),
-                    Element::Compound(children) => children.get(id as usize),
+                    Element::Parent { children, .. } => children.get(id),
+                    Element::Compound(children) => children.get(id),
                     _ => None,
                 })
             })
@@ -46,8 +46,8 @@ impl Element {
         let components: Vec<usize> = id.into();
         components.into_iter().fold(Some(self), |current, id| {
             current.and_then(|c| match c {
-                Element::Parent { children, .. } => children.get_mut(id as usize),
-                Element::Compound(children) => children.get_mut(id as usize),
+                Element::Parent { children, .. } => children.get_mut(id),
+                Element::Compound(children) => children.get_mut(id),
                 _ => None,
             })
         })

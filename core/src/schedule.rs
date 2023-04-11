@@ -8,7 +8,7 @@ use topological_sort::TopologicalSort;
 
 use crate::element::GranId;
 use crate::variables::{VarAccess, Variable};
-use crate::{Context, Element};
+use crate::{Context, Element, OutputFormat};
 
 type ScheduleId = usize;
 
@@ -87,7 +87,12 @@ impl Schedule {
         None
     }
 
-    pub fn add_element<T, U>(&mut self, element: &Element, ctx: &Context<T, U>) {
+    pub fn add_element<T, U>(
+        &mut self,
+        element: &Element,
+        ctx: &Context<T, U>,
+        format: &OutputFormat,
+    ) {
         // Element may be one of four kinds:
         // * Raw => We don't add it to the schedule
         // * Module => We add it to the schedule
@@ -97,7 +102,7 @@ impl Schedule {
         // Check if we have a compound element
         if let Element::Compound(children) = element {
             for child in children {
-                self.add_element(child, &ctx);
+                self.add_element(child, ctx, format);
             }
             return;
         }
@@ -105,10 +110,10 @@ impl Schedule {
         // For adding to the schedule, we need the name and GranId for that element
         // We could do this with a guard (let {name, id} = element else ...) but then rustfmt
         // doesn't format it for some reason
-        let (name, this_id) = {
+        let (name, this_id, args) = {
             match element {
-                Element::Parent { name, id, .. } => (name, id),
-                Element::Module { name, id, .. } => (name, id),
+                Element::Parent { name, id, .. } => (name, id, None),
+                Element::Module { name, id, args, .. } => (name, id, Some(args)),
                 _ => return,
             }
         };
@@ -117,7 +122,7 @@ impl Schedule {
         let this_schedule_id = self.id_iter.next().unwrap();
 
         // Insert this ScheduleId and put in the map
-        self.dag.insert(this_schedule_id.clone());
+        self.dag.insert(this_schedule_id);
         {
             let overwritten = self.id_map.insert(this_id.clone(), this_schedule_id);
             // Assert that the GranId isn't already in the map
@@ -125,43 +130,32 @@ impl Schedule {
         }
 
         // Look in the context to find info about which variables the element is interested in
-        if let Some(variables) = &ctx.get_variable_accesses(name) {
+        if let Some(variables) = &ctx.get_variable_accesses(name, args, format) {
             for (var, access) in variables {
                 let mut deps = self.dep_info.remove(var).unwrap_or_default();
 
                 // Update the dependency edges of the DAG
                 for (other_schedule_id, other_access_type) in &deps {
+                    let other_schedule_id = *other_schedule_id;
                     let cmp = other_access_type.partial_cmp(access).unwrap();
 
                     match cmp {
                         Ordering::Less => {
-                            self.dag.add_dependency(
-                                other_schedule_id.clone(),
-                                this_schedule_id.clone(),
-                            );
+                            self.dag.add_dependency(other_schedule_id, this_schedule_id);
                         }
                         Ordering::Greater => {
-                            self.dag.add_dependency(
-                                this_schedule_id.clone(),
-                                other_schedule_id.clone(),
-                            );
+                            self.dag.add_dependency(this_schedule_id, other_schedule_id);
                         }
 
                         // Some variable types care about the order in which they are written to (like lists for instance)
                         Ordering::Equal if access.order_granular() => {
-                            let other_id = self.id_map.get_by_right(other_schedule_id).unwrap();
-                            match other_id.cmp(&this_id) {
+                            let other_id = self.id_map.get_by_right(&other_schedule_id).unwrap();
+                            match other_id.cmp(this_id) {
                                 Ordering::Less => {
-                                    self.dag.add_dependency(
-                                        other_schedule_id.clone(),
-                                        this_schedule_id.clone(),
-                                    );
+                                    self.dag.add_dependency(other_schedule_id, this_schedule_id);
                                 }
                                 Ordering::Greater => {
-                                    self.dag.add_dependency(
-                                        this_schedule_id.clone(),
-                                        other_schedule_id.clone(),
-                                    );
+                                    self.dag.add_dependency(this_schedule_id, other_schedule_id);
                                 }
                                 _ => (),
                             }
@@ -171,7 +165,7 @@ impl Schedule {
                 }
 
                 // Add this element to the deps map as well
-                deps.push((this_schedule_id.clone(), *access));
+                deps.push((this_schedule_id, *access));
                 self.dep_info.insert(var.clone(), deps);
             }
         }
@@ -180,7 +174,7 @@ impl Schedule {
         if let Element::Parent { children, .. } = element {
             children
                 .iter()
-                .for_each(|child| self.add_element(child, ctx));
+                .for_each(|child| self.add_element(child, ctx, format));
         }
     }
 }
