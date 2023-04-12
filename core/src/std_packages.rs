@@ -7,7 +7,7 @@ use wasmer::Engine;
 use parser::ModuleArguments;
 
 use crate::context::Issue;
-use crate::element::GranId;
+use crate::element::GranularId;
 use crate::package::{ArgValue, PrimitiveArgType};
 use crate::package_store::PackageStore;
 use crate::std_packages_macros::{define_native_packages, define_standard_package_loader};
@@ -115,7 +115,7 @@ pub fn native_raw<T, U>(
     _args: HashMap<String, ArgValue>,
     _inline: bool,
     _output_format: &OutputFormat,
-    _id: &GranId,
+    _id: &GranularId,
 ) -> Result<Element, CoreError> {
     Ok(Element::Raw(body.to_owned()))
 }
@@ -128,7 +128,7 @@ pub fn native_inline_content<T, U>(
     _args: HashMap<String, ArgValue>,
     _inline: bool,
     _output_format: &OutputFormat,
-    id: &GranId,
+    id: &GranularId,
 ) -> Result<Element, CoreError> {
     let elements = parser::parse_inline(body)?
         .into_iter()
@@ -147,7 +147,7 @@ pub fn native_block_content<T, U>(
     _args: HashMap<String, ArgValue>,
     _inline: bool,
     _output_format: &OutputFormat,
-    id: &GranId,
+    id: &GranularId,
 ) -> Result<Element, CoreError> {
     let elements = parser::parse_blocks(body)?
         .into_iter()
@@ -165,7 +165,7 @@ pub fn native_set_env<T, U>(
     _args: HashMap<String, ArgValue>,
     _inline: bool,
     _output_format: &OutputFormat,
-    _id: &GranId,
+    _id: &GranularId,
 ) -> Result<Element, CoreError> {
     unimplemented!("native_set_env")
 }
@@ -176,7 +176,7 @@ pub fn native_warn<T, U>(
     mut args: HashMap<String, ArgValue>,
     _inline: bool,
     _output_format: &OutputFormat,
-    _id: &GranId,
+    _id: &GranularId,
 ) -> Result<Element, CoreError> {
     // Push the issue to warnings
     ctx.state.warnings.push(Issue {
@@ -199,7 +199,7 @@ pub fn native_err<T, U>(
     args: HashMap<String, ArgValue>,
     inline: bool,
     output_format: &OutputFormat,
-    id: &GranId,
+    id: &GranularId,
 ) -> Result<Element, CoreError> {
     let source = args.get("source").unwrap().clone().get_string().unwrap();
     let target = args.get("target").unwrap().clone().get_string().unwrap();

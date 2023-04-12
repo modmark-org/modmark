@@ -24,21 +24,21 @@ pub enum VarAccess {
 }
 
 impl VarAccess {
-    // If two access levels are deemed the same (no one should strictly be done before the other),
-    // this function is called to see if the granularid (occurance in the source document) should
-    // determine the order of evaluation. If not, the order is arbitrarily chosen.
+    /// If two access levels are deemed the same (no one should strictly be done before the other),
+    /// this function is called to see if the granularid (occurrence in the source document) should
+    /// determine the order of evaluation. If not, the order is arbitrarily chosen.
     pub fn order_granular(&self) -> bool {
         matches!(&self, VarAccess::List(_))
     }
 }
 
 impl PartialOrd for VarAccess {
-    // Two different accesses `a` and `b` may or may not need to be ordered in a certain way.
-    // The result when comparing the two determines how they are ordered:
-    // * If `a` < `b`, `a` *will* occur before `b`
-    // * If `a` > `b`, `a` *will* occur after `b`
-    // * If `a` = `b`, `a` may occur before or after `b` (see ::order_granular)
-    // * If there is no ordering (this function returns None), any may occur before the other
+    /// Two different accesses `a` and `b` may or may not need to be ordered in a certain way.
+    /// The result when comparing the two determines how they are ordered:
+    /// * If `a` < `b`, `a` *will* occur before `b`
+    /// * If `a` > `b`, `a` *will* occur after `b`
+    /// * If `a` = `b`, `a` may occur before or after `b` (see ::order_granular)
+    /// * If there is no ordering (this function returns None), any may occur before the other
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         use VarAccess::*;
         match &self {
@@ -72,11 +72,11 @@ impl PartialOrd for VarAccess {
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Variable(pub String, pub VarType);
 
-// The ordering of these is very important. For determining what variable access types must occur
-// before others, VarAccess::partial_cmp is used which in turn uses the ordering of this accesses.
-// #derive Ord makes an ordering based on the order they are defined. Lesser accesses always occur
-// before greater accesses, so defining SetAccess::Add before SetAccess::Read ensures that, for any
-// given set, all Add operations occur before any Read operation does.
+// The ordering of these enum variants is very important. For determining what variable access types
+// must occur before others, VarAccess::partial_cmp is used which in turn uses the ordering of this
+// accesses. #derive Ord makes an ordering based on the order they are defined. Lesser accesses
+// always occur before greater accesses, so defining SetAccess::Add before SetAccess::Read ensures
+// that, for any given set, all Add operations occur before any Read operation does.
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, PartialEq, Eq)]
 pub enum SetAccess {
     Add,

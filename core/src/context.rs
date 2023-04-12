@@ -20,7 +20,7 @@ use wasmer_wasi::{Pipe, WasiState};
 use parser::config::{Config, HideConfig, ImportConfig};
 use parser::ModuleArguments;
 
-use crate::element::GranId;
+use crate::element::GranularId;
 use crate::fs::CoreFs;
 use crate::package::{ArgValue, PackageImplementation};
 use crate::package_store::{PackageID, PackageStore};
@@ -197,7 +197,7 @@ impl<T, U> Context<T, U> {
     // RwLock (which allows multiple readers).
     // Another note: It may or may not be good to have something more than "name" to identify the
     // variable accesses, like also passing "args" and possibly have variable accesses dependent
-    // on variables. It is fully possible and will work since this is called once per each element.
+    // on variables. This is now implemented for module expressions.
     #[allow(unused_variables)] // Remove this when doing the actual impl
     pub fn get_variable_accesses(
         &self,
@@ -272,7 +272,7 @@ where
     fn transform_from_wasm(
         &self,
         module: &Module,
-        module_id: &GranId,
+        module_id: &GranularId,
         name: &str,
         from: &Element,
         output_format: &OutputFormat,
@@ -491,7 +491,7 @@ impl<T, U> Context<T, U> {
     }
 
     /// Deserialize a compound (i.e a list of `JsonEntries`) that are received from a package
-    pub fn deserialize_compound(input: &str, id: GranId) -> Result<Element, CoreError> {
+    pub fn deserialize_compound(input: &str, id: GranularId) -> Result<Element, CoreError> {
         let entries: Vec<JsonEntry> =
             serde_json::from_str(input).map_err(|error| CoreError::DeserializationError {
                 string: input.to_string(),
@@ -508,7 +508,7 @@ impl<T, U> Context<T, U> {
     }
 
     /// Convert a `JsonEntry` to an `Element`
-    fn entry_to_element(entry: JsonEntry, id: GranId) -> Element {
+    fn entry_to_element(entry: JsonEntry, id: GranularId) -> Element {
         let type_erase = |mut map: HashMap<String, Value>| {
             map.drain()
                 .map(|(k, v)| {
