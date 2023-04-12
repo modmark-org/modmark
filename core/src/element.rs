@@ -1,12 +1,10 @@
 use std::collections::HashMap;
 
-use granular_id::GranularId;
-
 use parser::{Ast, MaybeArgs, ModuleArguments};
 
 use crate::CoreError;
 
-pub type GranId = GranularId<usize>;
+pub type GranularId = granular_id::GranularId<usize>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Element {
@@ -14,21 +12,21 @@ pub enum Element {
         name: String,
         args: HashMap<String, String>,
         children: Vec<Element>,
-        id: GranId,
+        id: GranularId,
     },
     Module {
         name: String,
         args: ModuleArguments,
         body: String,
         inline: bool,
-        id: GranId,
+        id: GranularId,
     },
     Compound(Vec<Self>),
     Raw(String),
 }
 
 impl Element {
-    pub fn get_by_id(&self, id: GranId) -> Option<Self> {
+    pub fn get_by_id(&self, id: GranularId) -> Option<Self> {
         let components: Vec<usize> = id.into();
         components
             .into_iter()
@@ -42,7 +40,7 @@ impl Element {
             .cloned()
     }
 
-    pub fn get_by_id_mut(&mut self, id: GranId) -> Option<&mut Self> {
+    pub fn get_by_id_mut(&mut self, id: GranularId) -> Option<&mut Self> {
         let components: Vec<usize> = id.into();
         components.into_iter().fold(Some(self), |current, id| {
             current.and_then(|c| match c {
@@ -82,15 +80,10 @@ impl Element {
 }
 
 impl Element {
-    pub(crate) fn id(&self) -> Option<&GranId> {
-        if let Element::Parent { id, .. } | Element::Module { id, .. } = self {
-            Some(id)
-        } else {
-            None
-        }
-    }
-
-    pub fn try_from_ast(value: Ast, id: GranId) -> Result<Self, CoreError> {
+    /// Tries to create an Element from an Ast. Elements may contain ID:s, but Ast:s doesn't, which
+    /// means that we do need to have a root ID for the Ast. The Ast itself may be assigned that ID
+    /// and if the Ast has children, they will be assigned IDs of children to the root ID.
+    pub fn try_from_ast(value: Ast, id: GranularId) -> Result<Self, CoreError> {
         macro_rules! zip_elems {
             ($elems:expr, $id:expr) => {
                 $elems

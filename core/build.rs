@@ -1,3 +1,5 @@
+// Some functions are used conditionally based on features, so we allow dead code so we don't emit
+// build warnings for functions not used
 #![allow(dead_code)]
 
 use std::process::Child;

@@ -3,16 +3,16 @@ use std::collections::HashMap;
 use std::ops::RangeFrom;
 
 use bimap::BiBTreeMap;
-use granular_id::{GranularId, UpperBounded};
+use granular_id::UpperBounded;
 use topological_sort::TopologicalSort;
 
-use crate::element::GranId;
+use crate::element::GranularId;
 use crate::variables::{VarAccess, Variable};
 use crate::{Context, Element, OutputFormat};
 
 type ScheduleId = usize;
 
-// In short, each element is identified by its "GranId". We can use these Ids in our sorting, and
+// In short, each element is identified by its "GranularId". We can use these Ids in our sorting, and
 // then get the next ID to be evaluated. But when a parent node is evaluated, all its children
 // is invalid and any returned IDs from its children (which is "new") may previously have been
 // assigned to the previous children (which doesn't exist anymore). This means that we need to be
@@ -20,10 +20,10 @@ type ScheduleId = usize;
 // new unique IDs to each GranId, of the type ScheduleId. We have an BiBTreeMap to keep track of
 // this mapping.
 
-pub struct Schedule {
+pub(crate) struct Schedule {
     dag: TopologicalSort<ScheduleId>,
     dep_info: HashMap<Variable, Vec<(ScheduleId, VarAccess)>>,
-    id_map: BiBTreeMap<GranId, ScheduleId>,
+    id_map: BiBTreeMap<GranularId, ScheduleId>,
     id_iter: RangeFrom<ScheduleId>, // Assume this is infinite
 }
 
@@ -39,19 +39,19 @@ impl Default for Schedule {
 }
 
 impl Schedule {
-    pub fn is_empty(&self) -> bool {
+    pub(crate) fn is_empty(&self) -> bool {
         self.dag.is_empty()
     }
 
-    pub fn pop(&mut self) -> Option<GranId> {
+    pub(crate) fn pop(&mut self) -> Option<GranularId> {
         // TODO LATER: use pop all and reorder them so modules of the same type are evaluated
         //  after each other, that way we can keep the same wasm module alive for better performance
 
         // schedule_id is the ID of the next node to be evaluated
         while let Some(schedule_id) = self.dag.pop() {
-            // If this isn't in our BiBTreeMap it means that it doesn't exist anymore (it may once
-            // have been a child of an element that is now evaluated). Then we pop the next ID.
             let Some((gran_id, _)) = self.id_map.remove_by_right(&schedule_id) else {
+                // If this isn't in our BiBTreeMap it means that it doesn't exist anymore (it may once
+                // have been a child of an element that is now evaluated). Then we pop the next ID.
                 continue;
             };
 
@@ -83,11 +83,11 @@ impl Schedule {
         }
 
         // In this case, we couldn't pop one element, and this may occur either if there is a
-        // cycle or if the DAG is empty. This will be checked externally.ﬁ
+        // cycle or if the DAG is empty. This will be checked externally.
         None
     }
 
-    pub fn add_element<T, U>(
+    pub(crate) fn add_element<T, U>(
         &mut self,
         element: &Element,
         ctx: &Context<T, U>,
@@ -107,14 +107,12 @@ impl Schedule {
             return;
         }
 
-        // For adding to the schedule, we need the name and GranId for that element
-        // We could do this with a guard (let {name, id} = element else ...) but then rustfmt
-        // doesn't format it for some reason
         let (name, this_id, args) = {
             match element {
                 Element::Parent { name, id, .. } => (name, id, None),
                 Element::Module { name, id, args, .. } => (name, id, Some(args)),
-                _ => return,
+                Element::Compound(_) => return,
+                Element::Raw(_) => return,
             }
         };
 

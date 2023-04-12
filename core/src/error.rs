@@ -88,7 +88,7 @@ pub enum CoreError {
     DroppedRequest,
     #[error("Missing standard package named '{0}'")]
     NoSuchStdPackage(String),
-    #[error("Could not generate a good schedule; there might be dependency loops")]
+    #[error("Could not generate a good schedule; there might be cyclic dependencies")]
     Schedule,
     #[error("Could not flatten structure, internal scheduling error")]
     Flat,

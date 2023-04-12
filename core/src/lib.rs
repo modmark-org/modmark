@@ -2,7 +2,6 @@ use std::hash::{Hash, Hasher};
 use std::path::Path;
 use std::str::FromStr;
 
-use granular_id::GranularId;
 use serde::{Deserialize, Serialize};
 
 pub use context::Context;
@@ -12,6 +11,7 @@ pub use package::{ArgInfo, Package, PackageInfo, Transform};
 use package_store::Resolve;
 
 use crate::context::CompilationState;
+pub use crate::element::GranularId;
 use crate::schedule::Schedule;
 
 pub mod context;
