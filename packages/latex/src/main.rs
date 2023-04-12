@@ -177,11 +177,7 @@ fn transform_math(node: Value) -> String {
 fn transform_document(doc: Value) -> String {
     let mut result = String::new();
     result.push('[');
-<<<<<<< HEAD
-    write!(result, r#"{{"name": "raw", "data": "\\documentclass{{article}}\n\\{{float}}\n\\{{enumitem}}\n\\usepackage[normalem]{{ulem}}\n\\usepackage[hidelinks]{{hyperref}}\n\\usepackage{{xcolor}}\n\\usepackage[skins]{{tcolorbox}}\n\\tcbset{{commonstyle/.style={{boxrule=0pt,sharp corners,enhanced jigsaw,nobeforeafter,boxsep=0pt,left=\\fboxsep,right=\\fboxsep}}}}\n\\newtcolorbox{{mycolorbox}}[1][]{{commonstyle,#1}}\n\n\\begin{{document}}\n"}},"#,).unwrap();
-=======
     write!(result, r#"{{"name": "raw", "data": "\\documentclass{{article}}\n\\usepackage{{float}}\n\\usepackage{{enumitem}}\n\\usepackage[normalem]{{ulem}}\n\\usepackage[hidelinks]{{hyperref}}\n\\usepackage{{xcolor}}\n\\usepackage[skins]{{tcolorbox}}\n\\tcbset{{commonstyle/.style={{boxrule=0pt,sharp corners,enhanced jigsaw,nobeforeafter,boxsep=0pt,left=\\fboxsep,right=\\fboxsep}}}}\n\\newtcolorbox{{codebox}}[1][]{{commonstyle,#1}}\n\n\\begin{{document}}\n"}},"#,).unwrap();
->>>>>>> d90d20c (GH-113: Fix Latex imports)
     if let Value::Array(children) = &doc["children"] {
         for child in children {
             result.push_str(&serde_json::to_string(child).unwrap());
