@@ -145,13 +145,13 @@ select:hover,
     width: 50%;
     height: 100%;
     box-sizing: border-box;
-    overflow: auto;
     margin: 0;
     border: none;
     transition: 0.3s width;
 }
 
 #preview {
+    overflow: auto;
     background: rgb(242, 242, 242);
 }
 
