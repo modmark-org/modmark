@@ -23,23 +23,24 @@ use crate::element::GranularId;
 use crate::fs::CoreFs;
 use crate::package::{ArgValue, PackageImplementation};
 use crate::package_store::{PackageID, PackageStore};
-use crate::variables::{VarAccess, Variable};
+use crate::variables::{VarAccess, Variable, VariableStore};
 use crate::CoreError::MissingTransform;
 use crate::{std_packages, AccessPolicy, Element, Resolve};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, Transform};
 
 pub struct Context<T, U> {
     pub package_store: Arc<Mutex<PackageStore>>,
+    pub variables: VariableStore,
     pub(crate) resolver: T,
     #[cfg(feature = "native")]
     engine: Engine,
     pub(crate) state: CompilationState,
     pub filesystem: CoreFs<U>,
     policy: Arc<Mutex<U>>,
-    // This is a temporary field for testing variables
-    pub(crate) lists: HashMap<String, Vec<String>>,
 }
 
+/// Contains volatile compilation state that should be cleared
+/// in between calls to evaluation functions
 #[derive(Default, Clone, Debug)]
 pub struct CompilationState {
     pub warnings: Vec<Issue>,
@@ -138,13 +139,13 @@ impl<T, U> Context<T, U> {
         let policy = Arc::new(Mutex::new(policy));
         let ctx = Context {
             package_store: Arc::default(),
+            variables: VariableStore::default(),
             resolver,
             #[cfg(feature = "native")]
             engine: EngineBuilder::new(Cranelift::new()).engine(),
             state: CompilationState::default(),
             filesystem: CoreFs::new(Arc::clone(&policy)),
             policy,
-            lists: HashMap::new(),
         };
         #[cfg(feature = "native")]
         ctx.package_store
@@ -221,7 +222,7 @@ impl<T, U> Context<T, U> {
             Ok(transform
                 .variables
                 .into_iter()
-                .map(|(name, access)| (Variable(name, access.get_type()), access))
+                .map(|(name, access)| ((name, access.get_type()), access))
                 .collect())
         } else {
             // If the transform does have argument-dependent variables, we must collect arguments.
@@ -283,7 +284,7 @@ impl<T, U> Context<T, U> {
                                             None
                                         } else {
                                             Some(Ok((
-                                                Variable(variable_name, var_access.get_type()),
+                                                (variable_name, var_access.get_type()),
                                                 var_access,
                                             )))
                                         }
@@ -292,7 +293,7 @@ impl<T, U> Context<T, U> {
                             }
                         }
                     } else {
-                        Some(Ok((Variable(var_name, var_access.get_type()), var_access)))
+                        Some(Ok(((var_name, var_access.get_type()), var_access)))
                     }
                 })
                 .collect::<Result<Vec<(Variable, VarAccess)>, CoreError>>()?;
@@ -545,9 +546,7 @@ impl<T, U> Context<T, U> {
     /// specific to previous compilations, such as errors and warnings, gets cleared.
     pub fn clear_state(&mut self) {
         self.state.clear();
-        // FIXME: This is a temporary way to clear all variables between compilation cycles.
-        //  Change this to something more appropriate when actually implementing variable store
-        self.lists.clear();
+        self.variables.clear();
     }
 
     /// Takes the internal `CompilationState` of this Context, and replacing it with

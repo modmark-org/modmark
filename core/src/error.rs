@@ -110,6 +110,8 @@ pub enum CoreError {
     Schedule,
     #[error("Could not flatten structure, internal scheduling error")]
     Flat,
+    #[error("Attempted to redeclare the constant '{0}'.")]
+    ConstantRedeclaration(String),
 }
 
 impl From<WasiError> for CoreError {

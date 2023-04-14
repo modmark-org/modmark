@@ -11,7 +11,7 @@ use crate::element::GranularId;
 use crate::package::{ArgValue, PrimitiveArgType};
 use crate::package_store::PackageStore;
 use crate::std_packages_macros::{define_native_packages, define_standard_package_loader};
-use crate::variables::{ListAccess, VarAccess};
+use crate::variables::{self, ListAccess, VarAccess, VarType};
 use crate::{ArgInfo, Context, CoreError, Element, OutputFormat, PackageInfo, Transform};
 
 // Here, all standard packages are declared. The macro expands to one function
@@ -118,37 +118,37 @@ define_native_packages! {
             }
         ]
     }
-    "env" => {
-        desc: "[Temporary] Provides access to setting environment variables",
+    "variables" => {
+        desc: "Read and write to environment variables.",
         transforms: [
             {
-                name: "push-list",
-                desc: "Pushes a string to a list",
-                vars: [("$key".to_string(), VarAccess::List(ListAccess::Push))],
+                name: "const-decl",
+                desc: "Declare a constant",
+                vars: [("$name".to_string(), VarAccess::List(ListAccess::Push))],
                 args: vec![
                     ArgInfo {
-                        name: "key".to_string(),
+                        name: "name".to_string(),
                         default: None,
-                        description: "The key to set".to_string(),
+                        description: "The name to declare".to_string(),
                         r#type: PrimitiveArgType::String.into()
                     }
                 ],
-                func: native_push_list
+                func: const_decl
             },
             {
-                name: "read-list",
-                desc: "Reads all strings from a list",
-                vars: [("$key".to_string(), VarAccess::List(ListAccess::Read))],
+                name: "const-read",
+                desc: "Read a constant",
+                vars: [("$name".to_string(), VarAccess::List(ListAccess::Push))],
                 args: vec![
                     ArgInfo {
-                        name: "key".to_string(),
+                        name: "name".to_string(),
                         default: None,
-                        description: "The key to set".to_string(),
+                        description: "The name of the constant to read".to_string(),
                         r#type: PrimitiveArgType::String.into()
                     }
                 ],
-                func: native_read_list
-            }
+                func: const_read
+            },
         ]
     }
 }
@@ -204,42 +204,35 @@ pub fn native_block_content<T, U>(
     Ok(Element::Compound(elements))
 }
 
-/// Example function for pushing a string to a list
-pub fn native_push_list<T, U>(
+/// Declare a constant
+pub fn const_decl<T, U>(
     ctx: &mut Context<T, U>,
-    body: &str,
+    value: &str,
     args: HashMap<String, ArgValue>,
-    _inline: bool,
-    _output_format: &OutputFormat,
-    _id: &GranularId,
+    _: bool,
+    _: &OutputFormat,
+    _: &GranularId,
 ) -> Result<Element, CoreError> {
-    let key = args.get("key").unwrap().as_str().unwrap();
-    let entry = ctx.lists.entry(key.to_string()).or_default();
-    entry.push(body.to_string());
+    let name = args.get("name").unwrap().as_str().unwrap();
+    let value = variables::Value::Constant(value.to_string());
+    ctx.variables.declare_constant(name, value)?;
+
     Ok(Element::Compound(vec![]))
 }
 
-/// Example function for reading a list
-pub fn native_read_list<T, U>(
+/// Read a constant
+pub fn const_read<T, U>(
     ctx: &mut Context<T, U>,
-    _body: &str,
+    _: &str,
     args: HashMap<String, ArgValue>,
-    _inline: bool,
-    _output_format: &OutputFormat,
-    id: &GranularId,
+    _: bool,
+    _: &OutputFormat,
+    _: &GranularId,
 ) -> Result<Element, CoreError> {
-    let key = args.get("key").unwrap().as_str().unwrap();
-    if let Some(list) = ctx.lists.get(key) {
-        Ok(Element::Module {
-            name: "__text".to_string(),
-            args: Default::default(),
-            body: list.join(","),
-            inline: false,
-            id: id.clone(),
-        })
-    } else {
-        Ok(Element::Compound(vec![]))
-    }
+    let name = args.get("name").unwrap().as_str().unwrap();
+    ctx.variables.get(name, &VarType::Constant);
+
+    Ok(Element::Compound(vec![]))
 }
 
 pub fn native_warn<T, U>(

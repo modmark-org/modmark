@@ -1,5 +1,103 @@
+use crate::CoreError;
 use serde::{Deserialize, Serialize};
+use std::borrow::Borrow;
 use std::cmp::Ordering;
+use std::collections::{HashMap, HashSet};
+use std::hash::{Hash, Hasher};
+
+#[derive(Debug, Clone, Default)]
+pub struct VariableStore(HashMap<(String, VarType), Value>);
+
+impl VariableStore {
+    pub fn get(&self, name: &str, ty: &VarType) -> Option<&Value> {
+        self.0.get(&(name, ty) as &dyn VariableTrait)
+    }
+
+    /// Clears the variable store
+    pub fn clear(&mut self) {
+        self.0.clear()
+    }
+
+    /// declare a constant
+    pub fn declare_constant(&mut self, name: &str, value: Value) -> Result<(), CoreError> {
+        let prev_value = self.0.insert((name.to_string(), VarType::Constant), value);
+
+        if prev_value.is_some() {
+            Err(CoreError::ConstantRedeclaration(name.to_string()))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+/// Variables are identified by a name and a type. Meaning that you can
+/// have two different variables with the same name if they have different types
+pub type Variable = (String, VarType);
+
+/// Note: Variables are tuples of (String, VarType). The reason for implementing it as a
+/// trait instead of a concrete type is to do lookups in hashmaps using a variable as a key without
+/// having to clone. See: https://stackoverflow.com/questions/45786717/how-to-implement-hashmap-with-two-keys/45795699#45795699
+/// We lose a bit of performance due to dynamic dispatch but I think it should be rather negligible, especially since other options
+/// (nested or multiple hashmaps) has their problems performance
+trait VariableTrait {
+    fn name(&self) -> &str;
+    fn ty(&self) -> &VarType;
+}
+
+impl<'a> Borrow<dyn VariableTrait + 'a> for (String, VarType) {
+    fn borrow(&self) -> &(dyn VariableTrait + 'a) {
+        self
+    }
+}
+
+impl Hash for (dyn VariableTrait + '_) {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+        self.ty().hash(state);
+    }
+}
+
+impl PartialEq for (dyn VariableTrait + '_) {
+    fn eq(&self, other: &Self) -> bool {
+        self.name() == other.name() && self.ty() == other.ty()
+    }
+}
+
+impl Eq for (dyn VariableTrait + '_) {}
+
+impl VariableTrait for (String, VarType) {
+    fn name(&self) -> &str {
+        &self.0
+    }
+    fn ty(&self) -> &VarType {
+        &self.1
+    }
+}
+
+impl VariableTrait for (&str, &VarType) {
+    fn name(&self) -> &str {
+        self.0
+    }
+    fn ty(&self) -> &VarType {
+        self.1
+    }
+}
+
+impl VariableTrait for (&String, &VarType) {
+    fn name(&self) -> &str {
+        self.0
+    }
+    fn ty(&self) -> &VarType {
+        self.1
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum Value {
+    Set(HashSet<String>),
+    List(Vec<String>),
+    Constant(String),
+}
 
 /// The type of a variable
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
@@ -76,12 +174,6 @@ impl PartialOrd for VarAccess {
         }
     }
 }
-
-/// A identifier and type of a variable.
-/// Note we can have two different variables with the same name
-/// if they have different types
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
-pub struct Variable(pub String, pub VarType);
 
 // The ordering of these enum variants is very important. For determining what variable access types
 // must occur before others, VarAccess::partial_cmp is used which in turn uses the ordering of this
