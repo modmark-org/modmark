@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 use std::fmt::Formatter;
-use std::iter::once;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::{
@@ -296,7 +295,10 @@ where
         // Function to create an issue given a body text and if it is an error or not. This closure
         // captures references to the appropriate variables from this scope to generate correct
         // issues.
-        let create_issue = |error: bool, body: String, data: &str| -> Element {
+        // The GranularId must match the position of the element, so if this is the only element
+        // returned, it must be module_id, and if it is the n:th position of a compound, it must be
+        // the n:th child ID of module_id
+        let create_issue = |error: bool, body: String, data: &str, id: GranularId| -> Element {
             Element::Module {
                 name: if error {
                     "error".to_string()
@@ -318,7 +320,7 @@ where
                 },
                 body,
                 inline: false,
-                id: module_id.clone(),
+                id,
             }
         };
 
@@ -384,6 +386,7 @@ where
                     true,
                     format!("Wasm module crash: {error_msg}"),
                     &input_data,
+                    module_id.clone(),
                 ));
             }
         }
@@ -406,14 +409,16 @@ where
             return match result {
                 // This is the only fully successful exit point, where we have a result and no
                 // stderr => no errors/warnings logged
-                Ok(res) => Ok(res),
+                Ok(res) => Ok(Element::Compound(res)),
                 // If there is an issue in "result", the result was deserialized incorrectly.
                 // The CoreError error message is misleading so we skip printing it and only print
-                // our custom message
+                // our custom message. This is the only element we return, so it should have the
+                // same ID as module_id
                 Err(_) => Ok(create_issue(
                     true,
                     "Error deserializing result from module".to_string(),
                     &input_data,
+                    module_id.clone(),
                 )),
             };
         }
@@ -421,18 +426,26 @@ where
         // If we have stderr, check if result is successful or not
         // If successful, we treat the messages in stderr as warnings
         // If not, we treat them as if they are errors
-        if let Ok(elem) = result {
-            let elems = err_str
+        if let Ok(mut elems) = result {
+            // We have multiple warnings, and their IDs should be children of module_id, and since
+            // we already have `elems.len()` elements, so skip that many children
+            let warnings = err_str
                 .lines()
-                .map(|line| create_issue(false, format!("Logged warning: {line}"), &input_data))
-                // Here, in the warnings case, chain the result and emit it as well
-                .chain(once(elem))
-                .collect();
+                .zip(module_id.children().skip(elems.len()))
+                .map(|(line, id)| {
+                    create_issue(false, format!("Logged warning: {line}"), &input_data, id)
+                });
+            elems.extend(warnings);
             Ok(Element::Compound(elems))
         } else {
+            // We have multiple errors and their IDs should be children of module_id, and since we
+            // don't have any other elements, we zip with `module_id.children()`
             let errors = err_str
                 .lines()
-                .map(|line| create_issue(true, format!("Logged error: {line}"), &input_data))
+                .zip(module_id.children())
+                .map(|(line, id)| {
+                    create_issue(true, format!("Logged error: {line}"), &input_data, id)
+                })
                 .collect();
             Ok(Element::Compound(errors))
         }
@@ -490,8 +503,11 @@ impl<T, U> Context<T, U> {
         serde_json::to_string_pretty(&entry).map_err(|e| e.into())
     }
 
-    /// Deserialize a compound (i.e a list of `JsonEntries`) that are received from a package
-    pub fn deserialize_compound(input: &str, id: GranularId) -> Result<Element, CoreError> {
+    /// Deserialize a compound (i.e a list of `JsonEntries`) that are received from a package. The
+    /// list returned is the content of the compound and should be wrapped in `Element::Compound`.
+    /// The ID of the elements are correct in relation to the `id` passed as parameter being the
+    /// ID of the returned compound element.
+    pub fn deserialize_compound(input: &str, id: GranularId) -> Result<Vec<Element>, CoreError> {
         let entries: Vec<JsonEntry> =
             serde_json::from_str(input).map_err(|error| CoreError::DeserializationError {
                 string: input.to_string(),
@@ -504,7 +520,7 @@ impl<T, U> Context<T, U> {
             .zip(id.children())
             .map(|(entry, id)| Self::entry_to_element(entry, id))
             .collect();
-        Ok(Element::Compound(elements))
+        Ok(elements)
     }
 
     /// Convert a `JsonEntry` to an `Element`
