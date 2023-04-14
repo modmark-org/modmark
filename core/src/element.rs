@@ -77,6 +77,14 @@ impl Element {
             _ => None,
         }
     }
+
+    /// Get the name of a element (if it has one).
+    pub fn name(&self) -> Option<&str> {
+        match self {
+            Element::Parent { name, .. } | Element::Module { name, .. } => Some(name),
+            Element::Raw(_) | Element::Compound(_) => None,
+        }
+    }
 }
 
 impl Element {

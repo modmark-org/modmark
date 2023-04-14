@@ -1,28 +1,180 @@
+use crate::CoreError;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
+use std::collections::hash_map::Entry;
+use std::collections::{HashMap, HashSet};
+use std::fmt;
+use std::hash::Hash;
 
-// This is, for now, a placeholder file for variables. The data types it contains is (some) of the
-// once it will contain when the variable store is actually implemented.
+#[derive(Debug, Clone, Default)]
+pub struct VariableStore(HashMap<String, Value>);
 
-// The type of a variable
+impl VariableStore {
+    pub fn get(&self, name: &str) -> Option<&Value> {
+        self.0.get(name)
+    }
+
+    /// Clears the variable store
+    pub fn clear(&mut self) {
+        self.0.clear()
+    }
+
+    /// Ensure that a valid name is used.
+    /// Only ASCII alphanumerics characters and "_" is allowed. The name may also not start with a number.
+    fn validate_name(name: &str) -> Result<(), CoreError> {
+        let mut chars = name.chars();
+
+        let valid = chars
+            .next()
+            // Ensure that the first character is not a number and that the name
+            // is at least 1 character long
+            .map(|c| c.is_ascii_alphabetic() || c == '_')
+            .unwrap_or(false)
+            // Only ASCII alphanumerics characters and "_" is allowed.
+            && chars.all(|c| c.is_ascii_alphanumeric() || c == '_');
+
+        if valid {
+            Ok(())
+        } else {
+            Err(CoreError::ForbiddenVariableName(name.to_string()))
+        }
+    }
+
+    /// declare a constant
+    pub fn constant_declare(&mut self, name: &str, value: &str) -> Result<(), CoreError> {
+        Self::validate_name(name)?;
+        let value = Value::Constant(value.to_string());
+        let prev_value = self.0.insert(name.to_string(), value);
+
+        match prev_value {
+            Some(Value::Constant(_)) => Err(CoreError::ConstantRedeclaration(name.to_string())),
+            Some(prev_value) => Err(CoreError::TypeMismatch {
+                name: name.to_string(),
+                expected_type: VarType::Constant,
+                present_type: prev_value.get_type(),
+            }),
+            None => Ok(()),
+        }
+    }
+
+    /// Push a string to a list (if the list does not exist, a new one is created)
+    pub fn list_push(&mut self, name: &str, value: &str) -> Result<(), CoreError> {
+        Self::validate_name(name)?;
+
+        match self.0.entry(name.to_string()) {
+            Entry::Occupied(mut entry) => match entry.get_mut() {
+                Value::List(list) => list.push(value.to_string()),
+                wrong_value => {
+                    return Err(CoreError::TypeMismatch {
+                        name: name.to_string(),
+                        expected_type: VarType::List,
+                        present_type: wrong_value.get_type(),
+                    })
+                }
+            },
+            Entry::Vacant(entry) => {
+                entry.insert(Value::List(vec![value.to_string()]));
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Add a string to a set (if the set does not exist, a new one is created)
+    pub fn set_add(&mut self, name: &str, value: &str) -> Result<(), CoreError> {
+        Self::validate_name(name)?;
+
+        match self.0.entry(name.to_string()) {
+            Entry::Occupied(mut entry) => match entry.get_mut() {
+                Value::Set(set) => {
+                    set.insert(value.to_string());
+                }
+                wrong_value => {
+                    return Err(CoreError::TypeMismatch {
+                        name: name.to_string(),
+                        expected_type: VarType::Set,
+                        present_type: wrong_value.get_type(),
+                    })
+                }
+            },
+            Entry::Vacant(entry) => {
+                entry.insert(Value::Set({
+                    let mut set = HashSet::new();
+                    set.insert(value.to_string());
+                    set
+                }));
+            }
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum Value {
+    Set(HashSet<String>),
+    List(Vec<String>),
+    Constant(String),
+}
+
+impl Value {
+    pub fn get_type(&self) -> VarType {
+        match self {
+            Value::Set(_) => VarType::Set,
+            Value::List(_) => VarType::List,
+            Value::Constant(_) => VarType::Constant,
+        }
+    }
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            // Lists and sets are encoded as JSON values in order to escape ','
+            Value::Set(items) => {
+                let json_list: serde_json::Value = items.iter().cloned().collect();
+                write!(f, "{json_list}")
+            }
+            Value::List(items) => {
+                let json_list: serde_json::Value = items.clone().into();
+                write!(f, "{json_list}")
+            }
+            Value::Constant(value) => write!(f, "{value}"),
+        }
+    }
+}
+
+/// The type of a variable
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum VarType {
-    // Set<String>, a collection of unordered unique strings, like for imports and such
+    /// Set<String>, a collection of unordered unique strings, like for imports and such
     Set,
-    // List<String>, a list of ordered strings ordered top-to-bottom in order of writes in the
-    // document, for headings and such
+    /// List<String>, a list of ordered strings ordered top-to-bottom in order of writes in the
+    /// document, for headings and such
     List,
-    // Constant is a variable type that may only be written once
+    /// Constant is a variable type that may only be written once
     Constant,
 }
 
-// This is the type of accesses that a transform may request to a certain variable
-// The enum names here are used as the "type" field in the manifest
+impl fmt::Display for VarType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            VarType::Set => "set",
+            VarType::List => "list",
+            VarType::Constant => "const",
+        };
+        write!(f, "{s}")
+    }
+}
+
+/// This is the type of accesses that a transform may request to a certain variable
+/// The enum names here are used as the "type" field in the manifest
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "access", rename_all = "lowercase")]
 pub enum VarAccess {
     Set(SetAccess),
     List(ListAccess),
+    #[serde(alias = "const")]
     Constant(ConstantAccess),
 }
 
@@ -42,6 +194,16 @@ impl VarAccess {
             VarAccess::List(_) => VarType::List,
             VarAccess::Constant(_) => VarType::Constant,
         }
+    }
+
+    /// Returns true if it is a read access
+    pub fn is_read(&self) -> bool {
+        matches!(
+            self,
+            VarAccess::Set(SetAccess::Read)
+                | VarAccess::List(ListAccess::Read)
+                | VarAccess::Constant(ConstantAccess::Read)
+        )
     }
 }
 
@@ -79,11 +241,6 @@ impl PartialOrd for VarAccess {
         }
     }
 }
-
-// Note we can have two different variables with the same name
-// if they have different types
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
-pub struct Variable(pub String, pub VarType);
 
 // The ordering of these enum variants is very important. For determining what variable access types
 // must occur before others, VarAccess::partial_cmp is used which in turn uses the ordering of this
