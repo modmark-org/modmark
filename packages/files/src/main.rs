@@ -45,6 +45,7 @@ fn manifest() {
                     "from": "image",
                     "to": ["html", "latex"],
                     "arguments": [
+                        {"name": "alt", "default": "", "description": "Alternative text for the image"},
                         {
                             "name": "caption",
                             "default": "",
@@ -124,6 +125,15 @@ fn transform_image(input: Value, to: &str) {
     match to {
         "html" => {
             let path = input["data"].as_str().unwrap().trim();
+            let alt = {
+                let alt_text = input["arguments"]["alt"].as_str().unwrap();
+                if alt_text.is_empty() {
+                    eprintln!("Missing alt text");
+                    "Missing alt text".to_string()
+                } else {
+                    alt_text.replace('"', "&quot;")
+                }
+            };
             let width = input["arguments"]["width"].as_f64().unwrap().clamp(0.0, f64::MAX);
             let caption = input["arguments"]["caption"].as_str().unwrap();
             let label = input["arguments"]["label"].as_str().unwrap();
@@ -162,11 +172,13 @@ fn transform_image(input: Value, to: &str) {
                     return;
                 }
             };
-            let img_str = format!("<img src=\"{img_src}\" {id} {style}/>\n");
+            let img_str = format!("<img src=\"{img_src}\" {id} {style} alt=\"");
 
             let mut v = vec![];
             v.push(raw!("<figure>\n"));
             v.push(raw!(img_str));
+            v.push(json!({"name": "__text", "data": alt}));
+            v.push(raw!("\"/>\n"));
             if !caption.is_empty() {
                 v.push(raw!("<figcaption>"));
                 v.push(json!({"name": "inline_content", "data": caption}));
