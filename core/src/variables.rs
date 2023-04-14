@@ -1,23 +1,20 @@
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
-// This is, for now, a placeholder file for variables. The data types it contains is (some) of the
-// once it will contain when the variable store is actually implemented.
-
-// The type of a variable
+/// The type of a variable
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum VarType {
-    // Set<String>, a collection of unordered unique strings, like for imports and such
+    /// Set<String>, a collection of unordered unique strings, like for imports and such
     Set,
-    // List<String>, a list of ordered strings ordered top-to-bottom in order of writes in the
-    // document, for headings and such
+    /// List<String>, a list of ordered strings ordered top-to-bottom in order of writes in the
+    /// document, for headings and such
     List,
-    // Constant is a variable type that may only be written once
+    /// Constant is a variable type that may only be written once
     Constant,
 }
 
-// This is the type of accesses that a transform may request to a certain variable
-// The enum names here are used as the "type" field in the manifest
+/// This is the type of accesses that a transform may request to a certain variable
+/// The enum names here are used as the "type" field in the manifest
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "access", rename_all = "lowercase")]
 pub enum VarAccess {
@@ -80,8 +77,9 @@ impl PartialOrd for VarAccess {
     }
 }
 
-// Note we can have two different variables with the same name
-// if they have different types
+/// A identifier and type of a variable.
+/// Note we can have two different variables with the same name
+/// if they have different types
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Variable(pub String, pub VarType);
 
