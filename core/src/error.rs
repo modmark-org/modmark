@@ -8,7 +8,7 @@ use wasmer::{ExportError, InstantiationError, RuntimeError};
 use wasmer_wasi::{WasiError, WasiStateCreationError};
 
 use crate::package::ArgType;
-use crate::variables::VarAccess;
+use crate::variables::{VarAccess, VarType};
 use parser::ParseError;
 
 #[derive(Error, Debug)]
@@ -102,6 +102,22 @@ pub enum CoreError {
         transform: String,
         package: String,
     },
+    #[error("Attempted to access variable '{variable_name}' using multiple different variable types for transform '{transform}' in '{package}' ")]
+    ClashingVariableAccesses {
+        variable_name: String,
+        transform: String,
+        package: String,
+    },
+    #[error("Attempted to access the variable '{name}' as a '{expected_type}' but the name is already occupied by value of type '{present_type}'.")]
+    TypeMismatch {
+        name: String,
+        expected_type: VarType,
+        present_type: VarType,
+    },
+    #[error("Attempted to redeclare the constant '{0}'.")]
+    ConstantRedeclaration(String),
+    #[error("Forbidden variable name '{0}'. Only ASCII letters and digits as well as '_' is allowed. The name may also not start with a digit.")]
+    ForbiddenVariableName(String),
     #[error("A package request was dropped before resolving")]
     DroppedRequest,
     #[error("Missing standard package named '{0}'")]

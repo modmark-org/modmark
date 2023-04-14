@@ -275,7 +275,6 @@ mod tests {
 
     use crate::package::{ArgType, PrimitiveArgType};
     use crate::package_store::ResolveTask;
-    use crate::variables::{ConstantAccess, VarAccess};
 
     use super::*;
 

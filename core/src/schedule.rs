@@ -9,7 +9,7 @@ use topological_sort::TopologicalSort;
 
 use crate::context::Dependencies;
 use crate::element::GranularId;
-use crate::variables::{VarAccess, Variable};
+use crate::variables::{VarAccess, VarType};
 use crate::{Context, CoreError, Element, OutputFormat};
 
 type ScheduleId = usize;
@@ -24,7 +24,7 @@ type ScheduleId = usize;
 
 pub(crate) struct Schedule {
     dag: TopologicalSort<ScheduleId>,
-    dep_info: HashMap<Variable, Vec<(ScheduleId, VarAccess)>>,
+    dep_info: HashMap<(String, VarType), Vec<(ScheduleId, VarAccess)>>,
     id_map: BiBTreeMap<GranularId, ScheduleId>,
     id_iter: RangeFrom<ScheduleId>, // Assume this is infinite
     known_contents: HashSet<ScheduleId>,
@@ -115,9 +115,9 @@ impl Schedule {
             return Ok(());
         }
 
-        let (name, this_id) = {
+        let this_id = {
             match element {
-                Element::Parent { name, id, .. } | Element::Module { name, id, .. } => (name, id),
+                Element::Parent { id, .. } | Element::Module { id, .. } => id,
                 Element::Compound(_) => return Ok(()),
                 Element::Raw(_) => return Ok(()),
             }
@@ -138,7 +138,7 @@ impl Schedule {
         let Dependencies {
             var_accesses,
             has_unknown_content,
-        } = &ctx.get_dependencies(name, element, format)?;
+        } = &ctx.get_dependencies(element, format)?;
 
         if *has_unknown_content {
             // If we have unknown content, draw a dependency from every known content to this
