@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::iter::once;
 use std::ops::RangeFrom;
 
 use bimap::BiBTreeMap;
@@ -8,7 +9,7 @@ use topological_sort::TopologicalSort;
 
 use crate::element::GranularId;
 use crate::variables::{VarAccess, Variable};
-use crate::{Context, Element, OutputFormat};
+use crate::{Context, CoreError, Element, OutputFormat};
 
 type ScheduleId = usize;
 
@@ -64,10 +65,13 @@ impl Schedule {
                 .next()
                 .unwrap_or(GranularId::max_value());
             // We collect all ScheduleIds that will now be invalid due to the pop operation
+            // Note that the variable schedule_id is already removed but must be in this vec
+            // to remove dependencies
             let removed_ids = self
                 .id_map
                 .left_range(&gran_id..&end_range)
                 .map(|(_gran, sched)| *sched)
+                .chain(once(schedule_id))
                 .collect::<Vec<_>>();
             // For each ID that is removed, remove it from the ID map and from all dep infos
             removed_ids.into_iter().for_each(|id| {
@@ -92,7 +96,7 @@ impl Schedule {
         element: &Element,
         ctx: &Context<T, U>,
         format: &OutputFormat,
-    ) {
+    ) -> Result<(), CoreError> {
         // Element may be one of four kinds:
         // * Raw => We don't add it to the schedule
         // * Module => We add it to the schedule
@@ -102,17 +106,16 @@ impl Schedule {
         // Check if we have a compound element
         if let Element::Compound(children) = element {
             for child in children {
-                self.add_element(child, ctx, format);
+                self.add_element(child, ctx, format)?;
             }
-            return;
+            return Ok(());
         }
 
-        let (name, this_id, args) = {
+        let (name, this_id) = {
             match element {
-                Element::Parent { name, id, .. } => (name, id, None),
-                Element::Module { name, id, args, .. } => (name, id, Some(args)),
-                Element::Compound(_) => return,
-                Element::Raw(_) => return,
+                Element::Parent { name, id, .. } | Element::Module { name, id, .. } => (name, id),
+                Element::Compound(_) => return Ok(()),
+                Element::Raw(_) => return Ok(()),
             }
         };
 
@@ -128,51 +131,55 @@ impl Schedule {
         }
 
         // Look in the context to find info about which variables the element is interested in
-        if let Some(variables) = &ctx.get_variable_accesses(name, args, format) {
-            for (var, access) in variables {
-                let mut deps = self.dep_info.remove(var).unwrap_or_default();
+        let variables = &ctx.get_variable_accesses(name, element, format)?;
+        //if let Some(variables) = &ctx.get_variable_accesses(name, element, format)? {
+        for (var, access) in variables {
+            let mut deps = self.dep_info.remove(var).unwrap_or_default();
 
-                // Update the dependency edges of the DAG
-                for (other_schedule_id, other_access_type) in &deps {
-                    let other_schedule_id = *other_schedule_id;
-                    let cmp = other_access_type.partial_cmp(access).unwrap();
+            // Update the dependency edges of the DAG
+            for (other_schedule_id, other_access_type) in &deps {
+                let other_schedule_id = *other_schedule_id;
+                let cmp = other_access_type.partial_cmp(access).unwrap();
 
-                    match cmp {
-                        Ordering::Less => {
-                            self.dag.add_dependency(other_schedule_id, this_schedule_id);
-                        }
-                        Ordering::Greater => {
-                            self.dag.add_dependency(this_schedule_id, other_schedule_id);
-                        }
-
-                        // Some variable types care about the order in which they are written to (like lists for instance)
-                        Ordering::Equal if access.order_granular() => {
-                            let other_id = self.id_map.get_by_right(&other_schedule_id).unwrap();
-                            match other_id.cmp(this_id) {
-                                Ordering::Less => {
-                                    self.dag.add_dependency(other_schedule_id, this_schedule_id);
-                                }
-                                Ordering::Greater => {
-                                    self.dag.add_dependency(this_schedule_id, other_schedule_id);
-                                }
-                                _ => (),
-                            }
-                        }
-                        _ => (),
+                match cmp {
+                    Ordering::Less => {
+                        self.dag.add_dependency(other_schedule_id, this_schedule_id);
                     }
-                }
+                    Ordering::Greater => {
+                        self.dag.add_dependency(this_schedule_id, other_schedule_id);
+                    }
 
-                // Add this element to the deps map as well
-                deps.push((this_schedule_id, *access));
-                self.dep_info.insert(var.clone(), deps);
+                    // Some variable types care about the order in which they are written to (like lists for instance)
+                    Ordering::Equal if access.order_granular() => {
+                        let other_id = self.id_map.get_by_right(&other_schedule_id).unwrap();
+                        match other_id.cmp(this_id) {
+                            Ordering::Less => {
+                                self.dag.add_dependency(other_schedule_id, this_schedule_id);
+                            }
+                            Ordering::Greater => {
+                                self.dag.add_dependency(this_schedule_id, other_schedule_id);
+                            }
+                            _ => (),
+                        }
+                    }
+                    _ => (),
+                }
             }
+
+            // Add this element to the deps map as well
+            deps.push((this_schedule_id, *access));
+            self.dep_info.insert(var.clone(), deps);
         }
+        //}
 
         // If the element is a parent, also add the children
         if let Element::Parent { children, .. } = element {
             children
                 .iter()
-                .for_each(|child| self.add_element(child, ctx, format));
+                .map(|child| self.add_element(child, ctx, format))
+                .collect::<Result<(), CoreError>>()?;
         }
+
+        Ok(())
     }
 }

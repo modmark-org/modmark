@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
 // This is, for now, a placeholder file for variables. The data types it contains is (some) of the
@@ -16,7 +17,9 @@ pub enum VarType {
 }
 
 // This is the type of accesses that a transform may request to a certain variable
-#[derive(Copy, Clone, Debug, PartialEq)]
+// The enum names here are used as the "type" field in the manifest
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", content = "access", rename_all = "lowercase")]
 pub enum VarAccess {
     Set(SetAccess),
     List(ListAccess),
@@ -29,6 +32,16 @@ impl VarAccess {
     /// determine the order of evaluation. If not, the order is arbitrarily chosen.
     pub fn order_granular(&self) -> bool {
         matches!(&self, VarAccess::List(_))
+    }
+
+    /// Gets the `VarType` corresponding to this `VarAccess`, that is, `VarType::Set` if this
+    /// is a `VarAccess::Set` access etc.
+    pub fn get_type(&self) -> VarType {
+        match self {
+            VarAccess::Set(_) => VarType::Set,
+            VarAccess::List(_) => VarType::List,
+            VarAccess::Constant(_) => VarType::Constant,
+        }
     }
 }
 
@@ -77,19 +90,22 @@ pub struct Variable(pub String, pub VarType);
 // accesses. #derive Ord makes an ordering based on the order they are defined. Lesser accesses
 // always occur before greater accesses, so defining SetAccess::Add before SetAccess::Read ensures
 // that, for any given set, all Add operations occur before any Read operation does.
-#[derive(Copy, Clone, Debug, Ord, PartialOrd, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum SetAccess {
     Add,
     Read,
 }
 
-#[derive(Copy, Clone, Debug, Ord, PartialOrd, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum ListAccess {
     Push,
     Read,
 }
 
-#[derive(Copy, Clone, Debug, Ord, PartialOrd, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum ConstantAccess {
     Declare,
     Read,

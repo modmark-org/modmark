@@ -24,6 +24,7 @@ use crate::fs::CoreFs;
 use crate::package::{ArgValue, PackageImplementation};
 use crate::package_store::{PackageID, PackageStore};
 use crate::variables::{VarAccess, Variable};
+use crate::CoreError::MissingTransform;
 use crate::{std_packages, AccessPolicy, Element, Resolve};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, Transform};
 
@@ -35,6 +36,8 @@ pub struct Context<T, U> {
     pub(crate) state: CompilationState,
     pub filesystem: CoreFs<U>,
     policy: Arc<Mutex<U>>,
+    // This is a temporary field for testing variables
+    pub(crate) lists: HashMap<String, Vec<String>>,
 }
 
 #[derive(Default, Clone, Debug)]
@@ -139,6 +142,7 @@ impl<T, U> Context<T, U> {
             state: CompilationState::default(),
             filesystem: CoreFs::new(Arc::clone(&policy)),
             policy,
+            lists: HashMap::new(),
         };
         #[cfg(feature = "native")]
         ctx.package_store
@@ -201,15 +205,97 @@ impl<T, U> Context<T, U> {
     pub fn get_variable_accesses(
         &self,
         name: &str,
-        args: Option<&ModuleArguments>,
+        element: &Element,
         format: &OutputFormat,
-    ) -> Option<Vec<(Variable, VarAccess)>> {
-        // FIXME: add impl here
-        // Note that the var accesses may be dependent on argument, so if we are looking up a
-        // module, args is Some with the module arguments. This is important if we do a
-        // [set-env], which will have its accesses dependent on arguments. In addition to this,
-        // since arguments are dependent on output format, we also get the format passed here
-        Some(vec![])
+    ) -> Result<Vec<(Variable, VarAccess)>, CoreError> {
+        // Find the transform to get knowledge about variables
+        let Some((transform, package)) = self.package_store.lock().unwrap().find_transform(name, format) else {
+            return Err(MissingTransform(name.to_string(), format.0.clone()));
+        };
+
+        if !transform.has_argument_dependent_variable() {
+            // If the transform doesn't have any argument-dependent variables, we can just return
+            // the variable access list
+            Ok(transform
+                .variables
+                .into_iter()
+                .map(|(name, access)| (Variable(name, access.get_type()), access))
+                .collect())
+        } else {
+            // If the transform does have argument-dependent variables, we must collect arguments.
+            // Note that this entire function thus may do two mutex locks, one for finding the
+            // transform and one (possibly) for collecting arguments. This can be avoided if we
+            // move collect_..._arguments to package_store, but that would imply a longer critical
+            // section which is unwanted, and I think this is fine as-is for now.
+            let args = match element {
+                Element::Parent { args, .. } => {
+                    self.collect_parent_arguments(args, name, format)?
+                }
+                Element::Module { args, .. } => {
+                    self.collect_module_arguments(args, name, format)?
+                }
+                _ => unreachable!("Variable accesses only available for parent and module"),
+            };
+            let vars = transform
+                .variables
+                .into_iter()
+                // filter_map since we may want to exclude some arguments, such as if their name is the empty string
+                .filter_map(|(var_name, var_access)| {
+                    // If the variable name starts with $ we need to look up in the args to find out what variable it references
+                    if let Some(arg_name) = var_name.strip_prefix('$') {
+                        // Try to get the arg
+                        let var_name_arg = args.get(arg_name).ok_or_else(|| {
+                            CoreError::ArgumentDependentVariable {
+                                argument_name: arg_name.to_string(),
+                                transform: transform.from.to_string(),
+                                package: package.info.name.to_string(),
+                                var_access: var_access.clone(),
+                            }
+                        });
+
+                        match var_name_arg {
+                            // If we don't get the arg, return error
+                            Err(e) => Some(Err(e)),
+                            Ok(var_arg) => {
+                                // The actual referenced variable name is the value of var_arg, either
+                                // string or enum
+                                let variable_name = var_arg
+                                    .clone()
+                                    .get_string()
+                                    .or(var_arg.clone().get_enum_variant())
+                                    .ok_or_else(|| CoreError::ArgumentDependentVariableType {
+                                        argument_type: var_arg.get_type(),
+                                        argument_name: arg_name[1..].to_string(),
+                                        transform: transform.from.to_string(),
+                                        package: package.info.name.to_string(),
+                                    });
+                                match variable_name {
+                                    // If that failed, return that error
+                                    Err(e) => Some(Err(e)),
+                                    Ok(variable_name) => {
+                                        // If the variable name is empty (like if the module gives
+                                        // an optional arg with empty default), we don't want
+                                        // to include the variable in our access list. Otherwise,
+                                        // we do.
+                                        if variable_name.is_empty() {
+                                            None
+                                        } else {
+                                            Some(Ok((
+                                                Variable(variable_name, var_access.get_type()),
+                                                var_access,
+                                            )))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        Some(Ok((Variable(var_name, var_access.get_type()), var_access)))
+                    }
+                })
+                .collect::<Result<Vec<(Variable, VarAccess)>, CoreError>>()?;
+            Ok(vars)
+        }
     }
 }
 
@@ -457,6 +543,9 @@ impl<T, U> Context<T, U> {
     /// specific to previous compilations, such as errors and warnings, gets cleared.
     pub fn clear_state(&mut self) {
         self.state.clear();
+        // FIXME: This is a temporary way to clear all variables between compilation cycles.
+        //  Change this to something more appropriate when actually implementing variable store
+        self.lists.clear();
     }
 
     /// Takes the internal `CompilationState` of this Context, and replacing it with

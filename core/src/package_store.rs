@@ -356,6 +356,7 @@ impl PackageStore {
             to,
             description: _,
             arguments: _,
+            variables: _,
         } in &pkg.info.transforms
         {
             if include_entries == include_list.contains(from) {
