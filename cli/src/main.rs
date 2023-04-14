@@ -329,6 +329,10 @@ async fn run_cli(args: Args) -> Result<(), CliError> {
             },
             CliAccessManager::new(&args),
         )
+        .map_err(|e| {
+            eprintln!("Error creating Context: {e}");
+            e
+        })
         .unwrap(),
     ))
     .unwrap();

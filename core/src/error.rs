@@ -7,6 +7,8 @@ use wasmer::{CompileError, DeserializeError};
 use wasmer::{ExportError, InstantiationError, RuntimeError};
 use wasmer_wasi::{WasiError, WasiStateCreationError};
 
+use crate::package::ArgType;
+use crate::variables::VarAccess;
 use parser::ParseError;
 
 #[derive(Error, Debug)]
@@ -83,6 +85,20 @@ pub enum CoreError {
         package: String,
         expected_type: String,
         given_value: String,
+    },
+    #[error("Could not find argument '{argument_name}' which variable accesses depends on in transform '{transform}' in package '{package}' (variable access '{var_access:?}')")]
+    ArgumentDependentVariable {
+        argument_name: String,
+        transform: String,
+        package: String,
+        var_access: VarAccess,
+    },
+    #[error("Invalid argument dependent variable type, expected String or Enum variant, got '{argument_type:?}'; argument '{argument_name}' for transform '{transform}' in package '{package}'")]
+    ArgumentDependentVariableType {
+        argument_type: ArgType,
+        argument_name: String,
+        transform: String,
+        package: String,
     },
     #[error("A package request was dropped before resolving")]
     DroppedRequest,

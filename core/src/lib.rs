@@ -184,11 +184,11 @@ where
     U: AccessPolicy,
 {
     let mut schedule = Schedule::default();
-    schedule.add_element(&root, ctx, format);
+    schedule.add_element(&root, ctx, format)?;
     while let Some(id) = schedule.pop() {
         let elem = root.get_by_id(id.clone()).unwrap();
         let new_elem = ctx.transform(&elem, format)?;
-        schedule.add_element(&new_elem, ctx, format);
+        schedule.add_element(&new_elem, ctx, format)?;
         *root.get_by_id_mut(id).unwrap() = new_elem;
     }
 
@@ -202,9 +202,11 @@ where
 #[cfg(test)]
 mod tests {
     use serde_json::Value;
+    use std::collections::HashMap;
 
     use crate::package::{ArgType, PrimitiveArgType};
     use crate::package_store::ResolveTask;
+    use crate::variables::{ConstantAccess, VarAccess};
 
     use super::*;
 
@@ -267,6 +269,7 @@ mod tests {
                         r#type: ArgType::Enum(vec!["true".to_string(), "false".to_string()])
                     },
                 ],
+                variables: HashMap::new()
             }],
         };
 

@@ -11,6 +11,7 @@ use crate::element::GranularId;
 use crate::package::{ArgValue, PrimitiveArgType};
 use crate::package_store::PackageStore;
 use crate::std_packages_macros::{define_native_packages, define_standard_package_loader};
+use crate::variables::{ListAccess, VarAccess};
 use crate::{ArgInfo, Context, CoreError, Element, OutputFormat, PackageInfo, Transform};
 
 // Here, all standard packages are declared. The macro expands to one function
@@ -37,9 +38,10 @@ define_native_packages! {
     "Provides core functionality such as raw output, errors and warnings" => {
         "raw",
         "Outputs the body text as-is into the output document",
-        vec![] => native_raw,
+        [], vec![] => native_raw,
         "warning",
         "Adds a compilation warning to the list of all warnings that have occurred during compilation",
+        [],
         vec![
             ArgInfo {
                 name: "source".to_string(),
@@ -62,6 +64,7 @@ define_native_packages! {
         ] => native_warn,
         "error",
         "Adds a compilation error to the list of all errors that have occurred during compilation",
+        [],
         vec![
             ArgInfo {
                 name: "source".to_string(),
@@ -87,15 +90,16 @@ define_native_packages! {
     "Provides an interface to the built-in ModMark parser" => {
         "inline_content",
         "Parses the content as inline-content, as if it was in a paragraph. The result may contain text, smart punctuation, inline module expressions and tags",
-        vec![] => native_inline_content,
+        [], vec![] => native_inline_content,
         "block_content",
         "Parses the content as block-content, as if it was in the body of the document. The result may contain paragraphs containing inline content and multiline module expressions",
-        vec![] => native_block_content,
+        [], vec![] => native_block_content,
     };
     "env",
     "[Temporary] Provides access to setting environment variables" => {
-        "set-env",
-        "Sets an environment variable",
+        "push-list",
+        "Pushes a string to a list",
+        [("$key".to_string(), VarAccess::List(ListAccess::Push))],
         vec![
             ArgInfo {
                 name: "key".to_string(),
@@ -103,7 +107,18 @@ define_native_packages! {
                 description: "The key to set".to_string(),
                 r#type: PrimitiveArgType::String.into()
             }
-        ] => native_set_env,
+        ] => native_push_list,
+        "read-list",
+        "Reads all strings from a list",
+        [("$key".to_string(), VarAccess::List(ListAccess::Read))],
+        vec![
+            ArgInfo {
+                name: "key".to_string(),
+                default: None,
+                description: "The key to set".to_string(),
+                r#type: PrimitiveArgType::String.into()
+            }
+        ] => native_read_list,
     };
 }
 
@@ -158,16 +173,42 @@ pub fn native_block_content<T, U>(
     Ok(Element::Compound(elements))
 }
 
-/// Example function for setting environment variables, currently unimplemented
-pub fn native_set_env<T, U>(
-    _ctx: &mut Context<T, U>,
-    _body: &str,
-    _args: HashMap<String, ArgValue>,
+/// Example function for pushing a string to a list
+pub fn native_push_list<T, U>(
+    ctx: &mut Context<T, U>,
+    body: &str,
+    args: HashMap<String, ArgValue>,
     _inline: bool,
     _output_format: &OutputFormat,
     _id: &GranularId,
 ) -> Result<Element, CoreError> {
-    unimplemented!("native_set_env")
+    let key = args.get("key").unwrap().as_str().unwrap();
+    let entry = ctx.lists.entry(key.to_string()).or_default();
+    entry.push(body.to_string());
+    Ok(Element::Compound(vec![]))
+}
+
+/// Example function for reading a list
+pub fn native_read_list<T, U>(
+    ctx: &mut Context<T, U>,
+    _body: &str,
+    args: HashMap<String, ArgValue>,
+    _inline: bool,
+    _output_format: &OutputFormat,
+    id: &GranularId,
+) -> Result<Element, CoreError> {
+    let key = args.get("key").unwrap().as_str().unwrap();
+    if let Some(list) = ctx.lists.get(key) {
+        Ok(Element::Module {
+            name: "__text".to_string(),
+            args: Default::default(),
+            body: list.join(","),
+            inline: false,
+            id: id.clone(),
+        })
+    } else {
+        Ok(Element::Compound(vec![]))
+    }
 }
 
 pub fn native_warn<T, U>(

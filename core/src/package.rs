@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::{io::Read, sync::Arc};
 
 use serde::{Deserialize, Serialize};
@@ -8,6 +9,7 @@ use wasmer::{Instance, Module, Store};
 use wasmer_wasi::{Pipe, WasiState};
 
 use crate::package::PackageImplementation::Native;
+use crate::variables::VarAccess;
 use crate::{error::CoreError, OutputFormat};
 
 /// Transform from a node into another node
@@ -17,6 +19,8 @@ pub struct Transform {
     pub to: Vec<OutputFormat>,
     pub description: Option<String>,
     pub arguments: Vec<ArgInfo>,
+    #[serde(default)]
+    pub variables: HashMap<String, VarAccess>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -65,7 +69,45 @@ impl PackageInfo {
                 }
             }
         }
+        // Ensure all mentioned argument-dependent variables has corresponding arguments
+        for transform in &self.transforms {
+            for (var, access) in &transform.variables {
+                if var.starts_with('$') {
+                    let arg_name = &var[1..];
+                    // Check if the argument exist
+                    if let Some(arg_info) =
+                        transform.arguments.iter().find(|arg| arg.name == arg_name)
+                    {
+                        // If we find it, it must be of the type String or Enum
+                        if arg_info.r#type != ArgType::Primitive(PrimitiveArgType::String)
+                            && !matches!(arg_info.r#type, ArgType::Enum(_))
+                        {
+                            return Err(CoreError::ArgumentDependentVariableType {
+                                argument_type: arg_info.r#type.clone(),
+                                argument_name: arg_name.to_string(),
+                                transform: transform.from.to_string(),
+                                package: self.name.to_string(),
+                            });
+                        }
+                    } else {
+                        // If not, we are missing that argument and the manifest is invalid
+                        return Err(CoreError::ArgumentDependentVariable {
+                            argument_name: arg_name.to_string(),
+                            transform: transform.from.to_string(),
+                            package: self.name.to_string(),
+                            var_access: access.clone(),
+                        });
+                    }
+                }
+            }
+        }
         Ok(())
+    }
+}
+
+impl Transform {
+    pub(crate) fn has_argument_dependent_variable(&self) -> bool {
+        self.variables.keys().any(|key| key.starts_with('$'))
     }
 }
 

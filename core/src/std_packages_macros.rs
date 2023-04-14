@@ -12,19 +12,21 @@
 /// ```rust,ignore
 /// define_native_packages! {
 ///     "package_name_1" => {
-///         "module_name_1", vec![ //a vec containing the `ArgInfo`s
+///         "module_name_1", [], vec![ //a vec containing the `ArgInfo`s
 ///             ArgInfo {
 ///                 name: "key".to_string(),
 ///                 default: None,
 ///                 description: "The key to set".to_string()
 ///             }
 ///         ] => handle_module_1,
-///         "module_name_2", vec![] => handle_module_2
+///         "module_name_2",
+///         [("headings", VarAccess::List(ListAccess::Push))], //a list of kv-pairs of var accesses
+///         vec![] => handle_module_2
 ///     }
 /// }
 /// ```
 macro_rules! define_native_packages {
-    ($($name:expr, $desc:expr => { $($transform:expr, $tdesc:expr, $arg_info:expr => $handler:ident),* $(,)? };)*) => {
+    ($($name:expr, $desc:expr => { $($transform:expr, $tdesc:expr, $vars:expr, $arg_info:expr => $handler:ident),* $(,)? };)*) => {
         pub fn native_package_list() -> Vec<PackageInfo> {
             vec![
                 $(
@@ -39,6 +41,7 @@ macro_rules! define_native_packages {
                                     to: vec![],
                                     description: Some($tdesc.to_string()),
                                     arguments: $arg_info,
+                                    variables: $vars.into()
                                 }),
                             )*
                         ]
