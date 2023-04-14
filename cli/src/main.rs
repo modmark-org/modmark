@@ -59,8 +59,8 @@ struct Args {
     #[arg(short = 'f', long = "format", help = "The output format of the file")]
     format: Option<String>,
 
-    #[arg(short = 'r', long = "registry", help = "A URL to the registry to use")]
-    registry: Option<String>,
+    #[arg(long = "catalog", help = "A URL to the package catalog to use")]
+    catalog: Option<String>,
 
     #[arg(
         short = 'w',
@@ -143,7 +143,7 @@ impl Args {
     }
 }
 
-static DEFAULT_REGISTRY: &str =
+static DEFAULT_CATALOG: &str =
     "https://raw.githubusercontent.com/modmark-org/package-registry/main/package-registry.json";
 
 static CTX: OnceCell<Mutex<Context<PackageManager, CliAccessManager>>> = OnceCell::new();
@@ -312,10 +312,10 @@ async fn main() {
 async fn run_cli(args: Args) -> Result<(), CliError> {
     let current_path = env::current_dir()?;
 
-    let registry = args
-        .registry
+    let catalog = args
+        .catalog
         .as_deref()
-        .unwrap_or(DEFAULT_REGISTRY)
+        .unwrap_or(DEFAULT_CATALOG)
         .to_string();
 
     let (tx, rx) = channel::<()>(1);
@@ -324,7 +324,7 @@ async fn run_cli(args: Args) -> Result<(), CliError> {
     CTX.set(Mutex::new(
         Context::new(
             PackageManager {
-                registry,
+                catalog,
                 complete_tx: tx,
             },
             CliAccessManager::new(&args),
