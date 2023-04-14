@@ -35,92 +35,122 @@ define_standard_package_loader! {
 // one being a function returning the manifests for those packages, and the other
 // being the entry point to run these packages.
 define_native_packages! {
-    "core",
-    "Provides core functionality such as raw output, errors and warnings" => {
-        "raw",
-        "Outputs the body text as-is into the output document",
-        [], vec![] => native_raw,
-        "warning",
-        "Adds a compilation warning to the list of all warnings that have occurred during compilation",
-        [],
-        vec![
-            ArgInfo {
-                name: "source".to_string(),
-                default: Some(Value::String("<unknown>".to_string())),
-                description: "The source module/parent responsible for the warning".to_string(),
-                r#type: PrimitiveArgType::String.into()
+    "core" => {
+        desc: "Provides core functionality such as raw output, errors and warnings",
+        transforms: [
+            {
+                name: "raw",
+                desc: "Outputs the body text as-is into the output document",
+                vars: [],
+                args: vec![],
+                func: native_raw
             },
-            ArgInfo {
-                name: "target".to_string(),
-                default: Some(Value::String("<unknown>".to_string())),
-                description: "The target output format when the warning was generated".to_string(),
-                r#type: PrimitiveArgType::String.into()
+            {
+                name: "warning",
+                desc: "Adds a compilation warning to the list of all warnings that have occurred during compilation",
+                vars: [],
+                args: vec![
+                    ArgInfo {
+                        name: "source".to_string(),
+                        default: Some(Value::String("<unknown>".to_string())),
+                        description: "The source module/parent responsible for the warning".to_string(),
+                        r#type: PrimitiveArgType::String.into()
+                    },
+                    ArgInfo {
+                        name: "target".to_string(),
+                        default: Some(Value::String("<unknown>".to_string())),
+                        description: "The target output format when the warning was generated".to_string(),
+                        r#type: PrimitiveArgType::String.into()
+                    },
+                    ArgInfo {
+                        name: "input".to_string(),
+                        default: Some(Value::String("<unknown>".to_string())),
+                        description: "The input given to the module when it failed".to_string(),
+                        r#type: PrimitiveArgType::String.into()
+                    },
+                ],
+                func: native_warn
             },
-            ArgInfo {
-                name: "input".to_string(),
-                default: Some(Value::String("<unknown>".to_string())),
-                description: "The input given to the module when it failed".to_string(),
-                r#type: PrimitiveArgType::String.into()
-            },
-        ] => native_warn,
-        "error",
-        "Adds a compilation error to the list of all errors that have occurred during compilation",
-        [],
-        vec![
-            ArgInfo {
-                name: "source".to_string(),
-                default: Some(Value::String("<unknown>".to_string())),
-                description: "The source module/parent responsible for the error".to_string(),
-                r#type: PrimitiveArgType::String.into()
-            },
-            ArgInfo {
-                name: "target".to_string(),
-                default: Some(Value::String("<unknown>".to_string())),
-                description: "The target output format when the error was generated".to_string(),
-                r#type: PrimitiveArgType::String.into()
-            },
-            ArgInfo {
-                name: "input".to_string(),
-                default: Some(Value::String("<unknown>".to_string())),
-                description: "The input given to the module when it failed".to_string(),
-                r#type: PrimitiveArgType::String.into()
-            },
-        ] => native_err
-    };
-    "reparse",
-    "Provides an interface to the built-in ModMark parser" => {
-        "inline_content",
-        "Parses the content as inline-content, as if it was in a paragraph. The result may contain text, smart punctuation, inline module expressions and tags",
-        [], vec![] => native_inline_content,
-        "block_content",
-        "Parses the content as block-content, as if it was in the body of the document. The result may contain paragraphs containing inline content and multiline module expressions",
-        [], vec![] => native_block_content,
-    };
-    "env",
-    "[Temporary] Provides access to setting environment variables" => {
-        "push-list",
-        "Pushes a string to a list",
-        [("$key".to_string(), VarAccess::List(ListAccess::Push))],
-        vec![
-            ArgInfo {
-                name: "key".to_string(),
-                default: None,
-                description: "The key to set".to_string(),
-                r#type: PrimitiveArgType::String.into()
+            {
+                name: "error",
+                desc: "Adds a compilation error to the list of all errors that have occurred during compilation",
+                vars: [],
+                args: vec![
+                    ArgInfo {
+                        name: "source".to_string(),
+                        default: Some(Value::String("<unknown>".to_string())),
+                        description: "The source module/parent responsible for the error".to_string(),
+                        r#type: PrimitiveArgType::String.into()
+                    },
+                    ArgInfo {
+                        name: "target".to_string(),
+                        default: Some(Value::String("<unknown>".to_string())),
+                        description: "The target output format when the error was generated".to_string(),
+                        r#type: PrimitiveArgType::String.into()
+                    },
+                    ArgInfo {
+                        name: "input".to_string(),
+                        default: Some(Value::String("<unknown>".to_string())),
+                        description: "The input given to the module when it failed".to_string(),
+                        r#type: PrimitiveArgType::String.into()
+                    },
+                ],
+                func: native_err
             }
-        ] => native_push_list,
-        "read-list",
-        "Reads all strings from a list",
-        [("$key".to_string(), VarAccess::List(ListAccess::Read))],
-        vec![
-            ArgInfo {
-                name: "key".to_string(),
-                default: None,
-                description: "The key to set".to_string(),
-                r#type: PrimitiveArgType::String.into()
+        ]
+    }
+    "reparse" => {
+        desc: "Provides an interface to the built-in ModMark parser",
+        transforms: [
+            {
+                name: "inline_content",
+                desc: "Parses the content as inline-content, as if it was in a paragraph. The result may contain text, smart punctuation, inline module expressions and tags",
+                vars: [],
+                args: vec![],
+                func: native_inline_content
+            },
+            {
+                name: "block_content",
+                desc: "Parses the content as block-content, as if it was in the body of the document. The result may contain paragraphs containing inline content and multiline module expressions",
+                vars: [],
+                args: vec![],
+                func: native_block_content
             }
-        ] => native_read_list,
-    };
+        ]
+    }
+    "env" => {
+        desc: "[Temporary] Provides access to setting environment variables",
+        transforms: [
+            {
+                name: "push-list",
+                desc: "Pushes a string to a list",
+                vars: [("$key".to_string(), VarAccess::List(ListAccess::Push))],
+                args: vec![
+                    ArgInfo {
+                        name: "key".to_string(),
+                        default: None,
+                        description: "The key to set".to_string(),
+                        r#type: PrimitiveArgType::String.into()
+                    }
+                ],
+                func: native_push_list
+            },
+            {
+                name: "read-list",
+                desc: "Reads all strings from a list",
+                vars: [("$key".to_string(), VarAccess::List(ListAccess::Read))],
+                args: vec![
+                    ArgInfo {
+                        name: "key".to_string(),
+                        default: None,
+                        description: "The key to set".to_string(),
+                        r#type: PrimitiveArgType::String.into()
+                    }
+                ],
+                func: native_read_list
+            }
+        ]
+    }
 }
 
 /// Returns a string containing the body of this invocation. This is the "leaf" call; no tree will
