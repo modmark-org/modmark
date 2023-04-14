@@ -8,7 +8,6 @@ use std::{
         atomic::{AtomicUsize, Ordering},
         Arc, Mutex,
     },
-    time::Duration,
 };
 
 use clap::Parser;
@@ -18,11 +17,7 @@ use crossterm::{
     terminal, ExecutableCommand,
 };
 use futures_util::{SinkExt, StreamExt, TryFutureExt};
-use notify_debouncer_mini::{
-    new_debouncer,
-    notify::{self, RecommendedWatcher, RecursiveMode},
-    DebounceEventResult, DebouncedEvent, Debouncer,
-};
+use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use once_cell::sync::OnceCell;
 use portpicker::Port;
 use tokio::sync::{
@@ -515,50 +510,46 @@ async fn watch_files<P: AsRef<Path>>(
     // Trigger a first compilation
     compile(document.as_ref(), connections.as_ref(), args).await?;
 
-    let (mut debounce_watcher, mut rx) = get_debounce_watcher()?;
+    let (mut watcher, mut rx) = get_watcher()?;
 
     // Add a path to be watched. All files and directories at that path and
     // below will be monitored for changes.
-    debounce_watcher
-        .watcher()
-        .watch(watch_dir.as_ref(), RecursiveMode::Recursive)?;
+    watcher.watch(watch_dir.as_ref(), RecursiveMode::Recursive)?;
 
     while let Some(res) = rx.next().await {
         match res {
-            Ok(events) => {
+            Ok(event) => {
                 // If we also generate a output file, discard any changes from that file
                 if let Some(output_path) = ABSOLUTE_OUTPUT_PATH.get() {
-                    if events.iter().any(|event| event.path == *output_path) {
+                    if event.paths.contains(output_path) {
                         continue;
                     }
                 }
-
-                compile(document.as_ref(), connections.as_ref(), args).await?;
+                // We only care about changes from when files are created, removed or modified
+                if event.kind.is_modify() || event.kind.is_create() || event.kind.is_remove() {
+                    compile(document.as_ref(), connections.as_ref(), args).await?;
+                }
             }
-            Err(e) => eprintln!("watch error: {e:?}"),
+            Err(e) => eprintln!("watch error: {:?}", e),
         }
     }
 
     Ok(())
 }
 
-/// Get a debouncing file watcher using a async api
-fn get_debounce_watcher() -> Result<
-    (
-        Debouncer<RecommendedWatcher>,
-        UnboundedReceiverStream<Result<Vec<DebouncedEvent>, Vec<notify::Error>>>,
-    ),
-    notify::Error,
-> {
+/// Get the file watcher using a async api
+fn get_watcher() -> notify::Result<(
+    RecommendedWatcher,
+    UnboundedReceiverStream<notify::Result<Event>>,
+)> {
     let (tx, rx) = mpsc::unbounded_channel();
     let rx = UnboundedReceiverStream::new(rx);
 
-    let watcher = new_debouncer(
-        Duration::from_millis(50),
-        None,
-        move |res: DebounceEventResult| {
+    let watcher = RecommendedWatcher::new(
+        move |res| {
             tx.send(res).unwrap();
         },
+        Config::default(),
     )?;
 
     Ok((watcher, rx))

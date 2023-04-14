@@ -1,5 +1,4 @@
 use modmark_core::CoreError;
-use notify_debouncer_mini::notify;
 use parser::ParseError;
 use std::io;
 use thiserror::Error;
