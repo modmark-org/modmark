@@ -417,11 +417,8 @@ impl From<&str> for PackageID {
                 .then(|| (s.split_at(prefix.len()).1, t))
         }
 
-        // See issue #203, these identifiers will be changed as a result of that
         let (name, target) = None
-            //.or(prefix(s, "pkg:", PackageSource::Registry))
-            .or(prefix(s, "pkgs:", PackageSource::Registry))
-            //.or(prefix(s, "prelude:", PackageSource::Standard))
+            .or(prefix(s, "catalog:", PackageSource::Catalog))
             .or(prefix(s, "std:", PackageSource::Standard))
             .or_else(|| {
                 (s.starts_with("http://") | s.starts_with("https://"))
@@ -541,7 +538,7 @@ pub struct PackageID {
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Default)]
 pub enum PackageSource {
     Local,
-    Registry,
+    Catalog,
     Url,
     #[default]
     Standard,

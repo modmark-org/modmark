@@ -15,7 +15,7 @@ use crate::error::CliError;
 
 #[derive(Clone)]
 pub struct PackageManager {
-    pub(crate) registry: String,
+    pub(crate) catalog: String,
     pub(crate) complete_tx: Sender<()>,
 }
 
@@ -47,9 +47,9 @@ impl PackageManager {
         } = &task.package_id;
         let result = match target {
             PackageSource::Local => self.fetch_local(name),
-            PackageSource::Registry => self.fetch_registry(name).await,
+            PackageSource::Catalog => self.fetch_catalog(name).await,
             PackageSource::Url => self.fetch_url(name).await,
-            PackageSource::Standard => Err(CliError::Registry),
+            PackageSource::Standard => Err(CliError::Catalog),
         };
         task.complete(result);
     }
@@ -96,7 +96,7 @@ impl PackageManager {
         }
     }
 
-    async fn fetch_registry(&self, package_name: &str) -> Result<Vec<u8>, CliError> {
+    async fn fetch_catalog(&self, package_name: &str) -> Result<Vec<u8>, CliError> {
         let mut cache_path = match ProjectDirs::from("org", "modmark", "packages") {
             Some(path) => path.cache_dir().to_path_buf(),
             None => return Err(CliError::Cache),
@@ -114,11 +114,11 @@ impl PackageManager {
             create_dir_all(PathBuf::from(&cache_path))?;
             cache_path.push(&file_name);
 
-            let registry = reqwest::get(&self.registry).await?;
-            let content: serde_json::Value = registry.json().await?;
+            let catalog = reqwest::get(&self.catalog).await?;
+            let content: serde_json::Value = catalog.json().await?;
 
             let package_link = &content[&package_name]["source"];
-            let Some(package_link) = package_link.as_str() else { return Err(CliError::Registry) };
+            let Some(package_link) = package_link.as_str() else { return Err(CliError::Catalog) };
             let package_response = reqwest::get(package_link).await?;
 
             if package_response.status() != 200 {

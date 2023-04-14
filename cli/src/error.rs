@@ -34,8 +34,8 @@ pub enum CliError {
     #[error("Could not create cache path")]
     Cache,
 
-    #[error("Could not get registry source")]
-    Registry,
+    #[error("Could not get catalog source")]
+    Catalog,
 
     #[error("Could not find local path to '{0}'")]
     Local(String),

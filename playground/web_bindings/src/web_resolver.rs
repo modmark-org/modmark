@@ -32,8 +32,8 @@ thread_local! {
             .unwrap();
 }
 
-static REGISTRY: OnceCell<Registry> = OnceCell::new();
-static DEFAULT_REGISTRY: &str =
+static CATALOG: OnceCell<Catalog> = OnceCell::new();
+static DEFAULT_CATALOG: &str =
     "https://raw.githubusercontent.com/modmark-org/package-registry/main/package-registry.json";
 
 #[derive(Error, Debug)]
@@ -42,12 +42,12 @@ pub enum WebResolveError {
     Url(String),
     #[error("Failed to get URL {0}: {1}")]
     Fetch(String, String),
-    #[error("Failed to get registry from URL {0}: {1}")]
-    FetchRegistry(String, String),
-    #[error("Package {0} not in registry")]
-    RegistryKey(String),
-    #[error("Invalid registry JSON structure")]
-    RegistryJSON,
+    #[error("Failed to get catalog from URL {0}: {1}")]
+    FetchCatalog(String, String),
+    #[error("Package {0} not in catalog")]
+    CatalogKey(String),
+    #[error("Invalid catalog JSON structure")]
+    CatalogJSON,
     #[error("Local file doesn't exist: '{0}'")]
     File(String),
 }
@@ -62,9 +62,9 @@ pub fn resolve(task: ResolveTask) {
                 request_done();
             });
         }
-        PackageSource::Registry => {
+        PackageSource::Catalog => {
             spawn_local(async move {
-                let result = resolve_registry(&task.package_id.name, DEFAULT_REGISTRY).await;
+                let result = resolve_catalog(&task.package_id.name, DEFAULT_CATALOG).await;
                 task.complete(result);
                 request_done();
             });
@@ -109,24 +109,24 @@ async fn resolve_url(url: &str) -> Result<Vec<u8>, WebResolveError> {
     fetch_wasm_module(url).await
 }
 
-async fn resolve_registry(name: &str, url: &str) -> Result<Vec<u8>, WebResolveError> {
-    let registry = if let Some(reg) = REGISTRY.get() {
-        reg
+async fn resolve_catalog(name: &str, url: &str) -> Result<Vec<u8>, WebResolveError> {
+    let catalog = if let Some(catalog) = CATALOG.get() {
+        catalog
     } else {
-        let fetched = fetch_registry(url).await.map_err(|e| match e {
-            WebResolveError::Fetch(a, b) => WebResolveError::FetchRegistry(a, b),
+        let fetched = fetch_catalog(url).await.map_err(|e| match e {
+            WebResolveError::Fetch(a, b) => WebResolveError::FetchCatalog(a, b),
             x => x,
         })?;
         // If this fails, some previous thread already set the value
         // That is OK
-        let _ = REGISTRY.set(fetched);
-        REGISTRY.get().unwrap()
+        let _ = CATALOG.set(fetched);
+        CATALOG.get().unwrap()
     };
 
-    let entry = registry
+    let entry = catalog
         .0
         .get(name)
-        .ok_or(WebResolveError::RegistryKey(name.to_string()))?;
+        .ok_or(WebResolveError::CatalogKey(name.to_string()))?;
 
     fetch_wasm_module(&entry.source).await
 }
@@ -151,7 +151,7 @@ async fn fetch_bytes(url: &str) -> Result<Vec<u8>, WebResolveError> {
     Ok(js_sys::Uint8Array::new(&buffer).to_vec())
 }
 
-async fn fetch_registry(url: &str) -> Result<Registry, WebResolveError> {
+async fn fetch_catalog(url: &str) -> Result<Catalog, WebResolveError> {
     let resp = fetch_url(url).await?;
 
     // This should not fail (no exceptions listed in MDN docs)
@@ -161,8 +161,8 @@ async fn fetch_registry(url: &str) -> Result<Registry, WebResolveError> {
     debug_assert!(content.is_instance_of::<JsString>());
     let string = content.as_string().unwrap();
 
-    // Try to parse registry
-    serde_json::from_str(&string).map_err(|_| WebResolveError::RegistryJSON)
+    // Try to parse catalog
+    serde_json::from_str(&string).map_err(|_| WebResolveError::CatalogJSON)
 }
 
 async fn fetch_url(url: &str) -> Result<Response, WebResolveError> {
@@ -208,9 +208,9 @@ async fn fetch_url(url: &str) -> Result<Response, WebResolveError> {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-struct Registry(HashMap<String, RegistryEntry>);
+struct Catalog(HashMap<String, CatalogEntry>);
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-struct RegistryEntry {
+struct CatalogEntry {
     source: String,
 }
