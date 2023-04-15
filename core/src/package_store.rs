@@ -197,7 +197,7 @@ impl PackageStore {
             .map(|(transform, _)| transform.arguments)
             .ok_or(CoreError::MissingTransform(
                 element_name.to_string(),
-                output_format.0.to_string(),
+                output_format.to_string(),
             ))
     }
 
@@ -361,26 +361,48 @@ impl PackageStore {
         {
             if include_entries == include_list.contains(from) {
                 for output_format in to {
-                    if map
-                        .get(from)
-                        .and_then(|t| t.find_transform_to(output_format))
-                        .is_some()
-                    {
-                        return Err(CoreError::OccupiedTransform(
-                            from.clone(),
-                            output_format.to_string(),
-                            pkg.info.name.clone(),
-                        ));
+                    match output_format {
+                        OutputFormat::Any => {
+                            // this assures that we don't have overlapping transforms when Any is present
+                            match map.get(from) {
+                                Some(_) => {
+                                    return Err(CoreError::OccupiedTransform(
+                                        from.clone(),
+                                        output_format.to_string(),
+                                        pkg.info.name.clone(),
+                                    ));
+                                }
+                                None => {
+                                    map.insert(
+                                        from.clone(),
+                                        TransformVariant::Any((transform.clone(), pkg.clone())),
+                                    );
+                                }
+                            }
+                        }
+                        OutputFormat::Name(_) => {
+                            if map
+                                .get(from)
+                                .and_then(|t| t.find_transform_to(output_format))
+                                .is_some()
+                            {
+                                return Err(CoreError::OccupiedTransform(
+                                    from.clone(),
+                                    output_format.to_string(),
+                                    pkg.info.name.clone(),
+                                ));
+                            }
+                            let mut target = map
+                                .remove(from)
+                                .unwrap_or_else(|| TransformVariant::External(HashMap::new()));
+                            target.insert_into_external(
+                                output_format.clone(),
+                                (transform.clone(), pkg.clone()),
+                            );
+                            // Add the modified entry back to the map
+                            map.insert(from.clone(), target);
+                        }
                     }
-                    let mut target = map
-                        .remove(from)
-                        .unwrap_or_else(|| TransformVariant::External(HashMap::new()));
-                    target.insert_into_external(
-                        output_format.clone(),
-                        (transform.clone(), pkg.clone()),
-                    );
-                    // Add the modified entry back to the map
-                    map.insert(from.clone(), target);
                 }
             }
         }

@@ -77,7 +77,7 @@ fn manifest() {
                 },
                 {
                     "from": "include",
-                    "to": ["html", "latex"],
+                    "to": ["any"],
                     "arguments": [],
                 }
             ]

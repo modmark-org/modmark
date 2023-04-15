@@ -97,6 +97,7 @@ impl<T, U> Debug for Context<T, U> {
 pub enum TransformVariant {
     Native((Transform, Package)),
     External(HashMap<OutputFormat, (Transform, Package)>),
+    Any((Transform, Package)),
 }
 
 impl TransformVariant {
@@ -107,6 +108,7 @@ impl TransformVariant {
         match self {
             TransformVariant::Native(t) => Some(t),
             TransformVariant::External(map) => map.get(format),
+            TransformVariant::Any(t) => Some(t),
         }
     }
 
@@ -122,6 +124,7 @@ impl TransformVariant {
             TransformVariant::External(map) => {
                 map.insert(format, entry);
             }
+            TransformVariant::Any(_) => {}
         }
     }
 }
@@ -210,7 +213,7 @@ impl<T, U> Context<T, U> {
     ) -> Result<Vec<(Variable, VarAccess)>, CoreError> {
         // Find the transform to get knowledge about variables
         let Some((transform, package)) = self.package_store.lock().unwrap().find_transform(name, format) else {
-            return Err(MissingTransform(name.to_string(), format.0.clone()));
+            return Err(MissingTransform(name.to_string(), format.to_string()));
         };
 
         if !transform.has_argument_dependent_variable() {
@@ -396,7 +399,7 @@ where
                     named: Some({
                         let mut map = HashMap::new();
                         map.insert("source".to_string(), name.to_string());
-                        map.insert("target".to_string(), output_format.0.to_string());
+                        map.insert("target".to_string(), output_format.to_string());
                         // these two ifs can't be joined, unfortunately, or it won't run on stable
                         if self.state.verbose_errors {
                             map.insert("input".to_string(), data.to_string());

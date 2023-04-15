@@ -1,8 +1,10 @@
+use std::fmt::Formatter;
 use std::hash::{Hash, Hasher};
 use std::path::Path;
 use std::str::FromStr;
 
-use serde::{Deserialize, Serialize};
+use serde::de::{Error, Visitor};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 pub use context::Context;
 pub use element::Element;
@@ -59,31 +61,91 @@ impl AccessPolicy for DefaultAccessManager {
     }
 }
 
-#[derive(Debug, Clone, Eq, Deserialize, Serialize)]
-pub struct OutputFormat(String);
+#[derive(Debug, Clone, Eq)]
+pub enum OutputFormat {
+    Any,
+    Name(String),
+}
 
 impl OutputFormat {
     pub fn new(string: &str) -> Self {
-        OutputFormat(string.to_lowercase())
+        OutputFormat::Name(string.to_lowercase())
+    }
+}
+
+impl<'de> Deserialize<'de> for OutputFormat {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct FormatVisitor;
+
+        impl<'de> Visitor<'de> for FormatVisitor {
+            type Value = OutputFormat;
+
+            fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
+                formatter.write_str("an identifier for output format")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                if v.to_lowercase() == "any" {
+                    Ok(OutputFormat::Any)
+                } else {
+                    Ok(OutputFormat::new(v))
+                }
+            }
+        }
+
+        deserializer.deserialize_str(FormatVisitor)
+    }
+}
+
+impl Serialize for OutputFormat {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use OutputFormat::*;
+        match self {
+            Any => serializer.serialize_str("any"),
+            Name(n) => serializer.serialize_str(n),
+        }
     }
 }
 
 /// To ensure that "html" and "HTML" is the same.
 impl PartialEq for OutputFormat {
     fn eq(&self, other: &Self) -> bool {
-        self.0.to_lowercase() == other.0.to_lowercase()
+        use OutputFormat::*;
+        match (self, other) {
+            (Name(a), Name(b)) => a.to_lowercase() == b.to_lowercase(),
+            (Any, Any) => true,
+            (_, _) => false,
+        }
     }
 }
 
 impl Hash for OutputFormat {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.to_lowercase().hash(state);
+        use OutputFormat::*;
+        // should be fine to hash Any as "any", because deserialize will never give Name("any")
+        match self {
+            Any => "any".hash(state),
+            Name(n) => n.to_lowercase().hash(state),
+        }
     }
 }
 
 impl ToString for OutputFormat {
     fn to_string(&self) -> String {
-        self.0.to_lowercase()
+        use OutputFormat::*;
+        match self {
+            Any => String::from("any"),
+            Name(n) => n.to_lowercase(),
+        }
     }
 }
 
@@ -91,7 +153,11 @@ impl FromStr for OutputFormat {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(OutputFormat::new(s))
+        if s == "any" {
+            Ok(OutputFormat::Any)
+        } else {
+            Ok(OutputFormat::new(s))
+        }
     }
 }
 
