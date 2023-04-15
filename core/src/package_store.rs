@@ -363,21 +363,19 @@ impl PackageStore {
                 for output_format in to {
                     match output_format {
                         OutputFormat::Any => {
-                            // this assures that we don't have overlapping transforms when Any is present
-                            match map.get(from) {
-                                Some(_) => {
-                                    return Err(CoreError::OccupiedTransform(
-                                        from.clone(),
-                                        output_format.to_string(),
-                                        pkg.info.name.clone(),
-                                    ));
-                                }
-                                None => {
-                                    map.insert(
-                                        from.clone(),
-                                        TransformVariant::Any((transform.clone(), pkg.clone())),
-                                    );
-                                }
+                            // this ensures Any does not overlap with any transforms with a
+                            // specific output format
+                            if map.get(from).is_some() {
+                                return Err(CoreError::OccupiedTransform(
+                                    from.clone(),
+                                    output_format.to_string(),
+                                    pkg.info.name.clone(),
+                                ));
+                            } else {
+                                map.insert(
+                                    from.clone(),
+                                    TransformVariant::ExternalAny((transform.clone(), pkg.clone())),
+                                );
                             }
                         }
                         OutputFormat::Name(_) => {
