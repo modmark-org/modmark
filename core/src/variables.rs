@@ -10,7 +10,7 @@ pub struct VariableStore(HashMap<(String, VarType), Value>);
 
 impl VariableStore {
     pub fn get(&self, name: &str, ty: &VarType) -> Option<&Value> {
-        self.0.get(&(name, ty) as &dyn VariableTrait)
+        self.0.get(&(name, ty) as &dyn AsVariable)
     }
 
     /// Clears the variable store
@@ -39,33 +39,33 @@ pub type Variable = (String, VarType);
 /// having to clone. See: https://stackoverflow.com/questions/45786717/how-to-implement-hashmap-with-two-keys/45795699#45795699
 /// We lose a bit of performance due to dynamic dispatch but I think it should be rather negligible, especially since other options
 /// (nested or multiple hashmaps) has their problems performance
-trait VariableTrait {
+trait AsVariable {
     fn name(&self) -> &str;
     fn ty(&self) -> &VarType;
 }
 
-impl<'a> Borrow<dyn VariableTrait + 'a> for (String, VarType) {
-    fn borrow(&self) -> &(dyn VariableTrait + 'a) {
+impl<'a> Borrow<dyn AsVariable + 'a> for (String, VarType) {
+    fn borrow(&self) -> &(dyn AsVariable + 'a) {
         self
     }
 }
 
-impl Hash for (dyn VariableTrait + '_) {
+impl Hash for (dyn AsVariable + '_) {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.name().hash(state);
         self.ty().hash(state);
     }
 }
 
-impl PartialEq for (dyn VariableTrait + '_) {
+impl PartialEq for (dyn AsVariable + '_) {
     fn eq(&self, other: &Self) -> bool {
         self.name() == other.name() && self.ty() == other.ty()
     }
 }
 
-impl Eq for (dyn VariableTrait + '_) {}
+impl Eq for (dyn AsVariable + '_) {}
 
-impl VariableTrait for (String, VarType) {
+impl AsVariable for (String, VarType) {
     fn name(&self) -> &str {
         &self.0
     }
@@ -74,7 +74,7 @@ impl VariableTrait for (String, VarType) {
     }
 }
 
-impl VariableTrait for (&str, &VarType) {
+impl AsVariable for (&str, &VarType) {
     fn name(&self) -> &str {
         self.0
     }
@@ -83,7 +83,7 @@ impl VariableTrait for (&str, &VarType) {
     }
 }
 
-impl VariableTrait for (&String, &VarType) {
+impl AsVariable for (&String, &VarType) {
     fn name(&self) -> &str {
         self.0
     }
