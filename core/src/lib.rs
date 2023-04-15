@@ -73,6 +73,8 @@ impl OutputFormat {
     }
 }
 
+// Custom deserialization to separate "any" as a special output format immediately. This is to
+// avoid having to check for and distinguish "any" in several places elsewhere.
 impl<'de> Deserialize<'de> for OutputFormat {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -109,6 +111,7 @@ impl Serialize for OutputFormat {
         S: Serializer,
     {
         use OutputFormat::*;
+        // since deserialize never returns Name("any") we can serialize Any as "any"
         match self {
             Any => serializer.serialize_str("any"),
             Name(n) => serializer.serialize_str(n),
@@ -131,7 +134,7 @@ impl PartialEq for OutputFormat {
 impl Hash for OutputFormat {
     fn hash<H: Hasher>(&self, state: &mut H) {
         use OutputFormat::*;
-        // should be fine to hash Any as "any", because deserialize will never give Name("any")
+        // since deserialize never returns Name("any") we can hash Any as "any"
         match self {
             Any => "any".hash(state),
             Name(n) => n.to_lowercase().hash(state),

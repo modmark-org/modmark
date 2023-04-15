@@ -92,28 +92,28 @@ impl<T, U> Debug for Context<T, U> {
 
 /// This enum represents the different variants a transform can occur. Either a module/parent may be
 /// transformed natively (in one way), or externally (possibly in different ways, depending on the
-/// output format)
+/// output format). `ExternalAny` is used for external transforms that support any output format.
 #[derive(Debug)]
 pub enum TransformVariant {
     Native((Transform, Package)),
     External(HashMap<OutputFormat, (Transform, Package)>),
-    Any((Transform, Package)),
+    ExternalAny((Transform, Package)),
 }
 
 impl TransformVariant {
-    /// This function finds the transform to an output format. If the transform is a native
-    /// transform, that is returned regardless of the output format, but if it is external, the
-    /// map is searched to find the appropriate transform
+    /// This function finds the transform to an output format. If this if of the `External` variant,
+    /// the map is searched to find the appropriate transform. If this is of the `Native` or
+    /// `ExternalAny` variant, the transform is returned regardless of the output format.
     pub(crate) fn find_transform_to(&self, format: &OutputFormat) -> Option<&(Transform, Package)> {
         match self {
             TransformVariant::Native(t) => Some(t),
             TransformVariant::External(map) => map.get(format),
-            TransformVariant::Any(t) => Some(t),
+            TransformVariant::ExternalAny(t) => Some(t),
         }
     }
 
     /// This function `.insert`s an entry to the map if this is of the `External` variant. If it
-    /// is of the `Native` variant, this call does nothing.
+    /// is of the `Native` or `ExternalAny` variant, this call does nothing.
     pub(crate) fn insert_into_external(
         &mut self,
         format: OutputFormat,
@@ -124,7 +124,7 @@ impl TransformVariant {
             TransformVariant::External(map) => {
                 map.insert(format, entry);
             }
-            TransformVariant::Any(_) => {}
+            TransformVariant::ExternalAny(_) => {}
         }
     }
 }
