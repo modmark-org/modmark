@@ -42,7 +42,7 @@ fn manifest() {
                     {"name": "bg", "default": "default", "description": "Background of the code section"},
                 ],
                 "variables": {
-                    "code_theme": {"type": "constant", "access": "read"}
+                    "code_theme": {"type": "const", "access": "read"}
                 }
             }
         ]
