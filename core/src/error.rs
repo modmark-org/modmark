@@ -43,6 +43,8 @@ pub enum CoreError {
     IoError(#[from] std::io::Error),
     #[error("Failed to parse transforms of package '{0}'.")]
     ParseTransforms(String),
+    #[error("Package '{0}' contains a transform from '{1}' with overlapping output formats. If 'any' is specified as output format, no other formats should be specified.")]
+    OverlappingOutputFormats(String, String),
     #[error("You repeated the argument '{0}' for the '{1}' element.")]
     RepeatedArgument(String, String),
     #[error("Argument '{0}' is missing in element '{1}'.")]
