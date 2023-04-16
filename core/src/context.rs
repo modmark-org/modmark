@@ -193,43 +193,56 @@ where
 }
 
 impl<T, U> Context<T, U> {
-    /// This function returns the "variable accesses", which is all variables the transform
-    /// requires. This is used to schedule when the transform may run in relations to each other.
-    // Note to implementers: this most likely requires reading the PackageStore. This function will
-    // be called once for each element in the entire document tree, and when a Parent is evaluated,
-    // it will be called one additional time. Since it isn't done in parallel, however, and this
-    // is the only thing that only needs read access (afaik, or at least, other things that may
-    // happen in parallel often require write access), I don't think it is worth changing Mutex to
-    // RwLock (which allows multiple readers).
-    // Another note: It may or may not be good to have something more than "name" to identify the
-    // variable accesses, like also passing "args" and possibly have variable accesses dependent
-    // on variables. This is now implemented for module expressions.
-    #[allow(unused_variables)] // Remove this when doing the actual impl
-    pub fn get_variable_accesses(
+    /// Get a list of the variables this specific element has read access to
+    fn get_vars_to_read(
         &self,
-        name: &str,
+        element: &Element,
+        format: &OutputFormat,
+    ) -> Result<Vec<Variable>, CoreError> {
+        let variables = self
+            .get_var_dependencies(element, format)?
+            .into_iter()
+            .filter_map(|(variable, access)| {
+                if access.is_read() {
+                    Some(variable)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        Ok(variables)
+    }
+
+    /// For a given element and output format get a list of all variables it
+    /// depends upon (and which type of access they have)
+    pub fn get_var_dependencies(
+        &self,
         element: &Element,
         format: &OutputFormat,
     ) -> Result<Vec<(Variable, VarAccess)>, CoreError> {
-        // Find the transform to get knowledge about variables
+        let Some(name) = element.name() else {
+            // Compounds and Raw elements do not have a name, but they don't
+            // depend on any variables either so we can just return a empty vector.  
+            return Ok(vec![]);
+        };
+
+        // Now, let's find the relevent transform for provided output format
         let Some((transform, package)) = self.package_store.lock().unwrap().find_transform(name, format) else {
             return Err(MissingTransform(name.to_string(), format.to_string()));
         };
 
+        // Check if there are argument dependent variables, for example [list-push name=...](.)
+        // which depends on the value of the name argument.
         if !transform.has_argument_dependent_variable() {
-            // If the transform doesn't have any argument-dependent variables, we can just return
-            // the variable access list
+            // If not, we can just return the list of variables
+            // If the transform doesn't have any argument-dependent variables, we can just return the list
             Ok(transform
                 .variables
                 .into_iter()
                 .map(|(name, access)| ((name, access.get_type()), access))
                 .collect())
         } else {
-            // If the transform does have argument-dependent variables, we must collect arguments.
-            // Note that this entire function thus may do two mutex locks, one for finding the
-            // transform and one (possibly) for collecting arguments. This can be avoided if we
-            // move collect_..._arguments to package_store, but that would imply a longer critical
-            // section which is unwanted, and I think this is fine as-is for now.
+            // If the transform does have argument-dependent variables, we must collect and go through them
             let args = match element {
                 Element::Parent { args, .. } => {
                     self.collect_parent_arguments(args, name, format)?
@@ -237,7 +250,7 @@ impl<T, U> Context<T, U> {
                 Element::Module { args, .. } => {
                     self.collect_module_arguments(args, name, format)?
                 }
-                _ => unreachable!("Variable accesses only available for parent and module"),
+                _ => unreachable!("Compound and raw elements do not have arguments"),
             };
             let vars = transform
                 .variables
@@ -426,29 +439,41 @@ where
             )
         };
 
-        let wasi_env = if root.is_none() || !(read || write || create) {
-            WasiState::new("")
+        let has_fs_access = !root.is_none() && (read || write || create);
+
+        let wasi_env = {
+            // Get all the variables that this element has read access to
+            // the variables will be on the form of <TYPE>_<NAME>=<VALUE>
+            let vars_to_read: Vec<(String, String)> = self
+                .get_vars_to_read(from, output_format)?
+                .into_iter()
+                .filter_map(|(name, ty)| {
+                    self.variables
+                        .get(&name, &ty)
+                        .map(|value| (format!("{ty}_{name}"), value.to_string()))
+                })
+                .collect();
+
+            let mut state_builder = WasiState::new("");
+            state_builder
                 .stdin(Box::new(input))
                 .stdout(Box::new(output.clone()))
                 .stderr(Box::new(err_out.clone()))
                 .args(["transform", name, &output_format.to_string()])
-                .finalize(&mut store)?
-        } else {
-            let path = Path::new(root.as_ref().unwrap());
-            WasiState::new("")
-                .stdin(Box::new(input))
-                .stdout(Box::new(output.clone()))
-                .stderr(Box::new(err_out.clone()))
-                .set_fs(Box::new(fs))
-                .preopen(|p| {
+                .envs(vars_to_read);
+
+            if has_fs_access {
+                let path = Path::new(root.as_ref().unwrap());
+                state_builder.set_fs(Box::new(fs)).preopen(|p| {
                     p.directory(path)
                         .alias(".")
                         .read(read)
                         .write(write)
                         .create(create)
-                })?
-                .args(["transform", name, &output_format.to_string()])
-                .finalize(&mut store)?
+                })?;
+            }
+
+            state_builder.finalize(&mut store)?
         };
 
         let import_object = wasi_env.import_object(&mut store, module)?;

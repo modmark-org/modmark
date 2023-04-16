@@ -275,13 +275,12 @@ mod tests {
 
     use crate::package::{ArgType, PrimitiveArgType};
     use crate::package_store::ResolveTask;
-    use crate::variables::{ConstantAccess, VarAccess};
 
     use super::*;
 
     struct UnimplementedResolver;
     impl Resolve for UnimplementedResolver {
-        fn resolve_all(&self, paths: Vec<ResolveTask>) {
+        fn resolve_all(&self, _: Vec<ResolveTask>) {
             unimplemented!()
         }
     }

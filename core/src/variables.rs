@@ -163,6 +163,17 @@ pub enum VarType {
     Constant,
 }
 
+impl fmt::Display for VarType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            VarType::Set => "set",
+            VarType::List => "list",
+            VarType::Constant => "const",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 /// This is the type of accesses that a transform may request to a certain variable
 /// The enum names here are used as the "type" field in the manifest
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -170,6 +181,7 @@ pub enum VarType {
 pub enum VarAccess {
     Set(SetAccess),
     List(ListAccess),
+    #[serde(alias = "const")]
     Constant(ConstantAccess),
 }
 
@@ -188,6 +200,16 @@ impl VarAccess {
             VarAccess::Set(_) => VarType::Set,
             VarAccess::List(_) => VarType::List,
             VarAccess::Constant(_) => VarType::Constant,
+        }
+    }
+
+    /// Returns true if it is a read access
+    pub fn is_read(&self) -> bool {
+        match self {
+            VarAccess::Set(SetAccess::Read) => true,
+            VarAccess::List(ListAccess::Read) => true,
+            VarAccess::Constant(ConstantAccess::Read) => true,
+            _ => false,
         }
     }
 }

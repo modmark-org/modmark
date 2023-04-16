@@ -36,11 +36,14 @@ fn manifest() {
                         https://github.com/sublimehq/Packages"},
                     {"name": "font_size", "default": 12, "description": "The size of the font", "type": "uint"},
                     {"name": "tab_size", "default": 4, "description": "The size tabs will be adjusted to", "type": "uint"},
-                    {"name": "theme", "default": "mocha", "description":
+                    {"name": "theme", "default": "default", "type": ["default", "ocean-dark", "ocean-light", "mocha", "eighties", "github", "solar-dark", "solar-light"], "description":
                         "Theme of the code section. For available themes, see \
                         https://docs.rs/syntect/latest/syntect/highlighting/struct.ThemeSet.html#method.load_defaults"},
                     {"name": "bg", "default": "default", "description": "Background of the code section"},
                 ],
+                "variables": {
+                    "code_theme": {"type": "constant", "access": "read"}
+                }
             }
         ]
         }
@@ -57,16 +60,43 @@ fn transform(from: &str, to: &str) {
     }
 }
 
-fn transform_code(to: &str) {
-    macro_rules! get_arg {
-        ($input:expr, $arg:expr) => {
-            if let Value::String(val) = &$input["arguments"][$arg] {
-                val
-            } else {
-                panic!("No {} argument was provided", $arg);
+macro_rules! get_arg {
+    ($input:expr, $arg:expr) => {
+        if let Value::String(val) = &$input["arguments"][$arg] {
+            val
+        } else {
+            panic!("No {} argument was provided", $arg);
+        }
+    };
+}
+
+fn get_theme(input: &Value) -> String {
+    let theme = get_arg!(input, "theme").to_string();
+
+    // use env as a fallback if possible
+    if theme == "default" {
+        if let Ok(value) = env::var("const_code_theme") {
+            // also ensure that the env variable was set to a valid theme
+            if [
+                "ocean-dark",
+                "ocean-light",
+                "mocha",
+                "eighties",
+                "github",
+                "solar-dark",
+                "solar-light",
+            ]
+            .contains(&value.as_str())
+            {
+                return value;
             }
-        };
+        }
     }
+
+    theme
+}
+
+fn transform_code(to: &str) {
     match to {
         "html" => {
             let input: Value = {
@@ -77,12 +107,13 @@ fn transform_code(to: &str) {
 
             let code = input["data"].as_str().unwrap();
             let lang = get_arg!(input, "lang");
+            let theme = get_theme(&input);
             let font_size = input["arguments"]["font_size"].as_u64().unwrap();
             let tab_size = input["arguments"]["tab_size"].as_u64().unwrap();
-            let theme = get_arg!(input, "theme");
+
             let bg = get_arg!(input, "bg");
 
-            let (highlighted, default_bg) = get_highlighted(code, lang, theme);
+            let (highlighted, default_bg) = get_highlighted(code, lang, &theme);
 
             if let Value::Bool(inline) = &input["inline"] {
                 let style = get_style(inline, font_size, tab_size, bg, default_bg);
@@ -130,13 +161,14 @@ fn get_highlighted(code: &str, lang: &String, tm: &str) -> (String, Option<Color
     let ss = SyntaxSet::load_defaults_newlines();
     let ts = ThemeSet::load_defaults();
     let theme = match tm {
-        "ocean_dark" => &ts.themes["base16-ocean.dark"],
-        "ocean_light" => &ts.themes["base16-ocean.light"],
+        "ocean-dark" => &ts.themes["base16-ocean.dark"],
+        "ocean-light" => &ts.themes["base16-ocean.light"],
         "mocha" => &ts.themes["base16-mocha.dark"],
         "eighties" => &ts.themes["base16-eighties.dark"],
         "github" => &ts.themes["InspiredGitHub"],
-        "solar_dark" => &ts.themes["Solarized (dark)"],
-        "solar_light" => &ts.themes["Solarized (light)"],
+        "solar-dark" => &ts.themes["Solarized (dark)"],
+        "solar-light" => &ts.themes["Solarized (light)"],
+        // we default to inspired github
         _ => &ts.themes["InspiredGitHub"],
     };
 

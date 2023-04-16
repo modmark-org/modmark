@@ -111,9 +111,9 @@ impl Schedule {
             return Ok(());
         }
 
-        let (name, this_id) = {
+        let this_id = {
             match element {
-                Element::Parent { name, id, .. } | Element::Module { name, id, .. } => (name, id),
+                Element::Parent { id, .. } | Element::Module { id, .. } => id,
                 Element::Compound(_) => return Ok(()),
                 Element::Raw(_) => return Ok(()),
             }
@@ -131,7 +131,7 @@ impl Schedule {
         }
 
         // Look in the context to find info about which variables the element is interested in
-        let variables = &ctx.get_variable_accesses(name, element, format)?;
+        let variables = &ctx.get_var_dependencies(element, format)?;
         //if let Some(variables) = &ctx.get_variable_accesses(name, element, format)? {
         for (var, access) in variables {
             let mut deps = self.dep_info.remove(var).unwrap_or_default();
