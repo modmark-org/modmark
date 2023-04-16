@@ -156,7 +156,7 @@ impl FromStr for OutputFormat {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s == "any" {
+        if s.to_lowercase() == "any" {
             Ok(OutputFormat::Any)
         } else {
             Ok(OutputFormat::new(s))

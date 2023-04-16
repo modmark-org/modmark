@@ -106,9 +106,8 @@ impl TransformVariant {
     /// `ExternalAny` variant, the transform is returned regardless of the output format.
     pub(crate) fn find_transform_to(&self, format: &OutputFormat) -> Option<&(Transform, Package)> {
         match self {
-            TransformVariant::Native(t) => Some(t),
             TransformVariant::External(map) => map.get(format),
-            TransformVariant::ExternalAny(t) => Some(t),
+            TransformVariant::ExternalAny(t) | TransformVariant::Native(t) => Some(t),
         }
     }
 

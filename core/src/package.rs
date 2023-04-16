@@ -101,6 +101,17 @@ impl PackageInfo {
                 }
             }
         }
+
+        // Ensure package does not specify other output formats when "any" is specified
+        for transform in &self.transforms {
+            if transform.to.contains(&OutputFormat::Any) && transform.to.len() > 1 {
+                return Err(CoreError::OverlappingOutputFormats(
+                    self.name.to_string(),
+                    transform.from.clone(),
+                ));
+            }
+        }
+
         Ok(())
     }
 }
