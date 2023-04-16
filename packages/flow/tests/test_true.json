@@ -1,0 +1,15 @@
+{
+    "name": "if",
+    "data": "This should be parsed",
+    "arguments": {
+        "format": "HTML"
+    },
+    "inline": true,
+    "__test_transform_to": "html",
+    "__test_expected_result": [
+        {
+            "data": "This should be parsed",
+            "name": "inline_content"
+        }
+    ]
+}

@@ -1,0 +1,10 @@
+{
+    "name": "if",
+    "data": "This not should be parsed",
+    "arguments": {
+        "format": "latex"
+    },
+    "inline": true,
+    "__test_transform_to": "html",
+    "__test_expected_result": []
+}

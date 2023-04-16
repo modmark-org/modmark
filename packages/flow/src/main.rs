@@ -32,7 +32,11 @@ fn manifest() {
                         {
                             "name": "format",
                             "description":
-                                "Specifies the output format, which the conditional compilation depends on."
+                                "\
+                                Specifies the output format, which the conditional compilation \
+                                depends on. You can prefix the format with an exclamation mark \
+                                (such as format=!html) to invert the outcome.\
+                                "
                         },
                     ],
                 },
