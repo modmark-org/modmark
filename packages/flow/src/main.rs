@@ -58,8 +58,16 @@ fn transform(from: &str, to: &str) {
 }
 
 fn transform_if(output_format: &str, input: Value) {
-    let cmp_format = input["arguments"]["format"].as_str().unwrap();
-    if cmp_format == output_format {
+    let cmp_format = input["arguments"]["format"]
+        .as_str()
+        .unwrap()
+        .to_lowercase();
+    let result = match cmp_format.strip_prefix('!') {
+        Some(cmp_format) => cmp_format != output_format,
+        None => cmp_format == output_format,
+    };
+
+    if result {
         let inline = input["inline"].as_bool().unwrap();
         let body = input["data"].as_str().unwrap();
         let json = if inline {
