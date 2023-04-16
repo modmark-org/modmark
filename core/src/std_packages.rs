@@ -11,7 +11,7 @@ use crate::element::GranularId;
 use crate::package::{ArgValue, PrimitiveArgType};
 use crate::package_store::PackageStore;
 use crate::std_packages_macros::{define_native_packages, define_standard_package_loader};
-use crate::variables::{self, ListAccess, VarAccess, VarType};
+use crate::variables::{ConstantAccess, ListAccess, SetAccess, VarAccess, VarType};
 use crate::{ArgInfo, Context, CoreError, Element, OutputFormat, PackageInfo, Transform};
 
 // Here, all standard packages are declared. The macro expands to one function
@@ -124,7 +124,7 @@ define_native_packages! {
             {
                 name: "const-decl",
                 desc: "Declare a constant",
-                vars: [("$name".to_string(), VarAccess::List(ListAccess::Push))],
+                vars: [("$name".to_string(), VarAccess::Constant(ConstantAccess::Declare))],
                 args: vec![
                     ArgInfo {
                         name: "name".to_string(),
@@ -138,7 +138,7 @@ define_native_packages! {
             {
                 name: "const-read",
                 desc: "Read a constant",
-                vars: [("$name".to_string(), VarAccess::List(ListAccess::Push))],
+                vars: [("$name".to_string(), VarAccess::Constant(ConstantAccess::Read))],
                 args: vec![
                     ArgInfo {
                         name: "name".to_string(),
@@ -148,6 +148,62 @@ define_native_packages! {
                     }
                 ],
                 func: const_read
+            },
+            {
+                name: "list-push",
+                desc: "Push a string to a list",
+                vars: [("$name".to_string(), VarAccess::List(ListAccess::Push))],
+                args: vec![
+                    ArgInfo {
+                        name: "name".to_string(),
+                        default: None,
+                        description: "The name of the list".to_string(),
+                        r#type: PrimitiveArgType::String.into()
+                    }
+                ],
+                func: list_push
+            },
+            {
+                name: "list-read",
+                desc: "Read a list",
+                vars: [("$name".to_string(), VarAccess::List(ListAccess::Read))],
+                args: vec![
+                    ArgInfo {
+                        name: "name".to_string(),
+                        default: None,
+                        description: "The name of the list to read".to_string(),
+                        r#type: PrimitiveArgType::String.into()
+                    }
+                ],
+                func: list_read
+            },
+            {
+                name: "set-add",
+                desc: "Add a string to a set. Note that sets do not contains duplicates and are not ordered.",
+                vars: [("$name".to_string(), VarAccess::Set(SetAccess::Add))],
+                args: vec![
+                    ArgInfo {
+                        name: "name".to_string(),
+                        default: None,
+                        description: "The name of the set".to_string(),
+                        r#type: PrimitiveArgType::String.into()
+                    }
+                ],
+                func: set_add
+            },
+            {
+                name: "set-read",
+                desc: "Read a set. Note that sets do not follow a deterministic order.",
+                vars: [("$name".to_string(), VarAccess::Set(SetAccess::Read))],
+                args: vec![
+                    ArgInfo {
+                        name: "name".to_string(),
+                        default: None,
+                        description: "The name of the set to read".to_string(),
+                        r#type: PrimitiveArgType::String.into()
+                    }
+                ],
+                func: set_read
             },
         ]
     }
@@ -204,6 +260,17 @@ pub fn native_block_content<T, U>(
     Ok(Element::Compound(elements))
 }
 
+/// Helper function to create text elements
+fn text_element(contents: String, id: GranularId) -> Element {
+    Element::Module {
+        name: "__text".to_string(),
+        args: Default::default(),
+        body: contents,
+        inline: false,
+        id: id.clone(),
+    }
+}
+
 /// Declare a constant
 pub fn const_decl<T, U>(
     ctx: &mut Context<T, U>,
@@ -214,8 +281,7 @@ pub fn const_decl<T, U>(
     _: &GranularId,
 ) -> Result<Element, CoreError> {
     let name = args.get("name").unwrap().as_str().unwrap();
-    let value = variables::Value::Constant(value.to_string());
-    ctx.variables.declare_constant(name, value)?;
+    ctx.variables.constant_declare(name, value)?;
 
     Ok(Element::Compound(vec![]))
 }
@@ -227,12 +293,85 @@ pub fn const_read<T, U>(
     args: HashMap<String, ArgValue>,
     _: bool,
     _: &OutputFormat,
+    id: &GranularId,
+) -> Result<Element, CoreError> {
+    let name = args.get("name").unwrap().as_str().unwrap();
+    let value = ctx.variables.get(name, &VarType::Constant);
+
+    if let Some(value) = value {
+        Ok(text_element(value.to_string(), id.clone()))
+    } else {
+        // TODO: give a error or warning
+        Ok(Element::Compound(vec![]))
+    }
+}
+
+/// Push a value to a list
+pub fn list_push<T, U>(
+    ctx: &mut Context<T, U>,
+    value: &str,
+    args: HashMap<String, ArgValue>,
+    _: bool,
+    _: &OutputFormat,
     _: &GranularId,
 ) -> Result<Element, CoreError> {
     let name = args.get("name").unwrap().as_str().unwrap();
-    ctx.variables.get(name, &VarType::Constant);
-
+    ctx.variables.list_push(name, value);
     Ok(Element::Compound(vec![]))
+}
+
+/// Read a list of values
+pub fn list_read<T, U>(
+    ctx: &mut Context<T, U>,
+    _: &str,
+    args: HashMap<String, ArgValue>,
+    _: bool,
+    _: &OutputFormat,
+    id: &GranularId,
+) -> Result<Element, CoreError> {
+    let name = args.get("name").unwrap().as_str().unwrap();
+    let value = ctx.variables.get(name, &VarType::List);
+
+    if let Some(value) = value {
+        Ok(text_element(value.to_string(), id.clone()))
+    } else {
+        // TODO: give a error or warning
+        Ok(Element::Compound(vec![]))
+    }
+}
+
+/// Add a string to a set
+pub fn set_add<T, U>(
+    ctx: &mut Context<T, U>,
+    value: &str,
+    args: HashMap<String, ArgValue>,
+    _: bool,
+    _: &OutputFormat,
+    _: &GranularId,
+) -> Result<Element, CoreError> {
+    let name = args.get("name").unwrap().as_str().unwrap();
+    ctx.variables.set_add(name, value);
+    Ok(Element::Compound(vec![]))
+}
+
+/// Read a list of values
+pub fn set_read<T, U>(
+    ctx: &mut Context<T, U>,
+    _: &str,
+    args: HashMap<String, ArgValue>,
+    _: bool,
+    _: &OutputFormat,
+    id: &GranularId,
+) -> Result<Element, CoreError> {
+    let name = args.get("name").unwrap().as_str().unwrap();
+    let value = ctx.variables.get(name, &VarType::Set);
+
+    if let Some(value) = value {
+        Ok(text_element(value.to_string(), id.clone()))
+    } else {
+        // TODO: give a error or warning
+        Ok(Element::Compound(vec![]))
+    }
 }
 
 pub fn native_warn<T, U>(

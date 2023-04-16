@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Clone, Default)]
@@ -19,7 +20,8 @@ impl VariableStore {
     }
 
     /// declare a constant
-    pub fn declare_constant(&mut self, name: &str, value: Value) -> Result<(), CoreError> {
+    pub fn constant_declare(&mut self, name: &str, value: &str) -> Result<(), CoreError> {
+        let value = Value::Constant(value.to_string());
         let prev_value = self.0.insert((name.to_string(), VarType::Constant), value);
 
         if prev_value.is_some() {
@@ -27,6 +29,36 @@ impl VariableStore {
         } else {
             Ok(())
         }
+    }
+
+    /// Push a string to a list (if the list does not exist, a new one is created)
+    pub fn list_push(&mut self, name: &str, value: &str) {
+        self.0
+            .entry((name.to_string(), VarType::List))
+            .and_modify(|list| {
+                let Value::List(list) = list else {
+                    unreachable!("Should always contain a list value");
+                };
+                list.push(value.to_string())
+            })
+            .or_insert_with(|| Value::List(vec![value.to_string()]));
+    }
+
+    /// Add a string to a set (if the set does not exist, a new one is created)
+    pub fn set_add(&mut self, name: &str, value: &str) {
+        self.0
+            .entry((name.to_string(), VarType::Set))
+            .and_modify(|set| {
+                let Value::Set(set) = set else {
+                        unreachable!("Should always contain a set value");
+                    };
+                set.insert(value.to_string());
+            })
+            .or_insert_with(|| {
+                let mut set = HashSet::new();
+                set.insert(value.to_string());
+                Value::Set(set)
+            });
     }
 }
 
@@ -40,7 +72,9 @@ pub type Variable = (String, VarType);
 /// We lose a bit of performance due to dynamic dispatch but I think it should be rather negligible, especially since other options
 /// (nested or multiple hashmaps) has their problems performance
 trait AsVariable {
+    /// Get the name of the variable
     fn name(&self) -> &str;
+    /// Get the type of the variable
     fn ty(&self) -> &VarType;
 }
 
@@ -97,6 +131,24 @@ pub enum Value {
     Set(HashSet<String>),
     List(Vec<String>),
     Constant(String),
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Value::Set(items) => {
+                for (i, item) in items.iter().enumerate() {
+                    write!(f, "{item}")?;
+                    if i != items.len() - 1 {
+                        write!(f, ",")?;
+                    }
+                }
+            }
+            Value::List(items) => write!(f, "{}", items.join(","))?,
+            Value::Constant(value) => write!(f, "{value}")?,
+        }
+        Ok(())
+    }
 }
 
 /// The type of a variable
