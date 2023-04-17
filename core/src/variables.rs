@@ -161,18 +161,17 @@ pub enum Value {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            // Lists and sets are encoded as JSON values in order to escape ','
             Value::Set(items) => {
-                for (i, item) in items.iter().enumerate() {
-                    write!(f, "{item}")?;
-                    if i != items.len() - 1 {
-                        write!(f, ",")?;
-                    }
-                }
+                let json_list: serde_json::Value = items.into_iter().cloned().collect();
+                write!(f, "{}", json_list)
             }
-            Value::List(items) => write!(f, "{}", items.join(","))?,
-            Value::Constant(value) => write!(f, "{value}")?,
+            Value::List(items) => {
+                let json_list: serde_json::Value = items.clone().into();
+                write!(f, "{}", json_list)
+            }
+            Value::Constant(value) => write!(f, "{value}"),
         }
-        Ok(())
     }
 }
 
