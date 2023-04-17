@@ -235,82 +235,76 @@ impl<T, U> Context<T, U> {
         if !transform.has_argument_dependent_variable() {
             // If not, we can just return the list of variables
             // If the transform doesn't have any argument-dependent variables, we can just return the list
-            Ok(transform
+            return Ok(transform
                 .variables
                 .into_iter()
                 .map(|(name, access)| ((name, access.get_type()), access))
-                .collect())
-        } else {
-            // If the transform does have argument-dependent variables, we must collect and go through them
-            let args = match element {
-                Element::Parent { args, .. } => {
-                    self.collect_parent_arguments(args, name, format)?
-                }
-                Element::Module { args, .. } => {
-                    self.collect_module_arguments(args, name, format)?
-                }
-                _ => unreachable!("Compound and raw elements do not have arguments"),
-            };
-            let vars = transform
-                .variables
-                .into_iter()
-                // filter_map since we may want to exclude some arguments, such as if their name is the empty string
-                .filter_map(|(var_name, var_access)| {
-                    // If the variable name starts with $ we need to look up in the args to find out what variable it references
-                    if let Some(arg_name) = var_name.strip_prefix('$') {
-                        // Try to get the arg
-                        let var_name_arg = args.get(arg_name).ok_or_else(|| {
-                            CoreError::ArgumentDependentVariable {
-                                argument_name: arg_name.to_string(),
-                                transform: transform.from.to_string(),
-                                package: package.info.name.to_string(),
-                                var_access: var_access.clone(),
-                            }
-                        });
-
-                        match var_name_arg {
-                            // If we don't get the arg, return error
-                            Err(e) => Some(Err(e)),
-                            Ok(var_arg) => {
-                                // The actual referenced variable name is the value of var_arg, either
-                                // string or enum
-                                let variable_name = var_arg
-                                    .clone()
-                                    .get_string()
-                                    .or(var_arg.clone().get_enum_variant())
-                                    .ok_or_else(|| CoreError::ArgumentDependentVariableType {
-                                        argument_type: var_arg.get_type(),
-                                        argument_name: arg_name[1..].to_string(),
-                                        transform: transform.from.to_string(),
-                                        package: package.info.name.to_string(),
-                                    });
-                                match variable_name {
-                                    // If that failed, return that error
-                                    Err(e) => Some(Err(e)),
-                                    Ok(variable_name) => {
-                                        // If the variable name is empty (like if the module gives
-                                        // an optional arg with empty default), we don't want
-                                        // to include the variable in our access list. Otherwise,
-                                        // we do.
-                                        if variable_name.is_empty() {
-                                            None
-                                        } else {
-                                            Some(Ok((
-                                                (variable_name, var_access.get_type()),
-                                                var_access,
-                                            )))
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        Some(Ok(((var_name, var_access.get_type()), var_access)))
-                    }
-                })
-                .collect::<Result<Vec<(Variable, VarAccess)>, CoreError>>()?;
-            Ok(vars)
+                .collect());
         }
+
+        // If the transform does have argument-dependent variables, we must collect and go through them
+        let args = match element {
+            Element::Parent { args, .. } => self.collect_parent_arguments(args, name, format)?,
+            Element::Module { args, .. } => self.collect_module_arguments(args, name, format)?,
+            _ => unreachable!("Compound and raw elements do not have arguments"),
+        };
+
+        let mut collected_variables: HashMap<String, VarAccess> = HashMap::new();
+
+        for (provided_var_name, provided_var_access) in transform.variables.into_iter() {
+            // If the variable name starts with $arg_name we need to look up in the args to
+            // find out what variable it actually references
+            let real_var_name = if let Some(arg_name) = provided_var_name.strip_prefix('$') {
+                let Some(arg_value) = args.get(arg_name) else {
+                    // It looks like the $arg_value referes to a argument that does not
+                    // actually exist, so let's throw an error!
+                    return Err(CoreError::ArgumentDependentVariable {
+                        argument_name: arg_name.to_string(),
+                        element: transform.from.to_string(),
+                        package: package.info.name.to_string(),
+                        var_access: provided_var_access.clone(),
+                    });
+                };
+
+                // The variable that we actually want to use is stored in the argument, i.e arg_value.
+                // it must be of either the string or enum type.
+                let Some(var_name) = arg_value.clone().get_string().or_else(|| arg_value.clone().get_enum_variant()) else {
+                    // If it was of some other type, throw an error!
+                    return Err(CoreError::ArgumentDependentVariableType {
+                        argument_type: arg_value.get_type(),
+                        argument_name: arg_name.to_string(),
+                        element: transform.from.to_string(),
+                        package: package.info.name.to_string(),
+                    });
+                };
+
+                var_name
+            } else {
+                // If the variables did not start "$" it is a normal variable
+                // and we can use the provided string as is.
+                provided_var_name
+            };
+
+            // Finally, add the variable to map of all variables
+            if let Some(prev_access) =
+                collected_variables.insert(real_var_name.clone(), provided_var_access)
+            {
+                // Also, remember to check if this variable has been added before, this is fine only if it's
+                // the same access type
+                if prev_access != provided_var_access {
+                    return Err(CoreError::ClashingVariableAccesses {
+                        variable_name: real_var_name,
+                        element: transform.from.to_string(),
+                        package: package.info.name.to_string(),
+                    });
+                }
+            }
+        }
+
+        Ok(collected_variables
+            .into_iter()
+            .map(|(name, access)| ((name, access.get_type()), access))
+            .collect())
     }
 }
 
@@ -442,7 +436,6 @@ where
 
         let wasi_env = {
             // Get all the variables that this element has read access to
-            // the variables will be on the form of <TYPE>_<NAME>=<VALUE>
             let vars_to_read: Vec<(String, String)> = self
                 .get_vars_to_read(from, output_format)?
                 .into_iter()
@@ -450,7 +443,7 @@ where
                     self.state
                         .variables
                         .get(&name, &ty)
-                        .map(|value| (format!("{ty}_{name}"), value.to_string()))
+                        .map(|value| (name.to_string(), value.to_string()))
                 })
                 .collect();
 

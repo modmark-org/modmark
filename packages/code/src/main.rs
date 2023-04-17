@@ -75,7 +75,7 @@ fn get_theme(input: &Value) -> String {
 
     // use env as a fallback if possible
     if theme == "default" {
-        if let Ok(value) = env::var("const_code_theme") {
+        if let Ok(value) = env::var("code_theme") {
             // also ensure that the env variable was set to a valid theme
             if [
                 "ocean-dark",

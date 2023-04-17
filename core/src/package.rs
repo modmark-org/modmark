@@ -85,7 +85,7 @@ impl PackageInfo {
                             return Err(CoreError::ArgumentDependentVariableType {
                                 argument_type: arg_info.r#type.clone(),
                                 argument_name: arg_name.to_string(),
-                                transform: transform.from.to_string(),
+                                element: transform.from.to_string(),
                                 package: self.name.to_string(),
                             });
                         }
@@ -93,7 +93,7 @@ impl PackageInfo {
                         // If not, we are missing that argument and the manifest is invalid
                         return Err(CoreError::ArgumentDependentVariable {
                             argument_name: arg_name.to_string(),
-                            transform: transform.from.to_string(),
+                            element: transform.from.to_string(),
                             package: self.name.to_string(),
                             var_access: access.clone(),
                         });
