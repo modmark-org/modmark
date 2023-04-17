@@ -525,6 +525,8 @@ async fn watch_files<P: AsRef<Path>>(
                         continue;
                     }
                 }
+                // Take a quick nap to ensure that the file is closed before we start compiling
+                tokio::time::sleep(std::time::Duration::from_millis(20)).await;
                 // We only care about changes from when files are created, removed or modified
                 if event.kind.is_modify() || event.kind.is_create() || event.kind.is_remove() {
                     compile(document.as_ref(), connections.as_ref(), args).await?;
