@@ -39,6 +39,13 @@ impl Resolve for PackageManager {
     }
 }
 
+pub(crate) fn cache_location() -> Result<PathBuf, CliError> {
+    match ProjectDirs::from("org", "modmark", "packages") {
+        Some(path) => return Ok(path.cache_dir().to_path_buf()),
+        None => return Err(CliError::Cache),
+    };
+}
+
 impl PackageManager {
     async fn resolve(&self, task: ResolveTask) {
         let PackageID {
@@ -55,10 +62,7 @@ impl PackageManager {
     }
 
     async fn fetch_url(&self, package_path: &str) -> Result<Vec<u8>, CliError> {
-        let mut cache_path = match ProjectDirs::from("org", "modmark", "packages") {
-            Some(path) => path.cache_dir().to_path_buf(),
-            None => return Err(CliError::Cache),
-        };
+        let mut cache_path = cache_location()?;
 
         let splitter = package_path.split_once(':');
         let Some((_, mut domain_path)) = splitter else {
