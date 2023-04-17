@@ -28,6 +28,7 @@ fn manifest() {
                 {
                     "from": "if",
                     "to": ["any"],
+                    "description": "Conditionally compile content based on output format.",
                     "arguments": [
                         {
                             "name": "format",
