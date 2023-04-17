@@ -115,11 +115,11 @@ fn parse_opening_delim<'a>(
         if inline {
             opt(verify(take(1usize), |s: &str| {
                 let c = s.chars().next().unwrap();
-                !c.is_alphanumeric() && !c.is_whitespace()
+                !c.is_alphanumeric() && !c.is_whitespace() && !")]}>".contains(c)
             }))(i)
         } else {
             opt(take_while1(|c: char| {
-                !c.is_alphanumeric() && !c.is_whitespace()
+                !c.is_alphanumeric() && !c.is_whitespace() && !")]}>".contains(c)
             }))(i)
         }
     }
@@ -151,10 +151,6 @@ fn closing_delim(string: &str) -> String {
             '<' => '>',
             '»' => '«',
             '›' => '‹',
-            ')' => '(',
-            '}' => '{',
-            ']' => '[',
-            '>' => '<',
             '«' => '»',
             '‹' => '›',
             x => x,
@@ -421,7 +417,7 @@ fn get_named_arg_parser<'a>(
 ///
 /// returns: The parsing result capturing the argument name
 fn arg_key_parser(input: &str) -> IResult<&str, &str> {
-    take_while1(|c: char| c.is_alphanumeric() || c == '_')(input)
+    take_while1(|c: char| c.is_alphanumeric() || c == '_' || c == '-')(input)
 }
 
 /// Parses the argument to a function removing optional quotation marks and returning the value.

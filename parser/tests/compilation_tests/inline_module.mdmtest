@@ -11,7 +11,7 @@ Cases below:
 6. Should just take the first < as delimiter
 7. Should not include anything since body closes immediately
 8. Only closing brackets should close in this case
-9. Only opening brackets should close in this case
+9. Since closing brackets can't be used as delimiter, all should be captured
 
 ```mdm
 Equations:
@@ -23,7 +23,7 @@ Equations:
 [six]<"yes1 "yes2" yes3">
 [sev]""no no"
 [eig]<y<y<y>
-[nin]>y>y<n
+[nin]>y>y<y
 ```
 
 ```json
@@ -93,10 +93,9 @@ Equations:
                 {
                     "name": "nin",
                     "args": {},
-                    "body": "y>y",
+                    "body": ">y>y<y",
                     "one_line": true
-                },
-                "n"
+                }
             ]
         }
     ]

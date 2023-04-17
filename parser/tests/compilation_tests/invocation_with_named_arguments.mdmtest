@@ -1,7 +1,7 @@
 Testing parsing of modules with only named arguments
 
 ```mdm
-[code lang=py indent=tabs]
+[code lang=py indent-with=tabs]
 print("hello world")
 ```
 
@@ -13,7 +13,7 @@ print("hello world")
         "name": "code",
         "args": {
             "lang": "py",
-            "indent": "tabs"
+            "indent-with": "tabs"
         },
         "body": "print(\"hello world\")",
         "one_line": false
@@ -21,4 +21,3 @@ print("hello world")
   ]
 }
 ```
-
