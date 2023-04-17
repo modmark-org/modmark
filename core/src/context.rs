@@ -78,6 +78,7 @@ impl CompilationState {
     fn clear(&mut self) {
         self.warnings.clear();
         self.errors.clear();
+        self.variables.clear();
     }
 }
 
