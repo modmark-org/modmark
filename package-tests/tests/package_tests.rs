@@ -280,7 +280,7 @@ fn check_transform(transform: &Transform) {
     assert!(
         transform.arguments.iter().all(|arg|
             arg.name.starts_with(|c: char| c.is_ascii_lowercase()) &&
-                arg.name.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+                arg.name.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '-')
         ),
         "Argument names should start with lowercase letter, and must only contain lowercase letters, digits and underscores (transform from {} failed)",
         transform.from
