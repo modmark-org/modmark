@@ -316,7 +316,7 @@ pub fn list_push<T, U>(
     _: &GranularId,
 ) -> Result<Element, CoreError> {
     let name = args.get("name").unwrap().as_str().unwrap();
-    ctx.variables.list_push(name, value);
+    ctx.variables.list_push(name, value)?;
     Ok(Element::Compound(vec![]))
 }
 
@@ -350,7 +350,7 @@ pub fn set_add<T, U>(
     _: &GranularId,
 ) -> Result<Element, CoreError> {
     let name = args.get("name").unwrap().as_str().unwrap();
-    ctx.variables.set_add(name, value);
+    ctx.variables.set_add(name, value)?;
     Ok(Element::Compound(vec![]))
 }
 

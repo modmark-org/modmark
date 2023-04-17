@@ -112,6 +112,8 @@ pub enum CoreError {
     Flat,
     #[error("Attempted to redeclare the constant '{0}'.")]
     ConstantRedeclaration(String),
+    #[error("Forbidden variable name '{0}'. Only ASCII letters and numbers as well as '_' is allowed. The name may also not start with a number.")]
+    ForbiddenVariableName(String),
 }
 
 impl From<WasiError> for CoreError {

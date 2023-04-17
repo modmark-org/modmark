@@ -19,8 +19,25 @@ impl VariableStore {
         self.0.clear()
     }
 
+    /// Ensure that a valid name is used.
+    /// Only ASCII alphanumerics characters and "_" is allowed. The name may also not start with a number.
+    fn valid_name(&self, name: &str) -> Result<(), CoreError> {
+        // Ensure that the first character is not a number and that the name
+        // is at least 1 character long
+        if name.chars().next().map(char::is_numeric).unwrap_or(true) {
+            return Err(CoreError::ForbiddenVariableName(name.to_string()));
+        }
+
+        if name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+            Ok(())
+        } else {
+            Err(CoreError::ForbiddenVariableName(name.to_string()))
+        }
+    }
+
     /// declare a constant
     pub fn constant_declare(&mut self, name: &str, value: &str) -> Result<(), CoreError> {
+        self.valid_name(name)?;
         let value = Value::Constant(value.to_string());
         let prev_value = self.0.insert((name.to_string(), VarType::Constant), value);
 
@@ -32,7 +49,9 @@ impl VariableStore {
     }
 
     /// Push a string to a list (if the list does not exist, a new one is created)
-    pub fn list_push(&mut self, name: &str, value: &str) {
+    pub fn list_push(&mut self, name: &str, value: &str) -> Result<(), CoreError> {
+        self.valid_name(name)?;
+
         self.0
             .entry((name.to_string(), VarType::List))
             .and_modify(|list| {
@@ -42,10 +61,14 @@ impl VariableStore {
                 list.push(value.to_string())
             })
             .or_insert_with(|| Value::List(vec![value.to_string()]));
+
+        Ok(())
     }
 
     /// Add a string to a set (if the set does not exist, a new one is created)
-    pub fn set_add(&mut self, name: &str, value: &str) {
+    pub fn set_add(&mut self, name: &str, value: &str) -> Result<(), CoreError> {
+        self.valid_name(name)?;
+
         self.0
             .entry((name.to_string(), VarType::Set))
             .and_modify(|set| {
@@ -59,6 +82,8 @@ impl VariableStore {
                 set.insert(value.to_string());
                 Value::Set(set)
             });
+
+        Ok(())
     }
 }
 
