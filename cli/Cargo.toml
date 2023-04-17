@@ -23,6 +23,6 @@ warp = "0.3.3"
 futures-util = "0.3.27"
 portpicker = "0.1.1"
 notify =  { version = "5.1.0", default-features = false, features = ["macos_kqueue"] }
-
+walkdir = "2"
 [features]
 default = ["modmark_core/bundle_std_packages"]

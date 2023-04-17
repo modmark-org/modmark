@@ -10,7 +10,7 @@ use std::{
     },
 };
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use crossterm::{
     cursor,
     style::{self, Stylize},
@@ -19,6 +19,7 @@ use crossterm::{
 use futures_util::{SinkExt, StreamExt, TryFutureExt};
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use once_cell::sync::OnceCell;
+use package::cache_location;
 use portpicker::Port;
 use tokio::sync::{
     mpsc::{self, channel, Receiver},
@@ -26,6 +27,7 @@ use tokio::sync::{
 };
 use tokio::task::spawn_blocking;
 use tokio_stream::wrappers::UnboundedReceiverStream;
+use walkdir::WalkDir;
 use warp::{
     ws::{Message, WebSocket},
     Filter, Rejection, Reply,
@@ -42,9 +44,15 @@ mod error;
 mod file_access;
 mod package;
 
-#[derive(Parser, Debug)]
+#[derive(Parser)]
 #[command(author, version, about)]
 struct Args {
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(Parser)]
+struct CompileArgs {
     #[arg(index = 1, help = "Path to input file")]
     input: PathBuf,
 
@@ -90,7 +98,7 @@ struct Args {
     assets: Option<String>,
 }
 
-impl Args {
+impl CompileArgs {
     /// Get the output format from the cli and, if need be,
     /// infer the format based on the file extension on the output file
     fn get_output_format(&self) -> Result<OutputFormat, CliError> {
@@ -114,28 +122,44 @@ impl Args {
     }
 
     /// Check if a html live preview should be used
-    fn use_html_preview(&self) -> bool {
+    fn use_html_preview(&self) -> Result<bool, CliError> {
         // If no output file was provided and the output format is "html" (or left unspecified)
         // we know that the user wants to use the live preview.
         if self.output.is_none() {
-            return self.format.is_none()
+            return Ok(self.format.is_none()
                 || self
                     .get_output_format()
                     .map(|format| format == OutputFormat::new("html"))
-                    .unwrap_or(false);
+                    .unwrap_or(false));
         }
 
         // When using the --watch flag and the output format is html
         // we also start the live preview
         if self.watch {
             if let Ok(format) = self.get_output_format() {
-                return format == OutputFormat::new("html");
+                return Ok(format == OutputFormat::new("html"));
             }
         }
 
         // In all other cases, don't use start the live preview
-        false
+        Ok(false)
     }
+}
+
+#[derive(Subcommand)]
+enum Command {
+    Compile(CompileArgs),
+    Cache {
+        #[command(subcommand)]
+        command: CacheCommand,
+    },
+}
+
+#[derive(Subcommand)]
+enum CacheCommand {
+    Clear,
+    List,
+    Location,
 }
 
 static DEFAULT_CATALOG: &str =
@@ -183,6 +207,7 @@ async fn compile_file(input_file: &Path, output_format: &OutputFormat) -> Compil
 
     Err(vec![])
 }
+
 fn print_compiling_message() -> Result<(), CliError> {
     let mut stdout = stdout();
     stdout.execute(terminal::Clear(terminal::ClearType::All))?;
@@ -192,7 +217,7 @@ fn print_compiling_message() -> Result<(), CliError> {
     Ok(())
 }
 
-fn print_result(result: &CompilationResult, args: &Args) -> Result<(), CliError> {
+fn print_result(result: &CompilationResult, args: &CompileArgs) -> Result<(), CliError> {
     let mut stdout = stdout();
 
     let (_, state, ast) = match result {
@@ -229,7 +254,7 @@ fn print_result(result: &CompilationResult, args: &Args) -> Result<(), CliError>
     ))?;
 
     // Print the path to the live preview (if using one)
-    if args.use_html_preview() {
+    if args.use_html_preview()? {
         let port = get_port()?;
         println!("Live preview available at: http://localhost:{port}");
     }
@@ -269,7 +294,7 @@ fn print_result(result: &CompilationResult, args: &Args) -> Result<(), CliError>
 }
 
 /// Write the result to a file
-fn save_result(result: &CompilationResult, args: &Args) -> Result<(), CliError> {
+fn save_result(result: &CompilationResult, args: &CompileArgs) -> Result<(), CliError> {
     if let Some(output) = &args.output {
         if let Ok((document, _, _)) = result {
             let mut file = File::create(output)?;
@@ -293,18 +318,29 @@ fn save_result(result: &CompilationResult, args: &Args) -> Result<(), CliError> 
 async fn main() {
     let args = Args::parse();
 
-    match run_cli(args).await {
-        Ok(_) => (),
-        Err(error) => {
-            let mut stdout = stdout();
-            stdout
-                .execute(style::PrintStyledContent(format!("{error}").red()))
-                .unwrap();
-        }
+    match &args.command {
+        Command::Compile(compile_args) => match run_compile(compile_args).await {
+            Ok(_) => (),
+            Err(error) => {
+                let mut stdout = stdout();
+                stdout
+                    .execute(style::PrintStyledContent(format!("{error}").red()))
+                    .unwrap();
+            }
+        },
+        Command::Cache { command } => match run_cache(command).await {
+            Ok(_) => (),
+            Err(error) => {
+                let mut stdout = stdout();
+                stdout
+                    .execute(style::PrintStyledContent(format!("{error}").red()))
+                    .unwrap();
+            }
+        },
     }
 }
 
-async fn run_cli(args: Args) -> Result<(), CliError> {
+async fn run_compile(args: &CompileArgs) -> Result<(), CliError> {
     let current_path = env::current_dir()?;
 
     let catalog = args
@@ -334,7 +370,7 @@ async fn run_cli(args: Args) -> Result<(), CliError> {
 
     // Using html output format and watch flag
     // (or if the user never provided a output file at all)
-    if args.use_html_preview() && get_port().is_ok() {
+    if args.use_html_preview()? && get_port().is_ok() {
         let connections = PreviewConnections::default();
         let document = PreviewDoc::default();
         let port = get_port()?;
@@ -379,6 +415,44 @@ async fn run_cli(args: Args) -> Result<(), CliError> {
         print_result(&compilation_result, &args)?;
     } else {
         return Err(CliError::MissingOutputFile);
+    }
+
+    Ok(())
+}
+
+async fn run_cache(command: &CacheCommand) -> Result<(), CliError> {
+    match command {
+        CacheCommand::Clear => {
+            for dir in fs::read_dir(cache_location()?)? {
+                fs::remove_dir_all(dir?.path())?;
+            }
+        }
+        CacheCommand::List => {
+            let cache_path = cache_location()?;
+
+            if cache_path.read_dir()?.next().is_none() {
+                println!("No packages installed.");
+                return Ok(());
+            }
+
+            println!("These are the currently installed packages:");
+
+            let mut counter = 0;
+            for file in WalkDir::new(cache_path)
+                .into_iter()
+                .filter_map(|file| file.ok())
+            {
+                if file.file_type().is_file() {
+                    let Some(file_stem) = file.path().file_stem() else { return Err(CliError::Cache)};
+                    counter += 1;
+                    println!("  {}. \t{}", counter, file_stem.to_string_lossy())
+                }
+            }
+        }
+        CacheCommand::Location => println!(
+            "Your packages can be found in: {}",
+            cache_location()?.to_string_lossy()
+        ),
     }
 
     Ok(())
@@ -465,14 +539,14 @@ async fn handle_connection(socket: WebSocket, connections: PreviewConnections) {
 async fn watch_files<P: AsRef<Path>>(
     document: Option<PreviewDoc>,
     connections: Option<PreviewConnections>,
-    args: &Args,
+    args: &CompileArgs,
     watch_dir: P,
 ) -> Result<(), CliError> {
     // Function to recompile the document:
     async fn compile(
         document: Option<&PreviewDoc>,
         connections: Option<&PreviewConnections>,
-        args: &Args,
+        args: &CompileArgs,
     ) -> Result<(), CliError> {
         print_compiling_message()?;
 
