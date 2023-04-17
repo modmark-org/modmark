@@ -30,7 +30,6 @@ use crate::{ArgInfo, CoreError, OutputFormat, Package, Transform};
 
 pub struct Context<T, U> {
     pub package_store: Arc<Mutex<PackageStore>>,
-    pub variables: VariableStore,
     pub(crate) resolver: T,
     #[cfg(feature = "native")]
     engine: Engine,
@@ -43,6 +42,7 @@ pub struct Context<T, U> {
 /// in between calls to evaluation functions
 #[derive(Default, Clone, Debug)]
 pub struct CompilationState {
+    pub variables: VariableStore,
     pub warnings: Vec<Issue>,
     pub errors: Vec<Issue>,
     pub verbose_errors: bool,
@@ -139,7 +139,6 @@ impl<T, U> Context<T, U> {
         let policy = Arc::new(Mutex::new(policy));
         let ctx = Context {
             package_store: Arc::default(),
-            variables: VariableStore::default(),
             resolver,
             #[cfg(feature = "native")]
             engine: EngineBuilder::new(Cranelift::new()).engine(),
@@ -448,7 +447,8 @@ where
                 .get_vars_to_read(from, output_format)?
                 .into_iter()
                 .filter_map(|(name, ty)| {
-                    self.variables
+                    self.state
+                        .variables
                         .get(&name, &ty)
                         .map(|value| (format!("{ty}_{name}"), value.to_string()))
                 })
@@ -571,7 +571,6 @@ impl<T, U> Context<T, U> {
     /// specific to previous compilations, such as errors and warnings, gets cleared.
     pub fn clear_state(&mut self) {
         self.state.clear();
-        self.variables.clear();
     }
 
     /// Takes the internal `CompilationState` of this Context, and replacing it with

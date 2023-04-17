@@ -281,7 +281,7 @@ pub fn const_decl<T, U>(
     _: &GranularId,
 ) -> Result<Element, CoreError> {
     let name = args.get("name").unwrap().as_str().unwrap();
-    ctx.variables.constant_declare(name, value)?;
+    ctx.state.variables.constant_declare(name, value)?;
 
     Ok(Element::Compound(vec![]))
 }
@@ -296,7 +296,7 @@ pub fn const_read<T, U>(
     id: &GranularId,
 ) -> Result<Element, CoreError> {
     let name = args.get("name").unwrap().as_str().unwrap();
-    let value = ctx.variables.get(name, &VarType::Constant);
+    let value = ctx.state.variables.get(name, &VarType::Constant);
 
     if let Some(value) = value {
         Ok(text_element(value.to_string(), id.clone()))
@@ -316,7 +316,7 @@ pub fn list_push<T, U>(
     _: &GranularId,
 ) -> Result<Element, CoreError> {
     let name = args.get("name").unwrap().as_str().unwrap();
-    ctx.variables.list_push(name, value)?;
+    ctx.state.variables.list_push(name, value)?;
     Ok(Element::Compound(vec![]))
 }
 
@@ -330,7 +330,7 @@ pub fn list_read<T, U>(
     id: &GranularId,
 ) -> Result<Element, CoreError> {
     let name = args.get("name").unwrap().as_str().unwrap();
-    let value = ctx.variables.get(name, &VarType::List);
+    let value = ctx.state.variables.get(name, &VarType::List);
 
     if let Some(value) = value {
         Ok(text_element(value.to_string(), id.clone()))
@@ -350,7 +350,7 @@ pub fn set_add<T, U>(
     _: &GranularId,
 ) -> Result<Element, CoreError> {
     let name = args.get("name").unwrap().as_str().unwrap();
-    ctx.variables.set_add(name, value)?;
+    ctx.state.variables.set_add(name, value)?;
     Ok(Element::Compound(vec![]))
 }
 
@@ -364,7 +364,7 @@ pub fn set_read<T, U>(
     id: &GranularId,
 ) -> Result<Element, CoreError> {
     let name = args.get("name").unwrap().as_str().unwrap();
-    let value = ctx.variables.get(name, &VarType::Set);
+    let value = ctx.state.variables.get(name, &VarType::Set);
 
     if let Some(value) = value {
         Ok(text_element(value.to_string(), id.clone()))
