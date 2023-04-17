@@ -1,4 +1,4 @@
-use crate::Args;
+use crate::CompileArgs;
 use modmark_core::AccessPolicy;
 use std::collections::HashMap;
 use std::io::{stdin, stdout, Write};
@@ -77,7 +77,7 @@ fn prompt_user(prompt: &str) -> bool {
 }
 
 impl CliAccessManager {
-    pub(crate) fn new(args: &Args) -> Self {
+    pub(crate) fn new(args: &CompileArgs) -> Self {
         Self {
             root: args.assets.clone(),
             deny_read: args.deny_read,
