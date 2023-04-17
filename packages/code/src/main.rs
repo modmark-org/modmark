@@ -95,6 +95,9 @@ fn transform_code(to: &str) {
             }
         }
         "latex" => {
+            if font_size != 12{
+                eprintln!("Font size is not supported in LaTeX");
+            }
             print!("{}", highlight_latex(code, lang, theme, tab_size));
         }
         other => {
