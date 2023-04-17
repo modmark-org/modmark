@@ -132,7 +132,7 @@ fn highlight_latex(code: &str, lang: &String, tm: &str, tab_size: u64) -> String
         .unwrap();
         write!(
             result,
-            r#"{{"name": "raw", "data": "\\begin{{center}}\n\\begin{{codebox}}[colback=background]\n"}},"#
+            r#"{{"name": "raw", "data": "\\begin{{center}}\n\\texttt{{\n\\begin{{codebox}}[colback=background]\n"}},"#
         )
         .unwrap();
         for line in code.split('\n').map(|s| s.trim_end_matches('\r')) {
@@ -167,7 +167,7 @@ fn highlight_latex(code: &str, lang: &String, tm: &str, tab_size: u64) -> String
         }
         write!(
             result,
-            r#"{{"name": "raw", "data": "\\end{{codebox}}\n\\end{{center}}\n"}}"#
+            r#"{{"name": "raw", "data": "\\end{{codebox}}\n}}\n\\end{{center}}\n"}}"#
         )
         .unwrap();
         result.push(']');
