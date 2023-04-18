@@ -5,7 +5,6 @@ use std::env;
 use std::io::{self, Read};
 
 mod plot2d;
-mod plot3d;
 mod plotlist;
 
 fn main() {

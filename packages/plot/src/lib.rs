@@ -1,4 +1,4 @@
-use calc_lib::{evaluate_with_defined, Definitions, Error, Functions};
+use evalexpr::*;
 use plotters::prelude::*;
 use plotters::style::ShapeStyle;
 use serde_json::json;
@@ -140,43 +140,12 @@ pub fn manifest() {
     );
 }
 
-pub fn verify_function(function: &str, var_count: usize) -> bool {
-    if function.is_empty() {
-        return false;
+fn value_to_float(v: &Value) -> Option<f64> {
+    match v {
+        Value::Float(f) => Some(*f),
+        Value::Int(i) => Some(*i as f64),
+        _ => None,
     }
-
-    let names = get_var_names(function);
-    if names.len() > var_count {
-        return false;
-    }
-
-    let mut defs = Definitions::new();
-    for name in names {
-        defs.register(name, 0)
-    }
-
-    // prefix with "0+" cause otherwise functions starting with "-" break
-    // suspected calc_lib bugs: "+-x" does not subtract x, function args such as "2x" do not work
-    let prefixed = format!("0+{function}");
-
-    let calc_funcs = get_calc_funcs();
-    // if error is DivByZero or NegativeExponent it is likely a valid function
-    match evaluate_with_defined(prefixed, Some(&defs), Some(&calc_funcs)) {
-        Ok(_) => true,
-        Err(Error::DivByZero) | Err(Error::NegativeExponent) => true,
-        _ => false,
-    }
-}
-
-pub fn get_calc_funcs() -> Functions<'static> {
-    let mut funcs = Functions::default();
-
-    funcs.register("mod", |args| match args.len() {
-        2 => Ok(args[1] % args[0]),
-        _ => Err(Error::arg_count("mod", 2, args.len())),
-    });
-
-    funcs
 }
 
 // make sure this is up to date and matches get_calc_funcs
@@ -202,20 +171,98 @@ fn get_var_names(function: &str) -> Vec<String> {
     vars
 }
 
-pub fn eval_function(function: &str, vars: Vec<f32>, calc_funcs: &Functions) -> Result<f64, Error> {
-    let mut defs = Definitions::new();
-    let names = get_var_names(function);
-    let mut names_iter = names.iter();
-    let mut vars_iter = vars.iter();
+pub fn new_function_context() -> HashMapContext {
+    let mut ctx = HashMapContext::new();
+    ctx.set_function(
+        String::from("sin"),
+        Function::new(|arg| match value_to_float(arg) {
+            Some(float) => Ok(Value::Float(float.sin())),
+            None => Err(EvalexprError::expected_float(arg.clone())),
+        }),
+    )
+    .unwrap();
+    ctx.set_function(
+        String::from("cos"),
+        Function::new(|arg| match value_to_float(arg) {
+            Some(float) => Ok(Value::Float(float.cos())),
+            None => Err(EvalexprError::expected_float(arg.clone())),
+        }),
+    )
+    .unwrap();
+    ctx.set_function(
+        String::from("tan"),
+        Function::new(|arg| match value_to_float(arg) {
+            Some(float) => Ok(Value::Float(float.tan())),
+            None => Err(EvalexprError::expected_float(arg.clone())),
+        }),
+    )
+    .unwrap();
+    ctx.set_function(
+        String::from("sqrt"),
+        Function::new(|arg| match value_to_float(arg) {
+            Some(float) => Ok(Value::Float(float.sqrt())),
+            None => Err(EvalexprError::expected_float(arg.clone())),
+        }),
+    )
+    .unwrap();
+    ctx.set_function(
+        String::from("log"),
+        Function::new(|arg| {
+            let args = arg.as_tuple()?;
+            match (value_to_float(&args[0]), value_to_float(&args[1])) {
+                (Some(a), Some(b)) => Ok(Value::Float(b.log(a))),
+                (_, _) => Err(EvalexprError::expected_float(arg.clone())),
+            }
+        }),
+    )
+    .unwrap();
+    ctx.set_function(
+        String::from("mod"),
+        Function::new(|arg| {
+            let args = arg.as_tuple()?;
+            match (value_to_float(&args[0]), value_to_float(&args[1])) {
+                (Some(a), Some(b)) => Ok(Value::Float(b % a)),
+                (_, _) => Err(EvalexprError::expected_float(arg.clone())),
+            }
+        }),
+    )
+    .unwrap();
+    ctx
+}
 
-    while let (Some(name), Some(&var)) = (names_iter.next(), vars_iter.next()) {
-        defs.register(name, var);
+fn update_function_context(ctx: &mut HashMapContext, names: &[String], values: &[f32]) {
+    let mut names_iter = names.iter();
+    let mut values_iter = values.iter();
+    while let (Some(name), Some(&value)) = (names_iter.next(), values_iter.next()) {
+        // only values from verify_function float ranges will be used here, fine to unwrap
+        ctx.set_value(name.into(), (value as f64).into()).unwrap();
+    }
+}
+
+pub fn verify_function(ctx: &mut HashMapContext, function: &str, var_count: usize) -> bool {
+    if function.is_empty() {
+        return false;
     }
 
-    // prefix with "0+" cause otherwise functions starting with "-" break
-    // suspected calc_lib bugs: "+-x" does not subtract x, function args such as "2x" do not work
-    let prefixed = format!("0+{function}");
-    evaluate_with_defined(prefixed, Some(&defs), Some(calc_funcs))
+    let names = get_var_names(function);
+    if names.len() > var_count {
+        return false;
+    }
+
+    let values = vec![0.0; names.len()];
+    update_function_context(ctx, &names, &values);
+
+    eval_float_with_context_mut(function, ctx).is_ok()
+}
+
+pub fn eval_function(
+    ctx: &mut HashMapContext,
+    function: &str,
+    values: Vec<f32>,
+) -> EvalexprResult<f64> {
+    let names = get_var_names(function);
+    update_function_context(ctx, &names, &values);
+    eval_float_with_context_mut(function, ctx)
 }
 
 pub fn get_shape_style(color_str: &str, width: u32) -> ShapeStyle {

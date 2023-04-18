@@ -17,36 +17,35 @@ fn get_svg_from_list(
     // string where svg is stored
     let mut buf = String::new();
 
-    // scope to drop root before buf is needed again
-    {
-        // TODO: don't do this, this allows 3 numbers in x_range and 1 in y_range and so on
-        let ranges = format!("{x_range} {y_range}");
-        let bounds = ranges
+    // TODO: don't do this, this allows 3 numbers in x_range and 1 in y_range and so on
+    let ranges = format!("{x_range} {y_range}");
+    let bounds = ranges
+        .split(' ')
+        .filter_map(|v| v.parse::<f32>().ok())
+        .collect::<Vec<f32>>();
+    if bounds.len() != 4 {
+        return Err("Invalid input for axis ranges.".to_string());
+    }
+
+    let x_fr = bounds[0];
+    let x_to = bounds[1];
+    let y_fr = bounds[2];
+    let y_to = bounds[3];
+
+    let mut points = Vec::new();
+    for line in data.split('\n') {
+        let values = line
             .split(' ')
             .filter_map(|v| v.parse::<f32>().ok())
             .collect::<Vec<f32>>();
-        if bounds.len() != 4 {
-            return Err("Invalid input for axis ranges.".to_string());
+        if values.len() != 2 {
+            return Err("Invalid data in list of values.".to_string());
+        } else {
+            points.push((values[0], values[1]))
         }
+    }
 
-        let x_fr = bounds[0];
-        let x_to = bounds[1];
-        let y_fr = bounds[2];
-        let y_to = bounds[3];
-
-        let mut points = Vec::new();
-        for line in data.split('\n') {
-            let values = line
-                .split(' ')
-                .filter_map(|v| v.parse::<f32>().ok())
-                .collect::<Vec<f32>>();
-            if values.len() != 2 {
-                return Err("Invalid data in list of values.".to_string());
-            } else {
-                points.push((values[0], values[1]))
-            }
-        }
-
+    {
         let root = SVGBackend::with_string(&mut buf, (400, 400)).into_drawing_area();
         let mut chart = ChartBuilder::on(&root)
             .margin(10)
@@ -77,6 +76,7 @@ fn get_svg_from_list(
         root.present()
             .map_err(|_| "Failed to create SVG.".to_string())?;
     }
+
     Ok(buf)
 }
 

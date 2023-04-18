@@ -4,7 +4,7 @@ use serde_json::{json, Value};
 use std::fs::File;
 use std::io::Write;
 
-use plot::{eval_function, get_calc_funcs, get_shape_style, raw, verify_function};
+use plot::{eval_function, get_shape_style, new_function_context, raw, verify_function};
 
 fn get_svg_2d(
     function: &str,
@@ -12,80 +12,80 @@ fn get_svg_2d(
     y_range: &str,
     shape_style: ShapeStyle,
 ) -> Result<String, String> {
-    // verify that function is valid
-    if !verify_function(function, 1) {
+    let mut ctx = new_function_context();
+
+    if !verify_function(&mut ctx, function, 1) {
         return Err("Invalid function.".to_string());
     }
 
     // string where svg is stored
     let mut buf = String::new();
 
-    // scope to drop root before buf is needed again
-    {
-        // TODO: don't do this, this allows 3 numbers in x_range and 1 in y_range and so on
-        let ranges = format!("{x_range} {y_range}");
-        let bounds = ranges
-            .split(' ')
-            .filter_map(|v| v.parse::<f32>().ok())
-            .collect::<Vec<f32>>();
-        if bounds.len() != 4 {
-            return Err("Invalid input for axis ranges.".to_string());
-        }
+    // TODO: don't do this, this allows 3 numbers in x_range and 1 in y_range and so on
+    let ranges = format!("{x_range} {y_range}");
+    let bounds = ranges
+        .split(' ')
+        .filter_map(|v| v.parse::<f32>().ok())
+        .collect::<Vec<f32>>();
+    if bounds.len() != 4 {
+        return Err("Invalid input for axis ranges.".to_string());
+    }
 
-        let x_fr = bounds[0];
-        let x_to = bounds[1];
-        let y_fr = bounds[2];
-        let y_to = bounds[3];
+    let x_fr = bounds[0];
+    let x_to = bounds[1];
+    let y_fr = bounds[2];
+    let y_to = bounds[3];
 
-        // quotient to scale range of points and mean of x_fr, x_to
-        let q = (x_to - x_fr) / 200.0;
-        let m = (x_fr + x_to) / 2.0;
-        let calc_funcs = get_calc_funcs();
+    // quotient to scale range of points and mean of x_fr, x_to
+    let q = (x_to - x_fr) / 200.0;
+    let m = (x_fr + x_to) / 2.0;
 
-        // create a range of 400 points (same as svg width), scale the points to x_range and
-        // filter out undefined values
-        let points = (-100..=100)
-            .map(|x| x as f32 * q + m)
-            .map(|x| (x, eval_function(function, vec![x], &calc_funcs)))
-            .filter_map(|(x, y)| {
-                if let Ok(v) = y {
-                    if v != f64::INFINITY && v != f64::NEG_INFINITY {
-                        Some((x, v as f32))
-                    } else {
-                        None
-                    }
+    // create a range of 400 points (same as svg width), scale the points to x_range and
+    // filter out undefined values
+    let points = (-100..=100)
+        .map(|x| x as f32 * q + m)
+        .map(|x| (x, eval_function(&mut ctx, function, vec![x])))
+        .filter_map(|(x, y)| {
+            if let Ok(v) = y {
+                if v != f64::INFINITY && v != f64::NEG_INFINITY {
+                    Some((x, v as f32))
                 } else {
                     None
                 }
-            })
-            .collect::<Vec<(f32, f32)>>();
-
-        // filter out all points where both neighbours are out of bounds
-        // and split into different series, based on where plot goes outside bounds
-        let mut series: Vec<Vec<(f32, f32)>> = vec![vec![]];
-        let (_, y) = points[1];
-        // special case for first point
-        if y >= y_fr && y <= y_to {
-            let i = series.len() - 1;
-            series.get_mut(i).unwrap().push(points[0]);
-        }
-        for i in 1..points.len() - 1 {
-            let (_, ly) = points[i - 1];
-            let (_, ry) = points[i + 1];
-            if (ly >= y_fr && ly <= y_to) || (ry >= y_fr && ry <= y_to) {
-                let j = series.len() - 1;
-                series.get_mut(j).unwrap().push(points[i]);
             } else {
-                series.push(vec![]);
+                None
             }
-        }
-        // special case for last point
-        let (_, y) = points[points.len() - 2];
-        if y >= y_fr && y <= y_to {
-            let i = series.len() - 1;
-            series.get_mut(i).unwrap().push(points[points.len() - 1]);
-        }
+        })
+        .collect::<Vec<(f32, f32)>>();
 
+    // filter out all points where both neighbours are out of bounds
+    // and split into different series, based on where plot goes outside bounds
+    let mut series: Vec<Vec<(f32, f32)>> = vec![vec![]];
+    let (_, y) = points[1];
+    // special case for first point
+    if y >= y_fr && y <= y_to {
+        let i = series.len() - 1;
+        series.get_mut(i).unwrap().push(points[0]);
+    }
+    for i in 1..points.len() - 1 {
+        let (_, ly) = points[i - 1];
+        let (_, ry) = points[i + 1];
+        if (ly >= y_fr && ly <= y_to) || (ry >= y_fr && ry <= y_to) {
+            let j = series.len() - 1;
+            series.get_mut(j).unwrap().push(points[i]);
+        } else {
+            series.push(vec![]);
+        }
+    }
+    // special case for last point
+    let (_, y) = points[points.len() - 2];
+    if y >= y_fr && y <= y_to {
+        let i = series.len() - 1;
+        series.get_mut(i).unwrap().push(points[points.len() - 1]);
+    }
+
+    // scope to drop root and chart before buf is needed again
+    {
         let root = SVGBackend::with_string(&mut buf, (400, 400)).into_drawing_area();
         let mut chart = ChartBuilder::on(&root)
             .margin(10)
@@ -108,6 +108,7 @@ fn get_svg_2d(
         root.present()
             .map_err(|_| "Failed to create SVG.".to_string())?;
     }
+
     Ok(buf)
 }
 
