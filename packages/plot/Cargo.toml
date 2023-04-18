@@ -8,6 +8,6 @@ edition = "2021"
 [dependencies]
 serde = "1.0.152"
 serde_json = "1.0.93"
-plotters = { version = "0.3.4", default_features = false, features = ["svg_backend", "line_series"] }
-calc_lib = "2.1.0"
+plotters = { version = "0.3.4", default_features = false, features = ["svg_backend", "line_series", "surface_series"] }
+evalexpr = "9.0.0"
 base64 = "0.21.0"
