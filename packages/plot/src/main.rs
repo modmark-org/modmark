@@ -1,10 +1,12 @@
 use plot::manifest;
 use plot2d::transform_plot_2d;
+use plotlist::transform_plot_list;
 use std::env;
 use std::io::{self, Read};
 
 mod plot2d;
 mod plot3d;
+mod plotlist;
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -28,6 +30,7 @@ fn transform(from: &str, _to: &str) {
 
     match from {
         "plot" => transform_plot_2d(input),
+        "plot_list" => transform_plot_list(input),
         other => {
             eprintln!("Package does not support {other}");
         }

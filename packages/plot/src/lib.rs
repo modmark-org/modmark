@@ -65,10 +65,72 @@ pub fn manifest() {
                             "default": 1,
                         },
                         {
-                            "name": "line_color",
-                            "description": "The color of the line that is used in the plot.",
+                            "name": "color",
+                            "description": "The color that is used in the plot.",
                             "type": ["red", "blue", "green", "yellow"],
                             "default": "red",
+                        },
+                    ],
+                },
+                {
+                    "from": "plot_list",
+                    "to": ["html"],
+                    "description": "Plot a set of (x,y) values. The values should be placed on separate lines, and the x-y pair should space-separated.",
+                    "arguments": [
+                        {
+                            "name": "caption",
+                            "description": "Caption for the plot.",
+                            "default": "",
+                        },
+                        {
+                            "name": "label",
+                            "description": "Label to use for the plot, to be able to refer to it from the document.",
+                            "default": "",
+                        },
+                        {
+                            "name": "width",
+                            "description": "Width of the plot. For HTML this is given as the ratio to the width of the surrounding figure tag (created automatically).",
+                            "default": 1.0,
+                            "type": "f64",
+                        },
+                        {
+                            "name": "x_range",
+                            "description": "The range of x-values that are plotted. This is given as two numbers with a space between.",
+                            "default": "-20 20",
+                        },
+                        {
+                            "name": "y_range",
+                            "description": "The range of y-values that are plotted. This is given as two numbers with a space between.",
+                            "default": "-20 20",
+                        },
+                        {
+                            "name": "save",
+                            "description": "The name of the SVG file that is saved. No file is saved if this argument is left empty.",
+                            "default": "",
+                        },
+                        {
+                            "name": "line_width",
+                            "description": "The width of the line that is used in the plot.",
+                            "type": "uint",
+                            "default": 1,
+                        },
+                        {
+                            "name": "color",
+                            "description": "The color that is used in the plot.",
+                            "type": ["red", "blue", "green", "yellow"],
+                            "default": "red",
+                        },
+                        {
+                            "name": "connect",
+                            "description": "Decides if lines will be drawn between points.",
+                            "type": ["false", "true"],
+                            "default": "true",
+                        },
+                        {
+                            "name": "point_size",
+                            "description": "The diameter of each plotted point, given in pixels.",
+                            "type": "uint",
+                            "default": 3,
                         },
                     ],
                 },
@@ -166,7 +228,7 @@ pub fn get_shape_style(color_str: &str, width: u32) -> ShapeStyle {
     };
     ShapeStyle {
         color,
-        filled: false,
+        filled: true,
         stroke_width: width,
     }
 }

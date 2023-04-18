@@ -4,19 +4,16 @@ use serde_json::{json, Value};
 use std::fs::File;
 use std::io::Write;
 
-use plot::{eval_function, get_calc_funcs, get_shape_style, raw, verify_function};
+use plot::{get_shape_style, raw};
 
-fn get_svg_2d(
-    function: &str,
+fn get_svg_from_list(
+    data: &str,
     x_range: &str,
     y_range: &str,
     shape_style: ShapeStyle,
+    connect: bool,
+    point_size: u32,
 ) -> Result<String, String> {
-    // verify that function is valid
-    if !verify_function(function, 1) {
-        return Err("Invalid function.".to_string());
-    }
-
     // string where svg is stored
     let mut buf = String::new();
 
@@ -37,53 +34,17 @@ fn get_svg_2d(
         let y_fr = bounds[2];
         let y_to = bounds[3];
 
-        // quotient to scale range of points and mean of x_fr, x_to
-        let q = (x_to - x_fr) / 200.0;
-        let m = (x_fr + x_to) / 2.0;
-        let calc_funcs = get_calc_funcs();
-
-        // create a range of 400 points (same as svg width), scale the points to x_range and
-        // filter out undefined values
-        let points = (-100..=100)
-            .map(|x| x as f32 * q + m)
-            .map(|x| (x, eval_function(function, vec![x], &calc_funcs)))
-            .filter_map(|(x, y)| {
-                if let Ok(v) = y {
-                    if v != f64::INFINITY && v != f64::NEG_INFINITY {
-                        Some((x, v as f32))
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<(f32, f32)>>();
-
-        // filter out all points where both neighbours are out of bounds
-        // and split into different series, based on where plot goes outside bounds
-        let mut series: Vec<Vec<(f32, f32)>> = vec![vec![]];
-        let (_, y) = points[1];
-        // special case for first point
-        if y >= y_fr && y <= y_to {
-            let i = series.len() - 1;
-            series.get_mut(i).unwrap().push(points[0]);
-        }
-        for i in 1..points.len() - 1 {
-            let (_, ly) = points[i - 1];
-            let (_, ry) = points[i + 1];
-            if (ly >= y_fr && ly <= y_to) || (ry >= y_fr && ry <= y_to) {
-                let j = series.len() - 1;
-                series.get_mut(j).unwrap().push(points[i]);
+        let mut points = Vec::new();
+        for line in data.split('\n') {
+            let values = line
+                .split(' ')
+                .filter_map(|v| v.parse::<f32>().ok())
+                .collect::<Vec<f32>>();
+            if values.len() != 2 {
+                return Err("Invalid data in list of values.".to_string());
             } else {
-                series.push(vec![]);
+                points.push((values[0], values[1]))
             }
-        }
-        // special case for last point
-        let (_, y) = points[points.len() - 2];
-        if y >= y_fr && y <= y_to {
-            let i = series.len() - 1;
-            series.get_mut(i).unwrap().push(points[points.len() - 1]);
         }
 
         let root = SVGBackend::with_string(&mut buf, (400, 400)).into_drawing_area();
@@ -99,10 +60,18 @@ fn get_svg_2d(
             .draw()
             .map_err(|_| "Failed to draw coordinate system.".to_string())?;
 
-        for s in series {
+        chart
+            .draw_series(
+                points
+                    .iter()
+                    .map(|(x, y)| Circle::new((*x, *y), point_size, shape_style)),
+            )
+            .map_err(|_| "Failed to connect the points.".to_string())?;
+
+        if connect {
             chart
-                .draw_series(LineSeries::new(s, shape_style))
-                .map_err(|_| "Failed to plot the function.".to_string())?;
+                .draw_series(LineSeries::new(points.into_iter(), shape_style))
+                .map_err(|_| "Failed to connect the points.".to_string())?;
         }
 
         root.present()
@@ -111,7 +80,7 @@ fn get_svg_2d(
     Ok(buf)
 }
 
-pub fn transform_plot_2d(input: Value) {
+pub fn transform_plot_list(input: Value) {
     let caption = input["arguments"]["caption"].as_str().unwrap();
     let label = input["arguments"]["label"].as_str().unwrap();
     let width = input["arguments"]["width"]
@@ -127,7 +96,11 @@ pub fn transform_plot_2d(input: Value) {
     let line_color = input["arguments"]["color"].as_str().unwrap();
     let line_width = input["arguments"]["line_width"].as_u64().unwrap() as u32;
     let shape_style = get_shape_style(line_color, line_width);
-    let svg = match get_svg_2d(function, x_range, y_range, shape_style) {
+    let connect = input["arguments"]["connect"].as_str().unwrap() == "true";
+    let point_size = input["arguments"]["point_size"].as_u64().unwrap() as u32;
+
+    let svg = match get_svg_from_list(function, x_range, y_range, shape_style, connect, point_size)
+    {
         Ok(s) => s,
         Err(e) => {
             eprintln!("{e}");
