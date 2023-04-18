@@ -221,9 +221,8 @@ impl<T, U> Context<T, U> {
         format: &OutputFormat,
     ) -> Result<Vec<(Variable, VarAccess)>, CoreError> {
         let Some(name) = element.name() else {
-            // Compounds and Raw elements do not have a name, but they don't
-            // depend on any variables either so we can just return a empty vector.  
-            return Ok(vec![]);
+            // Compounds and Raw elements do not have names and we should not check for the dependencies either
+            unreachable!("Unexpected use of compound or raw element in get_var_dependencies")
         };
 
         // Now, let's find the relevent transform for provided output format
