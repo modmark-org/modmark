@@ -8,7 +8,7 @@ use wasmer::{ExportError, InstantiationError, RuntimeError};
 use wasmer_wasi::{WasiError, WasiStateCreationError};
 
 use crate::package::ArgType;
-use crate::variables::VarAccess;
+use crate::variables::{VarAccess, VarType};
 use parser::ParseError;
 
 #[derive(Error, Debug)]
@@ -88,26 +88,36 @@ pub enum CoreError {
         expected_type: String,
         given_value: String,
     },
-    #[error("Could not find argument '{argument_name}' which variable accesses depends on in element '{element}' in package '{package}' (variable access '{var_access:?}')")]
+    #[error("Could not find argument '{argument_name}' which variable accesses depends on in transform '{transform}' in package '{package}' (variable access '{var_access:?}')")]
     ArgumentDependentVariable {
         argument_name: String,
-        element: String,
+        transform: String,
         package: String,
         var_access: VarAccess,
     },
-    #[error("Invalid argument dependent variable type, expected String or Enum variant, got '{argument_type:?}'; argument '{argument_name}' for element '{element}' in package '{package}'")]
+    #[error("Invalid argument dependent variable type, expected String or Enum variant, got '{argument_type:?}'; argument '{argument_name}' for transform '{transform}' in package '{package}'")]
     ArgumentDependentVariableType {
         argument_type: ArgType,
         argument_name: String,
-        element: String,
+        transform: String,
         package: String,
     },
-    #[error("Attempted to access variable '{variable_name}' using multiple different operations for element '{element}' in '{package}' ")]
+    #[error("Attempted to access variable '{variable_name}' using multiple different variable types for transform '{transform}' in '{package}' ")]
     ClashingVariableAccesses {
         variable_name: String,
-        element: String,
+        transform: String,
         package: String,
     },
+    #[error("Attempted to access the variable '{name}' as a '{expected_type}' but the name is already occupied by value of type '{present_type}'.")]
+    TypeMismatch {
+        name: String,
+        expected_type: VarType,
+        present_type: VarType,
+    },
+    #[error("Attempted to redeclare the constant '{0}'.")]
+    ConstantRedeclaration(String),
+    #[error("Forbidden variable name '{0}'. Only ASCII letters and numbers as well as '_' is allowed. The name may also not start with a number.")]
+    ForbiddenVariableName(String),
     #[error("A package request was dropped before resolving")]
     DroppedRequest,
     #[error("Missing standard package named '{0}'")]
@@ -116,10 +126,6 @@ pub enum CoreError {
     Schedule,
     #[error("Could not flatten structure, internal scheduling error")]
     Flat,
-    #[error("Attempted to redeclare the constant '{0}'.")]
-    ConstantRedeclaration(String),
-    #[error("Forbidden variable name '{0}'. Only ASCII letters and numbers as well as '_' is allowed. The name may also not start with a number.")]
-    ForbiddenVariableName(String),
 }
 
 impl From<WasiError> for CoreError {

@@ -72,8 +72,7 @@ impl PackageInfo {
         // Ensure all mentioned argument-dependent variables has corresponding arguments
         for transform in &self.transforms {
             for (var, access) in &transform.variables {
-                if var.starts_with('$') {
-                    let arg_name = &var[1..];
+                if let Some(arg_name) = var.strip_prefix('$') {
                     // Check if the argument exist
                     if let Some(arg_info) =
                         transform.arguments.iter().find(|arg| arg.name == arg_name)
@@ -85,7 +84,7 @@ impl PackageInfo {
                             return Err(CoreError::ArgumentDependentVariableType {
                                 argument_type: arg_info.r#type.clone(),
                                 argument_name: arg_name.to_string(),
-                                element: transform.from.to_string(),
+                                transform: transform.from.to_string(),
                                 package: self.name.to_string(),
                             });
                         }
@@ -93,9 +92,9 @@ impl PackageInfo {
                         // If not, we are missing that argument and the manifest is invalid
                         return Err(CoreError::ArgumentDependentVariable {
                             argument_name: arg_name.to_string(),
-                            element: transform.from.to_string(),
+                            transform: transform.from.to_string(),
                             package: self.name.to_string(),
-                            var_access: access.clone(),
+                            var_access: *access,
                         });
                     }
                 }

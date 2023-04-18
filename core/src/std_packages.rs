@@ -11,7 +11,7 @@ use crate::element::GranularId;
 use crate::package::{ArgValue, PrimitiveArgType};
 use crate::package_store::PackageStore;
 use crate::std_packages_macros::{define_native_packages, define_standard_package_loader};
-use crate::variables::{ConstantAccess, ListAccess, SetAccess, VarAccess, VarType};
+use crate::variables::{self, ConstantAccess, ListAccess, SetAccess, VarAccess, VarType};
 use crate::{ArgInfo, Context, CoreError, Element, OutputFormat, PackageInfo, Transform};
 
 // Here, all standard packages are declared. The macro expands to one function
@@ -267,7 +267,7 @@ fn text_element(contents: String, id: GranularId) -> Element {
         args: Default::default(),
         body: contents,
         inline: false,
-        id: id.clone(),
+        id: id,
     }
 }
 
@@ -296,13 +296,17 @@ pub fn const_read<T, U>(
     id: &GranularId,
 ) -> Result<Element, CoreError> {
     let name = args.get("name").unwrap().as_str().unwrap();
-    let value = ctx.state.variables.get(name, &VarType::Constant);
 
-    if let Some(value) = value {
-        Ok(text_element(value.to_string(), id.clone()))
-    } else {
-        // TODO: give a error or warning
-        Ok(Element::Compound(vec![]))
+    match ctx.state.variables.get(name) {
+        Some(value @ variables::Value::Constant(_)) => {
+            Ok(text_element(value.to_string(), id.clone()))
+        }
+        Some(value) => Err(CoreError::TypeMismatch {
+            name: name.to_string(),
+            expected_type: VarType::Constant,
+            present_type: value.get_type(),
+        }),
+        None => Ok(Element::Compound(vec![])), // TODO: give a error or warning
     }
 }
 
@@ -330,13 +334,15 @@ pub fn list_read<T, U>(
     id: &GranularId,
 ) -> Result<Element, CoreError> {
     let name = args.get("name").unwrap().as_str().unwrap();
-    let value = ctx.state.variables.get(name, &VarType::List);
 
-    if let Some(value) = value {
-        Ok(text_element(value.to_string(), id.clone()))
-    } else {
-        // TODO: give a error or warning
-        Ok(Element::Compound(vec![]))
+    match ctx.state.variables.get(name) {
+        Some(value @ variables::Value::List(_)) => Ok(text_element(value.to_string(), id.clone())),
+        Some(value) => Err(CoreError::TypeMismatch {
+            name: name.to_string(),
+            expected_type: VarType::List,
+            present_type: value.get_type(),
+        }),
+        None => Ok(Element::Compound(vec![])), // TODO: give a error or warning
     }
 }
 
@@ -364,13 +370,15 @@ pub fn set_read<T, U>(
     id: &GranularId,
 ) -> Result<Element, CoreError> {
     let name = args.get("name").unwrap().as_str().unwrap();
-    let value = ctx.state.variables.get(name, &VarType::Set);
 
-    if let Some(value) = value {
-        Ok(text_element(value.to_string(), id.clone()))
-    } else {
-        // TODO: give a error or warning
-        Ok(Element::Compound(vec![]))
+    match ctx.state.variables.get(name) {
+        Some(value @ variables::Value::Set(_)) => Ok(text_element(value.to_string(), id.clone())),
+        Some(value) => Err(CoreError::TypeMismatch {
+            name: name.to_string(),
+            expected_type: VarType::Set,
+            present_type: value.get_type(),
+        }),
+        None => Ok(Element::Compound(vec![])), // TODO: give a error or warning
     }
 }
 

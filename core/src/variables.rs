@@ -1,17 +1,17 @@
 use crate::CoreError;
 use serde::{Deserialize, Serialize};
-use std::borrow::Borrow;
 use std::cmp::Ordering;
+use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 
 #[derive(Debug, Clone, Default)]
-pub struct VariableStore(HashMap<(String, VarType), Value>);
+pub struct VariableStore(HashMap<String, Value>);
 
 impl VariableStore {
-    pub fn get(&self, name: &str, ty: &VarType) -> Option<&Value> {
-        self.0.get(&(name, ty) as &dyn AsVariable)
+    pub fn get(&self, name: &str) -> Option<&Value> {
+        self.0.get(name)
     }
 
     /// Clears the variable store
@@ -39,12 +39,16 @@ impl VariableStore {
     pub fn constant_declare(&mut self, name: &str, value: &str) -> Result<(), CoreError> {
         self.valid_name(name)?;
         let value = Value::Constant(value.to_string());
-        let prev_value = self.0.insert((name.to_string(), VarType::Constant), value);
+        let prev_value = self.0.insert(name.to_string(), value);
 
-        if prev_value.is_some() {
-            Err(CoreError::ConstantRedeclaration(name.to_string()))
-        } else {
-            Ok(())
+        match prev_value {
+            Some(Value::Constant(_)) => Err(CoreError::ConstantRedeclaration(name.to_string())),
+            Some(prev_value) => Err(CoreError::TypeMismatch {
+                name: name.to_string(),
+                expected_type: VarType::Constant,
+                present_type: prev_value.get_type(),
+            }),
+            None => Ok(()),
         }
     }
 
@@ -52,15 +56,21 @@ impl VariableStore {
     pub fn list_push(&mut self, name: &str, value: &str) -> Result<(), CoreError> {
         self.valid_name(name)?;
 
-        self.0
-            .entry((name.to_string(), VarType::List))
-            .and_modify(|list| {
-                let Value::List(list) = list else {
-                    unreachable!("Should always contain a list value");
-                };
-                list.push(value.to_string())
-            })
-            .or_insert_with(|| Value::List(vec![value.to_string()]));
+        match self.0.entry(name.to_string()) {
+            Entry::Occupied(mut entry) => match entry.get_mut() {
+                Value::List(list) => list.push(value.to_string()),
+                wrong_value => {
+                    return Err(CoreError::TypeMismatch {
+                        name: name.to_string(),
+                        expected_type: VarType::List,
+                        present_type: wrong_value.get_type(),
+                    })
+                }
+            },
+            Entry::Vacant(entry) => {
+                entry.insert(Value::List(vec![value.to_string()]));
+            }
+        }
 
         Ok(())
     }
@@ -69,85 +79,29 @@ impl VariableStore {
     pub fn set_add(&mut self, name: &str, value: &str) -> Result<(), CoreError> {
         self.valid_name(name)?;
 
-        self.0
-            .entry((name.to_string(), VarType::Set))
-            .and_modify(|set| {
-                let Value::Set(set) = set else {
-                        unreachable!("Should always contain a set value");
-                    };
-                set.insert(value.to_string());
-            })
-            .or_insert_with(|| {
-                let mut set = HashSet::new();
-                set.insert(value.to_string());
-                Value::Set(set)
-            });
+        match self.0.entry(name.to_string()) {
+            Entry::Occupied(mut entry) => match entry.get_mut() {
+                Value::Set(set) => {
+                    set.insert(value.to_string());
+                }
+                wrong_value => {
+                    return Err(CoreError::TypeMismatch {
+                        name: name.to_string(),
+                        expected_type: VarType::Set,
+                        present_type: wrong_value.get_type(),
+                    })
+                }
+            },
+            Entry::Vacant(entry) => {
+                entry.insert(Value::Set({
+                    let mut set = HashSet::new();
+                    set.insert(value.to_string());
+                    set
+                }));
+            }
+        }
 
         Ok(())
-    }
-}
-
-/// Variables are identified by a name and a type. Meaning that you can
-/// have two different variables with the same name if they have different types
-pub type Variable = (String, VarType);
-
-/// Note: Variables are tuples of (String, VarType). The reason for implementing it as a
-/// trait instead of a concrete type is to do lookups in hashmaps using a variable as a key without
-/// having to clone. See: https://stackoverflow.com/questions/45786717/how-to-implement-hashmap-with-two-keys/45795699#45795699
-/// We lose a bit of performance due to dynamic dispatch but I think it should be rather negligible, especially since other options
-/// (nested or multiple hashmaps) has their problems performance
-trait AsVariable {
-    /// Get the name of the variable
-    fn name(&self) -> &str;
-    /// Get the type of the variable
-    fn ty(&self) -> &VarType;
-}
-
-impl<'a> Borrow<dyn AsVariable + 'a> for (String, VarType) {
-    fn borrow(&self) -> &(dyn AsVariable + 'a) {
-        self
-    }
-}
-
-impl Hash for (dyn AsVariable + '_) {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.name().hash(state);
-        self.ty().hash(state);
-    }
-}
-
-impl PartialEq for (dyn AsVariable + '_) {
-    fn eq(&self, other: &Self) -> bool {
-        self.name() == other.name() && self.ty() == other.ty()
-    }
-}
-
-impl Eq for (dyn AsVariable + '_) {}
-
-impl AsVariable for (String, VarType) {
-    fn name(&self) -> &str {
-        &self.0
-    }
-    fn ty(&self) -> &VarType {
-        &self.1
-    }
-}
-
-impl AsVariable for (&str, &VarType) {
-    fn name(&self) -> &str {
-        self.0
-    }
-    fn ty(&self) -> &VarType {
-        self.1
-    }
-}
-
-impl AsVariable for (&String, &VarType) {
-    fn name(&self) -> &str {
-        self.0
-    }
-    fn ty(&self) -> &VarType {
-        self.1
     }
 }
 
@@ -158,17 +112,27 @@ pub enum Value {
     Constant(String),
 }
 
+impl Value {
+    pub fn get_type(&self) -> VarType {
+        match self {
+            Value::Set(_) => VarType::Set,
+            Value::List(_) => VarType::List,
+            Value::Constant(_) => VarType::Constant,
+        }
+    }
+}
+
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             // Lists and sets are encoded as JSON values in order to escape ','
             Value::Set(items) => {
-                let json_list: serde_json::Value = items.into_iter().cloned().collect();
-                write!(f, "{}", json_list)
+                let json_list: serde_json::Value = items.iter().cloned().collect();
+                write!(f, "{json_list}")
             }
             Value::List(items) => {
                 let json_list: serde_json::Value = items.clone().into();
-                write!(f, "{}", json_list)
+                write!(f, "{json_list}")
             }
             Value::Constant(value) => write!(f, "{value}"),
         }
@@ -194,7 +158,7 @@ impl fmt::Display for VarType {
             VarType::List => "list",
             VarType::Constant => "const",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
@@ -229,12 +193,12 @@ impl VarAccess {
 
     /// Returns true if it is a read access
     pub fn is_read(&self) -> bool {
-        match self {
-            VarAccess::Set(SetAccess::Read) => true,
-            VarAccess::List(ListAccess::Read) => true,
-            VarAccess::Constant(ConstantAccess::Read) => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            VarAccess::Set(SetAccess::Read)
+                | VarAccess::List(ListAccess::Read)
+                | VarAccess::Constant(ConstantAccess::Read)
+        )
     }
 }
 

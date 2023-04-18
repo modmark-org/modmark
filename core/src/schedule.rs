@@ -8,7 +8,7 @@ use granular_id::UpperBounded;
 use topological_sort::TopologicalSort;
 
 use crate::element::GranularId;
-use crate::variables::{VarAccess, Variable};
+use crate::variables::{VarAccess, VarType};
 use crate::{Context, CoreError, Element, OutputFormat};
 
 type ScheduleId = usize;
@@ -23,7 +23,7 @@ type ScheduleId = usize;
 
 pub(crate) struct Schedule {
     dag: TopologicalSort<ScheduleId>,
-    dep_info: HashMap<Variable, Vec<(ScheduleId, VarAccess)>>,
+    dep_info: HashMap<(String, VarType), Vec<(ScheduleId, VarAccess)>>,
     id_map: BiBTreeMap<GranularId, ScheduleId>,
     id_iter: RangeFrom<ScheduleId>, // Assume this is infinite
 }

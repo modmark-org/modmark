@@ -23,7 +23,7 @@ use crate::element::GranularId;
 use crate::fs::CoreFs;
 use crate::package::{ArgValue, PackageImplementation};
 use crate::package_store::{PackageID, PackageStore};
-use crate::variables::{VarAccess, Variable, VariableStore};
+use crate::variables::{VarAccess, VarType, VariableStore};
 use crate::CoreError::MissingTransform;
 use crate::{std_packages, AccessPolicy, Element, Resolve};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, Transform};
@@ -215,7 +215,7 @@ impl<T, U> Context<T, U> {
         &self,
         element: &Element,
         format: &OutputFormat,
-    ) -> Result<Vec<Variable>, CoreError> {
+    ) -> Result<Vec<(String, VarType)>, CoreError> {
         let variables = self
             .get_var_dependencies(element, format)?
             .into_iter()
@@ -236,7 +236,7 @@ impl<T, U> Context<T, U> {
         &self,
         element: &Element,
         format: &OutputFormat,
-    ) -> Result<Vec<(Variable, VarAccess)>, CoreError> {
+    ) -> Result<Vec<((String, VarType), VarAccess)>, CoreError> {
         let Some(name) = element.name() else {
             // Compounds and Raw elements do not have names and we should not check for the dependencies either
             unreachable!("Unexpected use of compound or raw element in get_var_dependencies")
@@ -277,9 +277,9 @@ impl<T, U> Context<T, U> {
                     // actually exist, so let's throw an error!
                     return Err(CoreError::ArgumentDependentVariable {
                         argument_name: arg_name.to_string(),
-                        element: transform.from.to_string(),
+                        transform: transform.from,
                         package: package.info.name.to_string(),
-                        var_access: provided_var_access.clone(),
+                        var_access: provided_var_access,
                     });
                 };
 
@@ -290,7 +290,7 @@ impl<T, U> Context<T, U> {
                     return Err(CoreError::ArgumentDependentVariableType {
                         argument_type: arg_value.get_type(),
                         argument_name: arg_name.to_string(),
-                        element: transform.from.to_string(),
+                        transform: transform.from,
                         package: package.info.name.to_string(),
                     });
                 };
@@ -311,7 +311,7 @@ impl<T, U> Context<T, U> {
                 if prev_access != provided_var_access {
                     return Err(CoreError::ClashingVariableAccesses {
                         variable_name: real_var_name,
-                        element: transform.from.to_string(),
+                        transform: transform.from,
                         package: package.info.name.to_string(),
                     });
                 }
@@ -402,7 +402,7 @@ where
 
         // Generate the input data (by serializing elements)
         let input_data = self.serialize_element(from, output_format)?;
-        write!(&mut input, "{}", input_data)?;
+        write!(&mut input, "{input_data}")?;
 
         // Function to create an issue given a body text and if it is an error or not. This closure
         // captures references to the appropriate variables from this scope to generate correct
@@ -449,7 +449,7 @@ where
             )
         };
 
-        let has_fs_access = !root.is_none() && (read || write || create);
+        let has_fs_access = root.is_some() && (read || write || create);
 
         let wasi_env = {
             // Get all the variables that this element has read access to
@@ -459,7 +459,8 @@ where
                 .filter_map(|(name, ty)| {
                     self.state
                         .variables
-                        .get(&name, &ty)
+                        .get(&name)
+                        .filter(|value| value.get_type() == ty)
                         .map(|value| (name.to_string(), value.to_string()))
                 })
                 .collect();
