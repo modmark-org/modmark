@@ -165,7 +165,7 @@ define_native_packages! {
             },
             {
                 name: "list-read",
-                desc: "Read a list",
+                desc: "Read a list. The list will be serialized as a JSON array.",
                 vars: [("$name".to_string(), VarAccess::List(ListAccess::Read))],
                 args: vec![
                     ArgInfo {
@@ -193,7 +193,7 @@ define_native_packages! {
             },
             {
                 name: "set-read",
-                desc: "Read a set. Note that sets do not follow a deterministic order.",
+                desc: "Read a set. The set will be serialized as a JSON array. Note that sets do not follow a deterministic order.",
                 vars: [("$name".to_string(), VarAccess::Set(SetAccess::Read))],
                 args: vec![
                     ArgInfo {
