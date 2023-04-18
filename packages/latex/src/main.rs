@@ -1,9 +1,20 @@
-use serde_json::{from_str, json, Value};
 use std::{
     env,
     fmt::Write,
     io::{self, Read},
 };
+
+use serde_json::{from_str, json, Value};
+
+macro_rules! import {
+    ($e:expr) => {json!({"name": "set-add", "arguments": {"name": "imports"}, "data": $e})}
+}
+
+macro_rules! single_import {
+    ($e:expr) => {
+        vec![import![$e]]
+    };
+}
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -70,40 +81,35 @@ fn transform_paragraph(paragraph: Value) -> String {
     result
 }
 
-fn transform_tag(node: Value, latex_function: &str) -> String {
-    let mut result = String::new();
-    result.push('[');
-    write!(
-        result,
-        r#"{{"name": "raw", "data": "\\{latex_function}{{"}},"#,
-    )
-    .unwrap();
-    if let Value::Array(children) = &node["children"] {
-        for child in children {
-            result.push_str(&serde_json::to_string(child).unwrap());
-            result.push(',');
-        }
+fn transform_tag(mut node: Value, latex_function: &str) -> String {
+    let mut result: Vec<Value> = vec![];
+    result.push(Value::from(format!("\\{latex_function}{{")));
+    if let Some(children) = node.get_mut("children").and_then(Value::as_array_mut) {
+        result.append(children);
     }
-    write!(result, r#"{{"name": "raw", "data": "}}"}}"#,).unwrap();
-    result.push(']');
-
-    result
+    result.push(Value::from("}"));
+    result.append(&mut get_imports_for_tag(latex_function));
+    serde_json::to_string(&result).unwrap()
 }
 
-fn transform_verbatim(text: Value) -> String {
-    let mut result = String::new();
-    result.push('[');
-    write!(result, r#"{{"name": "raw", "data": "\\verb|"}},"#,).unwrap();
-    if let Value::Array(children) = &text["children"] {
-        for child in children {
-            result.push_str(&serde_json::to_string(child).unwrap());
-            result.push(',');
-        }
+fn get_imports_for_tag(latex_function: &str) -> Vec<Value> {
+    // Here we can define imports for tags passed to transform_tag
+    // Use single_import! with the import text to add one import, or if you need multiple, use
+    // vec![import!["\usepackage{...}"], import!["\usepackage{...}"]]
+    match latex_function {
+        "sout" => single_import![r"\usepackage[normalem]{ulem}"],
+        _ => vec![],
     }
-    write!(result, r#"{{"name": "raw", "data": "|"}}"#,).unwrap();
-    result.push(']');
+}
 
-    result
+fn transform_verbatim(mut text: Value) -> String {
+    let mut result: Vec<Value> = vec![];
+    result.push(Value::from("\\verb|"));
+    if let Some(children) = text.get_mut("children").and_then(Value::as_array_mut) {
+        result.append(children);
+    }
+    result.push(Value::from("|"));
+    serde_json::to_string(&result).unwrap()
 }
 
 fn transform_heading(heading: Value) -> String {
@@ -252,6 +258,9 @@ fn manifest() -> String {
                     "from": "__strikethrough",
                     "to": ["latex"],
                     "arguments": [],
+                    "variables": {
+                        "imports": {"type": "set", "access": "add"}
+                    }
                 },
                 {
                     "from": "__underlined",
