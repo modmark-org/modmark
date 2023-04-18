@@ -40,8 +40,44 @@ fn manifest() {
                                 "
                         },
                     ],
-                    "unknown-content": true
-                }
+                },
+                {
+                    "from": "if-const",
+                    "to": ["any"],
+                    "description": "Conditionally compile content based on a constant. Example: [if-const theme equals dark]",
+                    "arguments": [
+                        {
+                            "name": "constant",
+                            "description":
+                                "The constant to use for conditional compilation"
+                        },
+                        {
+                            "name": "check",
+                            "description": "Specifies the check to do to the value. \
+                            equals: compile the content if the variable equals the given value. \
+                            differs-to: compile the content if the variable differs from the given value. \
+                            defined: compile the content if the variable is defined. \
+                            undefined: compile the content if the variable is undefined.
+                            ",
+                            "default": "defined",
+                            "type": ["equals", "differs-to", "defined", "undefined"]
+                        },
+                        {
+                            "name": "value",
+                            "description": "Specifies the value to compare to",
+                            "default": ""
+                        },
+                        {
+                            "name": "case-sensitive",
+                            "description": "Specifies if 'equals/differs' checks are case sensitive.",
+                            "default": "case-sensitive",
+                            "type": ["case-sensitive", "case-insensitive"]
+                        }
+                    ],
+                    "variables": {
+                        "$constant": {"type": "constant", "access": "read"}
+                    }
+                },
             ]
             }
         )
@@ -57,9 +93,49 @@ fn transform(from: &str, to: &str) {
 
     match from {
         "if" => transform_if(to, input),
+        "if-const" => transform_if_const(input),
         other => {
             eprintln!("Package does not support {other}");
         }
+    }
+}
+
+fn transform_if_const(input: Value) {
+    let var_name = input["arguments"]["constant"].as_str().unwrap();
+    let check = input["arguments"]["check"].as_str().unwrap();
+    let compile = if check == "defined" || check == "undefined" {
+        (check == "defined") == (env::var(var_name).is_ok())
+    } else if let Ok(var_val) = env::var(var_name) {
+        let case_sensitive = input["arguments"]["case-sensitive"].as_str().unwrap() == "true";
+        let var_val = if case_sensitive {
+            var_val.to_string()
+        } else {
+            var_val.to_lowercase()
+        };
+        let value = input["arguments"]["value"].as_str().unwrap();
+
+        let cmp_val = if case_sensitive {
+            value.to_string()
+        } else {
+            value.to_lowercase()
+        };
+
+        (cmp_val == var_val) == (check == "equals")
+    } else {
+        false
+    };
+
+    if compile {
+        let inline = input["inline"].as_bool().unwrap();
+        let body = input["data"].as_str().unwrap();
+        let json = if inline {
+            json!({"name": "inline_content", "data": body}).to_string()
+        } else {
+            json!({"name": "block_content", "data": body}).to_string()
+        };
+        print!("[{json}]")
+    } else {
+        print!("[]")
     }
 }
 
