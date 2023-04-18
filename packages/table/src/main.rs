@@ -22,6 +22,10 @@ macro_rules! inline_content {
     }
 }
 
+macro_rules! import {
+    ($e:expr) => {json!({"name": "set-add", "arguments": {"name": "imports"}, "data": $e})}
+}
+
 // Entry point
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -38,8 +42,7 @@ fn main() {
 fn manifest() {
     print!(
         "{}",
-        json!(
-            {
+        json!({
             "name": "table",
             "version": "0.1",
             "description": "This package supports [table] modules",
@@ -58,9 +61,11 @@ fn manifest() {
                     ],
                     "unknown-content": true
                 }
-            ]
+            ],
+            "variables": {
+                "imports": {"type": "set", "access": "add"}
             }
-        )
+        })
     );
 }
 
@@ -272,6 +277,7 @@ impl Table<'_> {
             format!("|{}|", self.alignment.latex_str(self.width, false))
         };
 
+        vec.push(import!(r"\usepackage{float}"));
         vec.push(raw!("\\begin{table}[H]\n"));
         vec.push(raw!("\\centering\n"));
         vec.push(raw!(format!("\\begin{{tabular}} {{ {} }}\n", col_key)));
