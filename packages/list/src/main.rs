@@ -38,6 +38,9 @@ fn manifest() {
                             "type": "unsigned_integer"
                         }
                     ],
+                    "variables": {
+                        "imports": {"type": "set", "access": "add"}
+                    },
                     "unknown-content": true
                 },
             ]

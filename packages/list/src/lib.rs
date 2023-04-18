@@ -2,6 +2,10 @@ use std::str::FromStr;
 
 use serde_json::{json, Value};
 
+macro_rules! import {
+    ($e:expr) => {json!({"name": "set-add", "arguments": {"name": "imports"}, "data": $e})}
+}
+
 #[derive(Debug)]
 pub struct InvalidListError;
 
@@ -249,6 +253,7 @@ impl List {
     fn to_latex_vec(&self) -> Vec<Value> {
         let mut json_vec: Vec<Value> = vec![];
 
+        json_vec.push(import!(r"\usepackage{enumitem}"));
         json_vec.push(json!({"name": "raw", "data": self.opening_latex_command()}));
 
         for item in &self.items {
