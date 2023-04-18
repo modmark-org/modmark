@@ -170,28 +170,33 @@ fn transform_math(node: Value) -> String {
         }
     } else {
         eprintln!("Unexpected __math structure");
-        "".to_string()
+        String::new()
     }
 }
 
-fn transform_document(doc: Value) -> String {
-    let mut result = String::new();
-    result.push('[');
-    write!(result, r#"{{"name": "raw", "data": "\\documentclass{{article}}\n\n\\usepackage[normalem]{{ulem}}\n\\usepackage{{enumitem}}\n\\usepackage[hidelinks]{{hyperref}}\n\\usepackage{{float}}\n\\usepackage{{graphicx}}\n\n\\begin{{document}}\n"}},"#,).unwrap();
-    if let Value::Array(children) = &doc["children"] {
-        for child in children {
-            result.push_str(&serde_json::to_string(child).unwrap());
-            result.push(',');
+fn transform_document(mut doc: Value) -> String {
+    let mut result: Vec<Value> = vec![];
+
+    result.push(Value::from(r"\documentclass{article}"));
+
+    let imports_var = env::var("imports").unwrap_or("[]".to_string());
+    let imports: Vec<String> = serde_json::from_str(&imports_var).unwrap();
+
+    if !imports.is_empty() {
+        result.push(Value::from("\n"));
+        for import in imports {
+            result.push(Value::from(format!("\n{import}")));
         }
     }
-    write!(
-        result,
-        r#"{{"name": "raw", "data": "\n\\end{{document}}"}}"#,
-    )
-    .unwrap();
-    result.push(']');
 
-    result
+    result.push(Value::from("\n\n\\begin{document}\n\n"));
+
+    if let Some(vec) = doc.get_mut("children").and_then(Value::as_array_mut) {
+        result.append(vec);
+    }
+    result.push(Value::from("\n\n\\end{document}"));
+
+    serde_json::to_string(&result).unwrap()
 }
 
 fn escape_text(module: Value) -> String {
@@ -262,6 +267,9 @@ fn manifest() -> String {
                     "from": "__document",
                     "to": ["latex"],
                     "arguments": [],
+                    "variables": {
+                        "imports": {"type": "set", "access": "read"}
+                    }
                 },
                 {
                     "from": "__text",
