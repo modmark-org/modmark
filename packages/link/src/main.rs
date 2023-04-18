@@ -2,6 +2,11 @@ use std::env;
 use std::io::{self, Read};
 
 use serde_json::{json, Value};
+
+macro_rules! import {
+    ($e:expr) => {json!({"name": "set-add", "arguments": {"name": "imports"}, "data": $e})}
+}
+
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
     let action = &args[0];
@@ -29,6 +34,9 @@ fn manifest() {
                     "arguments": [
                         {"name": "label", "default": "", "description": "Label for link"}
                     ],
+                    "variables": {
+                        "imports": {"type": "set", "access": "add"}
+                    }
                 },
                 {
                     "from": "label",
@@ -99,6 +107,7 @@ fn transform_link(to: &str) {
 
             let output = json!([
                 {"name": "raw", "data": data},
+                import![r"\usepackage[hidelinks]{hyperref}"]
             ]);
             print!("{output}");
         }
