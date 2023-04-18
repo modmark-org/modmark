@@ -16,7 +16,7 @@ use wasmer::{Cranelift, Engine, EngineBuilder};
 use wasmer::{Instance, Module, Store};
 use wasmer_wasi::{Pipe, WasiState};
 
-use parser::config::{Config, HideConfig, ImportConfig};
+use parser::config::{self, Config, HideConfig, ImportConfig};
 use parser::ModuleArguments;
 
 use crate::element::GranularId;
@@ -175,6 +175,23 @@ where
 
         #[cfg(feature = "web")]
         store_guard.register_resolved_packages()?;
+
+        // Declare any constants that were specified in the [config] module
+        let declaration_errors: Vec<CoreError> = config
+            .sets
+            .iter()
+            .filter_map(|config::Set { key, value }| {
+                if let Err(error) = self.state.variables.constant_declare(key, value) {
+                    Some(error)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        if !declaration_errors.is_empty() {
+            return Err(declaration_errors);
+        }
 
         let arc_mutex = Arc::clone(&self.package_store);
         let resolve_tasks = store_guard.generate_resolve_tasks(arc_mutex, &config)?;
