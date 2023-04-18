@@ -1,10 +1,11 @@
-use base64::{engine::general_purpose, Engine as _};
-use serde_json::{json, Value};
 use std::env;
 use std::ffi::OsStr;
 use std::fs;
 use std::io::{self, Read};
 use std::path::Path;
+
+use base64::{engine::general_purpose, Engine as _};
+use serde_json::{json, Value};
 
 macro_rules! raw {
     ($expr:expr) => {
@@ -13,6 +14,10 @@ macro_rules! raw {
             "data": $expr
         })
     }
+}
+
+macro_rules! import {
+    ($e:expr) => {json!({"name": "set-add", "arguments": {"name": "imports"}, "data": $e})}
 }
 
 fn main() {
@@ -74,6 +79,9 @@ fn manifest() {
                             "description": "Decides if the provided image should be embedded in the HTML document."
                         },
                     ],
+                    "variables": {
+                        "imports": {"type": "set", "access": "add"}
+                    }
                 },
                 {
                     "from": "include",
@@ -110,7 +118,8 @@ fn transform_text(input: Value, to: &str) {
             let path = input["data"].as_str().unwrap().trim();
             if let Ok(contents) = fs::read_to_string(path) {
                 let text = json!([{"name": "__text", "data": contents}]);
-                let json = json!({"name": "__paragraph", "arguments": {}, "children": text}).to_string();
+                let json =
+                    json!({"name": "__paragraph", "arguments": {}, "children": text}).to_string();
                 print!("[{json}]");
             } else {
                 eprintln!("File could not be accessed at {path}");
@@ -135,7 +144,10 @@ fn transform_image(input: Value, to: &str) {
                     alt_text.replace('"', "&quot;")
                 }
             };
-            let width = input["arguments"]["width"].as_f64().unwrap().clamp(0.0, f64::MAX);
+            let width = input["arguments"]["width"]
+                .as_f64()
+                .unwrap()
+                .clamp(0.0, f64::MAX);
             let caption = input["arguments"]["caption"].as_str().unwrap();
             let label = input["arguments"]["label"].as_str().unwrap();
             let embed = input["arguments"]["embed"].as_str().unwrap();
@@ -191,7 +203,10 @@ fn transform_image(input: Value, to: &str) {
         }
         "latex" => {
             let path = input["data"].as_str().unwrap().trim();
-            let width = input["arguments"]["width"].as_f64().unwrap().clamp(0.0, f64::MAX);
+            let width = input["arguments"]["width"]
+                .as_f64()
+                .unwrap()
+                .clamp(0.0, f64::MAX);
             let caption = input["arguments"]["caption"].as_str().unwrap();
             let label = input["arguments"]["label"].as_str().unwrap();
 
@@ -201,7 +216,7 @@ fn transform_image(input: Value, to: &str) {
                         "svg" => format!("\\includesvg[width={width}\\textwidth]{{{path}}}\n"),
                         "png" | "jpg" | "jpeg" => {
                             format!("\\includegraphics[width={width}\\textwidth]{{{path}}}\n")
-                        },
+                        }
                         _ => {
                             eprintln!("Unexpected file extension.");
                             format!("\\includegraphics[width={width}\\textwidth]{{{path}}}\n")
@@ -215,6 +230,8 @@ fn transform_image(input: Value, to: &str) {
 
             let mut v = vec![];
 
+            v.push(import!(r"\usepackage{graphicx}"));
+            v.push(import!(r"\usepackage{float}"));
             v.push(raw!("\\begin{figure}[H]\n"));
             v.push(raw!("\\centering\n"));
             v.push(raw!(img_str));
