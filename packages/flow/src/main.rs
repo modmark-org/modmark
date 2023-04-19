@@ -40,6 +40,7 @@ fn manifest() {
                                 "
                         },
                     ],
+                    "unknown-content": true
                 },
                 {
                     "from": "if-const",
@@ -76,7 +77,8 @@ fn manifest() {
                     ],
                     "variables": {
                         "$constant": {"type": "constant", "access": "read"}
-                    }
+                    },
+                    "unknown-content": true
                 },
                 {
                     "from": "if-set",
@@ -116,7 +118,8 @@ fn manifest() {
                     ],
                     "variables": {
                         "$set": {"type": "set", "access": "read"}
-                    }
+                    },
+                    "unknown-content": true
                 },
                 {
                     "from": "if-list",
@@ -156,7 +159,8 @@ fn manifest() {
                     ],
                     "variables": {
                         "$list": {"type": "list", "access": "read"}
-                    }
+                    },
+                    "unknown-content": true
                 }
             ]
             }
