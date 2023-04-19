@@ -351,14 +351,7 @@ impl PackageStore {
         include_entries: bool,
         include_list: &[String],
     ) -> Result<(), CoreError> {
-        for transform @ Transform {
-            from,
-            to,
-            description: _,
-            arguments: _,
-            variables: _,
-        } in &pkg.info.transforms
-        {
+        for transform @ Transform { from, to, .. } in &pkg.info.transforms {
             if include_entries == include_list.contains(from) {
                 for output_format in to {
                     match output_format {

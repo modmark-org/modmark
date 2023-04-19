@@ -26,7 +26,7 @@
 /// }
 /// ```
 macro_rules! define_native_packages {
-    ($($name:expr, $desc:expr => { $($transform:expr, $tdesc:expr, $vars:expr, $arg_info:expr => $handler:ident),* $(,)? };)*) => {
+    ($($name:expr, $desc:expr => { $($transform:expr, $tdesc:expr, $vars:expr, $arg_info:expr, $ukwn:expr => $handler:ident),* $(,)? };)*) => {
         pub fn native_package_list() -> Vec<PackageInfo> {
             vec![
                 $(
@@ -41,7 +41,8 @@ macro_rules! define_native_packages {
                                     to: vec![],
                                     description: Some($tdesc.to_string()),
                                     arguments: $arg_info,
-                                    variables: $vars.into()
+                                    variables: $vars.into(),
+                                    unknown_content: $ukwn
                                 }),
                             )*
                         ]

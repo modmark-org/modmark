@@ -39,7 +39,9 @@ define_native_packages! {
     "Provides core functionality such as raw output, errors and warnings" => {
         "raw",
         "Outputs the body text as-is into the output document",
-        [], vec![] => native_raw,
+        [],
+        vec![],
+        false => native_raw,
         "warning",
         "Adds a compilation warning to the list of all warnings that have occurred during compilation",
         [],
@@ -62,7 +64,7 @@ define_native_packages! {
                 description: "The input given to the module when it failed".to_string(),
                 r#type: PrimitiveArgType::String.into()
             },
-        ] => native_warn,
+        ], false => native_warn,
         "error",
         "Adds a compilation error to the list of all errors that have occurred during compilation",
         [],
@@ -85,16 +87,16 @@ define_native_packages! {
                 description: "The input given to the module when it failed".to_string(),
                 r#type: PrimitiveArgType::String.into()
             },
-        ] => native_err
+        ], false => native_err
     };
     "reparse",
     "Provides an interface to the built-in ModMark parser" => {
         "inline_content",
         "Parses the content as inline-content, as if it was in a paragraph. The result may contain text, smart punctuation, inline module expressions and tags",
-        [], vec![] => native_inline_content,
+        [], vec![], true => native_inline_content,
         "block_content",
         "Parses the content as block-content, as if it was in the body of the document. The result may contain paragraphs containing inline content and multiline module expressions",
-        [], vec![] => native_block_content,
+        [], vec![], true => native_block_content,
     };
     "env",
     "[Temporary] Provides access to setting environment variables" => {
@@ -108,7 +110,7 @@ define_native_packages! {
                 description: "The key to set".to_string(),
                 r#type: PrimitiveArgType::String.into()
             }
-        ] => native_push_list,
+        ], false => native_push_list,
         "read-list",
         "Reads all strings from a list",
         [("$key".to_string(), VarAccess::List(ListAccess::Read))],
@@ -119,7 +121,7 @@ define_native_packages! {
                 description: "The key to set".to_string(),
                 r#type: PrimitiveArgType::String.into()
             }
-        ] => native_read_list,
+        ], false => native_read_list,
     };
 }
 

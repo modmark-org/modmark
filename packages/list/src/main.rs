@@ -38,6 +38,7 @@ fn manifest() {
                             "type": "unsigned_integer"
                         }
                     ],
+                    "unknown-content": true
                 },
             ]
             }

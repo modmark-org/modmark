@@ -191,6 +191,11 @@ where
     }
 }
 
+pub struct Dependencies {
+    pub var_accesses: Vec<(Variable, VarAccess)>,
+    pub has_unknown_content: bool,
+}
+
 impl<T, U> Context<T, U> {
     /// This function returns the "variable accesses", which is all variables the transform
     /// requires. This is used to schedule when the transform may run in relations to each other.
@@ -204,12 +209,12 @@ impl<T, U> Context<T, U> {
     // variable accesses, like also passing "args" and possibly have variable accesses dependent
     // on variables. This is now implemented for module expressions.
     #[allow(unused_variables)] // Remove this when doing the actual impl
-    pub fn get_variable_accesses(
+    pub fn get_dependencies(
         &self,
         name: &str,
         element: &Element,
         format: &OutputFormat,
-    ) -> Result<Vec<(Variable, VarAccess)>, CoreError> {
+    ) -> Result<Dependencies, CoreError> {
         // Find the transform to get knowledge about variables
         let Some((transform, package)) = self.package_store.lock().unwrap().find_transform(name, format) else {
             return Err(MissingTransform(name.to_string(), format.to_string()));
@@ -218,11 +223,14 @@ impl<T, U> Context<T, U> {
         if !transform.has_argument_dependent_variable() {
             // If the transform doesn't have any argument-dependent variables, we can just return
             // the variable access list
-            Ok(transform
-                .variables
-                .into_iter()
-                .map(|(name, access)| (Variable(name, access.get_type()), access))
-                .collect())
+            Ok(Dependencies {
+                var_accesses: transform
+                    .variables
+                    .into_iter()
+                    .map(|(name, access)| (Variable(name, access.get_type()), access))
+                    .collect(),
+                has_unknown_content: transform.unknown_content,
+            })
         } else {
             // If the transform does have argument-dependent variables, we must collect arguments.
             // Note that this entire function thus may do two mutex locks, one for finding the
@@ -296,7 +304,10 @@ impl<T, U> Context<T, U> {
                     }
                 })
                 .collect::<Result<Vec<(Variable, VarAccess)>, CoreError>>()?;
-            Ok(vars)
+            Ok(Dependencies {
+                var_accesses: vars,
+                has_unknown_content: transform.unknown_content,
+            })
         }
     }
 }

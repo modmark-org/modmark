@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::iter::once;
 use std::ops::RangeFrom;
 
@@ -7,6 +7,7 @@ use bimap::BiBTreeMap;
 use granular_id::UpperBounded;
 use topological_sort::TopologicalSort;
 
+use crate::context::Dependencies;
 use crate::element::GranularId;
 use crate::variables::{VarAccess, Variable};
 use crate::{Context, CoreError, Element, OutputFormat};
@@ -26,6 +27,7 @@ pub(crate) struct Schedule {
     dep_info: HashMap<Variable, Vec<(ScheduleId, VarAccess)>>,
     id_map: BiBTreeMap<GranularId, ScheduleId>,
     id_iter: RangeFrom<ScheduleId>, // Assume this is infinite
+    known_contents: HashSet<ScheduleId>,
 }
 
 impl Default for Schedule {
@@ -35,6 +37,7 @@ impl Default for Schedule {
             dep_info: Default::default(),
             id_map: Default::default(),
             id_iter: ScheduleId::MIN..,
+            known_contents: HashSet::new(),
         }
     }
 }
@@ -82,6 +85,7 @@ impl Schedule {
                 self.dep_info.iter_mut().for_each(|(_k, v)| {
                     v.retain(|elem| elem.0 != id);
                 });
+                self.known_contents.remove(&id);
             });
             return Some(gran_id);
         }
@@ -131,9 +135,29 @@ impl Schedule {
         }
 
         // Look in the context to find info about which variables the element is interested in
-        let variables = &ctx.get_variable_accesses(name, element, format)?;
-        //if let Some(variables) = &ctx.get_variable_accesses(name, element, format)? {
-        for (var, access) in variables {
+        let Dependencies {
+            var_accesses,
+            has_unknown_content,
+        } = &ctx.get_dependencies(name, element, format)?;
+
+        if *has_unknown_content {
+            // If we have unknown content, draw a dependency from every known content to this
+            for known_content in &self.known_contents {
+                self.dag.add_dependency(this_schedule_id, *known_content);
+            }
+        } else {
+            // If we have known content, insert into the known content set
+            self.known_contents.insert(this_schedule_id);
+            // and loop though all IDs there are
+            for schedule_id in self.id_map.right_values() {
+                // and draw a dependency from each unknown content
+                if !self.known_contents.contains(schedule_id) {
+                    self.dag.add_dependency(*schedule_id, this_schedule_id);
+                }
+            }
+        }
+
+        for (var, access) in var_accesses {
             let mut deps = self.dep_info.remove(var).unwrap_or_default();
 
             // Update the dependency edges of the DAG

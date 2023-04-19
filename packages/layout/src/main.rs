@@ -53,7 +53,8 @@ fn manifest() {
                             be cropped if used without wrapping."
                         },
                         {"name": "wrap", "default": "false", "type": ["true", "false"], "description": "Decides if items will wrap around to new rows."},
-                    ]
+                    ],
+                    "unknown-content": true
                 },
                 {
                     "from": "center",
@@ -72,7 +73,8 @@ fn manifest() {
                             be cropped if used without wrapping."
                         },
                         {"name": "wrap", "default": "false", "type": ["true", "false"], "description": "Decides if items will wrap around to new rows."},
-                    ]
+                    ],
+                    "unknown-content": true
                 }
             ]
             }
