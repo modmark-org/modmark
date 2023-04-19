@@ -299,6 +299,7 @@ mod tests {
                 from: "table".to_string(),
                 to: vec![OutputFormat::new("html"), OutputFormat::new("latex")],
                 description: None,
+                black_box: true,
                 arguments: vec![
                     ArgInfo {
                         name: "caption".to_string(),

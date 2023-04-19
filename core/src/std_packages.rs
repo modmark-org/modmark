@@ -41,6 +41,7 @@ define_native_packages! {
             {
                 name: "raw",
                 desc: "Outputs the body text as-is into the output document",
+                black_box: false,
                 vars: [],
                 args: vec![],
                 func: native_raw
@@ -48,6 +49,7 @@ define_native_packages! {
             {
                 name: "warning",
                 desc: "Adds a compilation warning to the list of all warnings that have occurred during compilation",
+                black_box: false,
                 vars: [],
                 args: vec![
                     ArgInfo {
@@ -74,6 +76,7 @@ define_native_packages! {
             {
                 name: "error",
                 desc: "Adds a compilation error to the list of all errors that have occurred during compilation",
+                black_box: false,
                 vars: [],
                 args: vec![
                     ArgInfo {
@@ -105,6 +108,7 @@ define_native_packages! {
             {
                 name: "inline_content",
                 desc: "Parses the content as inline-content, as if it was in a paragraph. The result may contain text, smart punctuation, inline module expressions and tags",
+                black_box: true,
                 vars: [],
                 args: vec![],
                 func: native_inline_content
@@ -112,6 +116,7 @@ define_native_packages! {
             {
                 name: "block_content",
                 desc: "Parses the content as block-content, as if it was in the body of the document. The result may contain paragraphs containing inline content and multiline module expressions",
+                black_box: true,
                 vars: [],
                 args: vec![],
                 func: native_block_content
@@ -124,6 +129,7 @@ define_native_packages! {
             {
                 name: "const-decl",
                 desc: "Declare a constant",
+                black_box: false,
                 vars: [("$name".to_string(), VarAccess::Constant(ConstantAccess::Declare))],
                 args: vec![
                     ArgInfo {
@@ -138,6 +144,7 @@ define_native_packages! {
             {
                 name: "const-read",
                 desc: "Read a constant",
+                black_box: false,
                 vars: [("$name".to_string(), VarAccess::Constant(ConstantAccess::Read))],
                 args: vec![
                     ArgInfo {
@@ -152,6 +159,7 @@ define_native_packages! {
             {
                 name: "list-push",
                 desc: "Push a string to a list",
+                black_box: false,
                 vars: [("$name".to_string(), VarAccess::List(ListAccess::Push))],
                 args: vec![
                     ArgInfo {
@@ -166,6 +174,7 @@ define_native_packages! {
             {
                 name: "list-read",
                 desc: "Read a list. The list will be serialized as a JSON array.",
+                black_box: false,
                 vars: [("$name".to_string(), VarAccess::List(ListAccess::Read))],
                 args: vec![
                     ArgInfo {
@@ -180,6 +189,7 @@ define_native_packages! {
             {
                 name: "set-add",
                 desc: "Add a string to a set. Note that sets do not contains duplicates and are not ordered.",
+                black_box: false,
                 vars: [("$name".to_string(), VarAccess::Set(SetAccess::Add))],
                 args: vec![
                     ArgInfo {
@@ -194,6 +204,7 @@ define_native_packages! {
             {
                 name: "set-read",
                 desc: "Read a set. The set will be serialized as a JSON array. Note that sets do not follow a deterministic order.",
+                black_box: false,
                 vars: [("$name".to_string(), VarAccess::Set(SetAccess::Read))],
                 args: vec![
                     ArgInfo {

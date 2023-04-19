@@ -26,7 +26,7 @@
 /// }
 /// ```
 macro_rules! define_native_packages {
-    ($($name:expr => { desc: $desc:expr, transforms: [ $({name: $transform:expr, desc: $tdesc:expr, vars: $vars:expr, args: $arg_info:expr, func: $handler:ident}),* $(,)? ]})*) => {
+    ($($name:expr => { desc: $desc:expr, transforms: [ $({name: $transform:expr, desc: $tdesc:expr, black_box: $black_box:expr, vars: $vars:expr, args: $arg_info:expr, func: $handler:ident}),* $(,)? ]})*) => {
         pub fn native_package_list() -> Vec<PackageInfo> {
             vec![
                 $(
@@ -41,7 +41,8 @@ macro_rules! define_native_packages {
                                     to: vec![],
                                     description: Some($tdesc.to_string()),
                                     arguments: $arg_info,
-                                    variables: $vars.into()
+                                    variables: $vars.into(),
+                                    black_box: $black_box
                                 }),
                             )*
                         ]
