@@ -11,19 +11,13 @@
     ],
     "__test_transform_to": "latex",
     "__test_expected_result": [
+        "\\textbf{",
         {
-            "data": "\\textbf{",
-            "name": "raw"
-          },
-          {
             "arguments": {},
             "data": "Hello, world",
             "inline": true,
             "name": "__text"
-          },
-          {
-            "data": "}",
-            "name": "raw"
-          }
+        },
+        "}"
     ]
 }

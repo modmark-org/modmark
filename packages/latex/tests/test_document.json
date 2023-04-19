@@ -23,10 +23,8 @@
   ],
   "__test_transform_to": "latex",
   "__test_expected_result": [
-    {
-      "data": "\\documentclass{article}\n\n\\usepackage[normalem]{ulem}\n\\usepackage{enumitem}\n\\usepackage[hidelinks]{hyperref}\n\\usepackage{float}\n\\usepackage{graphicx}\n\n\\begin{document}\n",
-      "name": "raw"
-    },
+    "\\documentclass{article}",
+    "\n\n\\begin{document}\n\n",
     {
       "arguments": {},
       "data": "Raw stuff",
@@ -45,9 +43,6 @@
       ],
       "name": "__bold"
     },
-    {
-      "data": "\n\\end{document}",
-      "name": "raw"
-    }
+    "\n\n\\end{document}"
   ]
 }
