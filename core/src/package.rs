@@ -21,6 +21,9 @@ pub struct Transform {
     pub arguments: Vec<ArgInfo>,
     #[serde(default)]
     pub variables: HashMap<String, VarAccess>,
+    #[serde(default)]
+    #[serde(rename = "unknown-content")]
+    pub unknown_content: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]

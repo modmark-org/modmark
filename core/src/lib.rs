@@ -281,7 +281,7 @@ mod tests {
 
     struct UnimplementedResolver;
     impl Resolve for UnimplementedResolver {
-        fn resolve_all(&self, paths: Vec<ResolveTask>) {
+        fn resolve_all(&self, _: Vec<ResolveTask>) {
             unimplemented!()
         }
     }
@@ -338,7 +338,8 @@ mod tests {
                         r#type: ArgType::Enum(vec!["true".to_string(), "false".to_string()])
                     },
                 ],
-                variables: HashMap::new()
+                variables: HashMap::new(),
+                unknown_content: true
             }],
         };
 

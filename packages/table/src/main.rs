@@ -56,6 +56,7 @@ fn manifest() {
                         {"name": "delimiter", "default": "|", "description": "The delimiter between cells"},
                         {"name": "strip_whitespace", "default": "true", "type": ["true", "false"], "description": "true/false to strip/don't strip whitespace in cells"}
                     ],
+                    "unknown-content": true
                 }
             ]
             }

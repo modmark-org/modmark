@@ -79,6 +79,7 @@ fn manifest() {
                     "from": "include",
                     "to": ["any"],
                     "arguments": [],
+                    "unknown-content": true
                 }
             ]
             }

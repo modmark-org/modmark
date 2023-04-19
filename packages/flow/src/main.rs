@@ -40,7 +40,8 @@ fn manifest() {
                                 "
                         },
                     ],
-                },
+                    "unknown-content": true
+                }
             ]
             }
         )
