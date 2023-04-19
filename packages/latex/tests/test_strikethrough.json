@@ -11,20 +11,20 @@
     ],
     "__test_transform_to": "latex",
     "__test_expected_result": [
+        "\\sout{",
         {
-            "data": "\\sout{",
-            "name": "raw"
-          },
-          {
             "arguments": {},
             "data": "Hello, world",
             "inline": true,
             "name": "__text"
-          },
-          {
-            "data": "}",
-            "name": "raw"
-          }
-        
+        },
+        "}",
+        {
+            "arguments": {
+                "name": "imports"
+            },
+            "data": "\\usepackage[normalem]{ulem}",
+            "name": "set-add"
+        }
     ]
 }

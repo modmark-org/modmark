@@ -11,20 +11,13 @@
     ],
     "__test_transform_to": "latex",
     "__test_expected_result": [
+        "\\underline{",
         {
-            "data": "\\underline{",
-            "name": "raw"
-          },
-          {
             "arguments": {},
             "data": "Hello, world",
             "inline": true,
             "name": "__text"
-          },
-          {
-            "data": "}",
-            "name": "raw"
-          }
-        
+        },
+        "}"
     ]
 }

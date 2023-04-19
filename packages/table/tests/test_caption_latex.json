@@ -14,6 +14,13 @@
     "__test_transform_to": "latex",
     "__test_expected_result": [
         {
+            "arguments": {
+                "name": "imports"
+            },
+            "data": "\\usepackage{float}",
+            "name": "set-add"
+        },
+        {
             "data": "\\begin{table}[H]\n",
             "name": "raw"
         },

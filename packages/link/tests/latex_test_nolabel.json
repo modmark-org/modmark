@@ -10,6 +10,13 @@
     {
       "data": "\\href{https://google.com}{https://google.com}",
       "name": "raw"
+    },
+    {
+      "arguments": {
+        "name": "imports"
+      },
+      "data": "\\usepackage[hidelinks]{hyperref}",
+      "name": "set-add"
     }
   ]
 }
