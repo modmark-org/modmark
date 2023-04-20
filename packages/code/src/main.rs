@@ -113,10 +113,16 @@ fn transform_code(to: &str) {
             }
         }
         "latex" => {
-            if font_size != 12 {
-                eprintln!("Font size is not supported in LaTeX");
-            }
-            print!("{}", highlight_latex(code, tab_size, theme, syntax, &ss));
+            if let Value::Bool(inline) = &input["inline"] {
+                if *inline {
+                    print!("{}", latex_inline(code));
+                } else {
+                    if font_size != 12 {
+                        eprintln!("Font size is not supported in LaTeX");
+                    }
+                    print!("{}", highlight_latex(code, tab_size, theme, syntax, &ss));
+                }
+            } 
         }
         other => {
             eprintln!("Cannot convert code to {other}");
@@ -184,6 +190,17 @@ fn escape_latex_text(text: String) -> String {
         .replace('~', r"\textasciitilde{}")
         .replace('^', r"\textasciicircum{}");
     s
+}
+
+fn latex_inline(text: &str) -> String {
+    let mut result = String::new();
+    result.push('[');
+    write!(result, r#"{{"name": "raw", "data": "\\verb|"}},"#,).unwrap();
+    write!(result, "{},", serde_json::to_string(&text.replace('|', "\\|")).unwrap()).unwrap();
+    write!(result, r#"{{"name": "raw", "data": "|"}}"#,).unwrap();
+    result.push(']');
+
+    result
 }
 
 fn get_style_html(
