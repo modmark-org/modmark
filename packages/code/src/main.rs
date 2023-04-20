@@ -4,9 +4,9 @@ use std::io::{self, Read};
 
 use serde_json::{json, Value};
 use syntect::easy::HighlightLines;
-use syntect::highlighting::{Color, ThemeSet};
+use syntect::highlighting::{Color, ThemeSet, Theme};
 use syntect::html::{styled_line_to_highlighted_html, IncludeBackground};
-use syntect::parsing::SyntaxSet;
+use syntect::parsing::{SyntaxSet, SyntaxReference};
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -77,12 +77,30 @@ fn transform_code(to: &str) {
     let lang = get_arg!(input, "lang");
     let font_size = input["arguments"]["font_size"].as_u64().unwrap();
     let tab_size = input["arguments"]["tab_size"].as_u64().unwrap();
-    let theme = get_arg!(input, "theme");
+    let tm = get_arg!(input, "theme");
     let bg = get_arg!(input, "bg");
+
+    let ss = SyntaxSet::load_defaults_newlines();
+    let ts = ThemeSet::load_defaults();
+    let theme = match tm.as_str() {
+        "ocean_dark" => &ts.themes["base16-ocean.dark"],
+        "ocean_light" => &ts.themes["base16-ocean.light"],
+        "mocha" => &ts.themes["base16-mocha.dark"],
+        "eighties" => &ts.themes["base16-eighties.dark"],
+        "github" => &ts.themes["InspiredGitHub"],
+        "solar_dark" => &ts.themes["Solarized (dark)"],
+        "solar_light" => &ts.themes["Solarized (light)"],
+        _ => &ts.themes["InspiredGitHub"],
+    };
+
+    let syntax = ss.find_syntax_by_token(lang).unwrap_or_else(|| {
+        eprintln!("Invalid language {lang}");
+        ss.find_syntax_by_token("txt").unwrap()
+    });
 
     match to {
         "html" => {
-            let (highlighted, default_bg) = get_highlighted_html(code, lang, theme);
+            let (highlighted, default_bg) = get_highlighted_html(code, theme, syntax, &ss);
 
             if let Value::Bool(inline) = &input["inline"] {
                 let style = get_style_html(inline, font_size, tab_size, bg, default_bg);
@@ -98,7 +116,7 @@ fn transform_code(to: &str) {
             if font_size != 12 {
                 eprintln!("Font size is not supported in LaTeX");
             }
-            print!("{}", highlight_latex(code, lang, theme, tab_size));
+            print!("{}", highlight_latex(code, tab_size, theme, syntax, &ss));
         }
         other => {
             eprintln!("Cannot convert code to {other}");
@@ -106,74 +124,48 @@ fn transform_code(to: &str) {
     }
 }
 
-fn highlight_latex(code: &str, lang: &String, tm: &str, tab_size: u64) -> String {
-    let ss = SyntaxSet::load_defaults_newlines();
-    let ts = ThemeSet::load_defaults();
-    let theme = match tm {
-        "ocean_dark" => &ts.themes["base16-ocean.dark"],
-        "ocean_light" => &ts.themes["base16-ocean.light"],
-        "mocha" => &ts.themes["base16-mocha.dark"],
-        "eighties" => &ts.themes["base16-eighties.dark"],
-        "github" => &ts.themes["InspiredGitHub"],
-        "solar_dark" => &ts.themes["Solarized (dark)"],
-        "solar_light" => &ts.themes["Solarized (light)"],
-        _ => &ts.themes["InspiredGitHub"],
-    };
+fn highlight_latex(code: &str, tab_size: u64, theme: &Theme, syntax: &SyntaxReference, ss: &SyntaxSet) -> String {
+    let mut h = HighlightLines::new(syntax, theme);
+    let mut result: Vec<String> = vec![];
+    let background_color = theme.settings.background.unwrap();
+    let r = background_color.r;
+    let g = background_color.g;
+    let b = background_color.b;
+    let space_size = 0.5;
 
-    if let Some(syntax) = ss.find_syntax_by_token(lang) {
-        let mut h = HighlightLines::new(syntax, theme);
-        let mut result: Vec<String> = vec![];
-        let background_color = theme.settings.background.unwrap();
-        let r = background_color.r;
-        let g = background_color.g;
-        let b = background_color.b;
-        let space_size = 0.5;
-        
-        result.push(
-            format!("\\begin{{center}}\n\\definecolor{{background}}{{RGB}}{{{r},{g},{b}}}\n")
-        );
-        
-        result.push(
-            "\\texttt{\n\\begin{codebox}[colback=background]\n".to_string()
-        );
-        
-        for line in code.split('\n').map(|s| s.trim_end_matches('\r')) {
-            let regions = h.highlight_line(line, &ss).unwrap();
-            let (colors, words): (Vec<_>, Vec<_>) =
-                regions.into_iter().map(|(a, b)| (a.foreground, b)).unzip();
-            for i in 0..words.len() {
-                let r = colors[i].r;
-                let g = colors[i].g;
-                let b = colors[i].b;
-                let word = words[i];
-                let escaped = escape_latex_text(word.to_string());
-                if escaped.chars().all(|c| c.is_whitespace()){
-                    let tab_size = tab_size;
-                    let space_sum: u64 = escaped
-                        .chars()
-                        .map(|x| if x == '\t' { tab_size } else { 1 })
-                        .sum();
-                    let space_len = space_sum as f64 * space_size;
-                    result.push(format!("\\hspace*{{{space_len}em}}"));
-                } else {
-                    result.push(
-                        format!(
-                            "\\textcolor[RGB]{{{r},{g},{b}}}{{{escaped}}}"
-                        )
-                    );
-                }
+    result.push(format!(
+        "\\begin{{center}}\n\\definecolor{{background}}{{RGB}}{{{r},{g},{b}}}\n"
+    ));
+
+    result.push("\\texttt{\n\\begin{codebox}[colback=background]\n".to_string());
+
+    for line in code.split('\n').map(|s| s.trim_end_matches('\r')) {
+        let regions = h.highlight_line(line, ss).unwrap();
+        let (colors, words): (Vec<_>, Vec<_>) =
+            regions.into_iter().map(|(a, b)| (a.foreground, b)).unzip();
+        for i in 0..words.len() {
+            let r = colors[i].r;
+            let g = colors[i].g;
+            let b = colors[i].b;
+            let word = words[i];
+            let escaped = escape_latex_text(word.to_string());
+            if escaped.chars().all(|c| c.is_whitespace()) {
+                let tab_size = tab_size;
+                let space_sum: u64 = escaped
+                    .chars()
+                    .map(|x| if x == '\t' { tab_size } else { 1 })
+                    .sum();
+                let space_len = space_sum as f64 * space_size;
+                result.push(format!("\\hspace*{{{space_len}em}}"));
+            } else {
+                result.push(format!("\\textcolor[RGB]{{{r},{g},{b}}}{{{escaped}}}"));
             }
-            result.push("\n\\\\".to_string());
         }
-        result.push(
-            "\\end{codebox}\n}\n\\end{center}\n".to_string()
-        );
-    
-        serde_json::to_string(&result).unwrap()
-    } else {
-        eprintln!("Invalid language: {lang}");
-        code.to_string()
+        result.push("\n\\\\".to_string());
     }
+    result.push("\\end{codebox}\n}\n\\end{center}\n".to_string());
+
+    serde_json::to_string(&result).unwrap()
 }
 
 fn escape_latex_text(text: String) -> String {
@@ -220,45 +212,20 @@ fn get_style_html(
     style
 }
 
-fn get_highlighted_html(code: &str, lang: &String, tm: &str) -> (String, Option<Color>) {
-    let ss = SyntaxSet::load_defaults_newlines();
-    let ts = ThemeSet::load_defaults();
-    let theme = match tm {
-        "ocean_dark" => &ts.themes["base16-ocean.dark"],
-        "ocean_light" => &ts.themes["base16-ocean.light"],
-        "mocha" => &ts.themes["base16-mocha.dark"],
-        "eighties" => &ts.themes["base16-eighties.dark"],
-        "github" => &ts.themes["InspiredGitHub"],
-        "solar_dark" => &ts.themes["Solarized (dark)"],
-        "solar_light" => &ts.themes["Solarized (light)"],
-        _ => &ts.themes["InspiredGitHub"],
-    };
+fn get_highlighted_html(
+    code: &str,
+    theme: &Theme,
+    syntax: &SyntaxReference,
+    ss: &SyntaxSet
+) -> (String, Option<Color>) {
+    let mut h = HighlightLines::new(syntax, theme);
+    let incl_bg = IncludeBackground::No;
+    let mut html: Vec<String> = vec![];
 
-    if let Some(syntax) = ss.find_syntax_by_token(lang) {
-        let mut h = HighlightLines::new(syntax, theme);
-        let incl_bg = IncludeBackground::No;
-        let mut html: Vec<String> = vec![];
-
-        // avoiding lines() here because we want to include the final newline
-        for line in code.split('\n').map(|s| s.trim_end_matches('\r')) {
-            let regions = h.highlight_line(line, &ss).unwrap();
-            html.push(styled_line_to_highlighted_html(&regions[..], incl_bg).unwrap())
-        }
-        (html.join("<br>"), theme.settings.background)
-    } else {
-        eprintln!("Invalid language: {lang}");
-        let html = code
-            .split('\n')
-            .map(|s| s.trim_end_matches('\r'))
-            .collect::<Vec<&str>>();
-        (
-            html.join("<br>"),
-            Some(Color {
-                r: 200,
-                g: 200,
-                b: 200,
-                a: 255,
-            }),
-        )
+    // avoiding lines() here because we want to include the final newline
+    for line in code.split('\n').map(|s| s.trim_end_matches('\r')) {
+        let regions = h.highlight_line(line, ss).unwrap();
+        html.push(styled_line_to_highlighted_html(&regions[..], incl_bg).unwrap())
     }
+    (html.join("<br>"), theme.settings.background)
 }
