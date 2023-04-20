@@ -122,23 +122,21 @@ fn highlight_latex(code: &str, lang: &String, tm: &str, tab_size: u64) -> String
 
     if let Some(syntax) = ss.find_syntax_by_token(lang) {
         let mut h = HighlightLines::new(syntax, theme);
-        let mut result = String::new();
+        let mut result: Vec<String> = vec![];
         let background_color = theme.settings.background.unwrap();
         let r = background_color.r;
         let g = background_color.g;
         let b = background_color.b;
         let space_size = 0.5;
-        result.push('[');
-        write!(
-            result,
-            r#"{{"name": "raw", "data": "\\begin{{center}}\n\\definecolor{{background}}{{RGB}}{{{r},{g},{b}}}\n"}},"#
-        )
-        .unwrap();
-        write!(
-            result,
-            r#"{{"name": "raw", "data": "\\texttt{{\n\\begin{{codebox}}[colback=background]\n"}},"#
-        )
-        .unwrap();
+        
+        result.push(
+            format!("\\begin{{center}}\n\\definecolor{{background}}{{RGB}}{{{r},{g},{b}}}\n")
+        );
+        
+        result.push(
+            "\\texttt{\n\\begin{codebox}[colback=background]\n".to_string()
+        );
+        
         for line in code.split('\n').map(|s| s.trim_end_matches('\r')) {
             let regions = h.highlight_line(line, &ss).unwrap();
             let (colors, words): (Vec<_>, Vec<_>) =
@@ -149,52 +147,29 @@ fn highlight_latex(code: &str, lang: &String, tm: &str, tab_size: u64) -> String
                 let b = colors[i].b;
                 let word = words[i];
                 let escaped = escape_latex_text(word.to_string());
-                if escaped.chars().all(|c| c.is_whitespace()) && i == 0 {
+                if escaped.chars().all(|c| c.is_whitespace()){
                     let tab_size = tab_size;
                     let space_sum: u64 = escaped
                         .chars()
                         .map(|x| if x == '\t' { tab_size } else { 1 })
                         .sum();
                     let space_len = space_sum as f64 * space_size;
-                    write!(
-                        result,
-                        r#"{{"name": "raw", "data": "\\hspace*{{{space_len}em}}"}},"#
-                    )
-                    .unwrap();
-                } else{
-                    if escaped == " " {
-                        write!(
-                            result,
-                            "{}",
-                            json!({
-                                "name": "raw",
-                                "data": " "
-                            })
+                    result.push(format!("\\hspace*{{{space_len}em}}"));
+                } else {
+                    result.push(
+                        format!(
+                            "\\textcolor[RGB]{{{r},{g},{b}}}{{{escaped}}}"
                         )
-                        .unwrap();
-                    } else {
-                        write!(
-                            result,
-                            "{}",
-                            json!({
-                                "name": "raw",
-                                "data": format!(r"\textcolor[RGB]{{{r},{g},{b}}}{{{escaped}}}")
-                            })
-                        )
-                        .unwrap();
-                    }
-                    result.push(',');
+                    );
                 }
             }
-            write!(result, r#"{{"name": "raw", "data": "\n\\\\"}},"#).unwrap();
+            result.push("\n\\\\".to_string());
         }
-        write!(
-            result,
-            r#"{{"name": "raw", "data": "\\end{{codebox}}\n}}\n\\end{{center}}\n"}}"#
-        )
-        .unwrap();
-        result.push(']');
-        result
+        result.push(
+            "\\end{codebox}\n}\n\\end{center}\n".to_string()
+        );
+    
+        serde_json::to_string(&result).unwrap()
     } else {
         eprintln!("Invalid language: {lang}");
         code.to_string()
