@@ -1,0 +1,13 @@
+{
+    "name": "if-list",
+    "data": "This should not be parsed",
+    "arguments": {
+        "list": "foo",
+        "check": "contains",
+        "value": "bar",
+        "case-sensitive": "case-sensitive"
+    },
+    "inline": true,
+    "__test_transform_to": "html",
+    "__test_expected_result": []
+}
