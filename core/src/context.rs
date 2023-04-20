@@ -35,6 +35,8 @@ pub struct Context<T, U> {
     engine: Engine,
     pub(crate) state: CompilationState,
     pub filesystem: CoreFs<U>,
+    /// If true verbose errors and warnings will be used
+    pub verbose: bool,
     policy: Arc<Mutex<U>>,
 }
 
@@ -45,7 +47,6 @@ pub struct CompilationState {
     pub variables: VariableStore,
     pub warnings: Vec<Issue>,
     pub errors: Vec<Issue>,
-    pub verbose_errors: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -58,18 +59,17 @@ pub struct Issue {
 
 impl fmt::Display for Issue {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        if let Some(input) = &self.input {
-            write!(
-                f,
-                "{} -> {}: {}, input: {}",
-                self.source, self.target, self.description, input
-            )
-        } else {
-            write!(
+        match self.input.as_ref().map(String::as_str) {
+            None => write!(
                 f,
                 "{} -> {}: {}",
                 self.source, self.target, self.description
-            )
+            ),
+            Some(input) => write!(
+                f,
+                "{} -> {}: {}, input: {}",
+                self.source, self.target, self.description, input
+            ),
         }
     }
 }
@@ -145,6 +145,7 @@ impl<T, U> Context<T, U> {
             engine: EngineBuilder::new(Cranelift::new()).engine(),
             state: CompilationState::default(),
             filesystem: CoreFs::new(Arc::clone(&policy)),
+            verbose: false,
             policy,
         };
         #[cfg(feature = "native")]
@@ -432,7 +433,7 @@ where
                         map.insert("source".to_string(), name.to_string());
                         map.insert("target".to_string(), output_format.to_string());
                         // these two ifs can't be joined, unfortunately, or it won't run on stable
-                        if self.state.verbose_errors {
+                        if self.verbose {
                             map.insert("input".to_string(), data.to_string());
                         }
                         map
