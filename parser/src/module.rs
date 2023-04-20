@@ -203,7 +203,7 @@ fn get_multiline_body_parser<'a>(
             let res = delimited(
                 line_ending,
                 take_until(closing.as_str()),
-                tag(closing.as_str()),
+                terminated(tag(closing.as_str()), opt(take_until("\n"))),
             )(i);
             res
         } else {
