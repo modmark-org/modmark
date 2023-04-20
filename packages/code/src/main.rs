@@ -95,7 +95,7 @@ fn transform_code(to: &str) {
             }
         }
         "latex" => {
-            if font_size != 12{
+            if font_size != 12 {
                 eprintln!("Font size is not supported in LaTeX");
             }
             print!("{}", highlight_latex(code, lang, theme, tab_size));
@@ -127,15 +127,16 @@ fn highlight_latex(code: &str, lang: &String, tm: &str, tab_size: u64) -> String
         let r = background_color.r;
         let g = background_color.g;
         let b = background_color.b;
+        let space_size = 0.5;
         result.push('[');
         write!(
             result,
-            r#"{{"name": "raw", "data": "\\definecolor{{background}}{{RGB}}{{{r},{g},{b}}}\n"}},"#
+            r#"{{"name": "raw", "data": "\\begin{{center}}\n\\definecolor{{background}}{{RGB}}{{{r},{g},{b}}}\n"}},"#
         )
         .unwrap();
         write!(
             result,
-            r#"{{"name": "raw", "data": "\\begin{{center}}\n\\texttt{{\n\\begin{{codebox}}[colback=background]\n"}},"#
+            r#"{{"name": "raw", "data": "\\texttt{{\n\\begin{{codebox}}[colback=background]\n"}},"#
         )
         .unwrap();
         for line in code.split('\n').map(|s| s.trim_end_matches('\r')) {
@@ -147,24 +148,43 @@ fn highlight_latex(code: &str, lang: &String, tm: &str, tab_size: u64) -> String
                 let g = colors[i].g;
                 let b = colors[i].b;
                 let word = words[i];
-                let escaped = escape_latex_text(word.to_string(), tab_size);
-                if escaped == " " {
+                let escaped = escape_latex_text(word.to_string());
+                if escaped.chars().all(|c| c.is_whitespace()) && i == 0 {
+                    let tab_size = tab_size;
+                    let space_sum: u64 = escaped
+                        .chars()
+                        .map(|x| if x == '\t' { tab_size } else { 1 })
+                        .sum();
+                    let space_len = space_sum as f64 * space_size;
                     write!(
                         result,
-                        "{}",
-                        json!({
-                            "name": "raw",
-                            "data": " "
-                        })
+                        r#"{{"name": "raw", "data": "\\hspace*{{{space_len}em}}"}},"#
                     )
                     .unwrap();
-                } else {
-                    write!(result, "{}", json!({
-                        "name": "raw",
-                        "data": format!(r"\textcolor[RGB]{{{r},{g},{b}}}{{{escaped}}}")
-                    })).unwrap();
+                } else{
+                    if escaped == " " {
+                        write!(
+                            result,
+                            "{}",
+                            json!({
+                                "name": "raw",
+                                "data": " "
+                            })
+                        )
+                        .unwrap();
+                    } else {
+                        write!(
+                            result,
+                            "{}",
+                            json!({
+                                "name": "raw",
+                                "data": format!(r"\textcolor[RGB]{{{r},{g},{b}}}{{{escaped}}}")
+                            })
+                        )
+                        .unwrap();
+                    }
+                    result.push(',');
                 }
-                result.push(',');
             }
             write!(result, r#"{{"name": "raw", "data": "\n\\\\"}},"#).unwrap();
         }
@@ -181,7 +201,7 @@ fn highlight_latex(code: &str, lang: &String, tm: &str, tab_size: u64) -> String
     }
 }
 
-fn escape_latex_text(text: String, tab_size: u64) -> String {
+fn escape_latex_text(text: String) -> String {
     let s = text
         .split('\\')
         .map(|t| t.replace('{', r"\{").replace('}', r"\}"))
@@ -195,8 +215,7 @@ fn escape_latex_text(text: String, tab_size: u64) -> String {
         .replace('<', r"\textless{}")
         .replace('>', r"\textgreater{}")
         .replace('~', r"\textasciitilde{}")
-        .replace('^', r"\textasciicircum{}")
-        .replace("    ", &format!(r"\hspace*{{{tab_size}mm}}"));
+        .replace('^', r"\textasciicircum{}");
     s
 }
 
