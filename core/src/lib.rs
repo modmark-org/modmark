@@ -183,9 +183,6 @@ where
     // outside of here which doesn't take state afterwards
     ctx.clear_state();
 
-    // TODO: Move this out so that we have a flag in the CLI and a switch in the playground to
-    //   do verbose errors or "debug mode" or similar
-    ctx.state.verbose_errors = true;
     let (doc_ast, config) = parser::parse_with_config(source).map_err(|e| vec![e.into()])?;
     let document: Element =
         Element::try_from_ast(doc_ast, GranularId::root()).map_err(|e| vec![e])?;
@@ -217,9 +214,6 @@ where
 {
     ctx.clear_state();
 
-    // TODO: Move this out so that we have a flag in the CLI and a switch in the playground to
-    //   do verbose errors or "debug mode" or similar
-    ctx.state.verbose_errors = true;
     let (doc_ast, config) = parser::parse_with_config(source).map_err(|e| vec![e.into()])?;
     let document: Element =
         Element::try_from_ast(doc_ast, GranularId::root()).map_err(|e| vec![e])?;

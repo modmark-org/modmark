@@ -72,6 +72,9 @@ struct CompileArgs {
     )]
     watch: bool,
 
+    #[arg(long = "verbose", help = "Display detailed error and warnings")]
+    verbose: bool,
+
     #[arg(short = 'd', long = "dev", help = "Print the AST")]
     dev: bool,
 
@@ -352,8 +355,8 @@ async fn run_compile(args: &CompileArgs) -> Result<(), CliError> {
     let (tx, rx) = channel::<()>(1);
 
     RESOLVE_COMPLETE_RX.set(Mutex::new(rx)).unwrap();
-    CTX.set(Mutex::new(
-        Context::new(
+    CTX.set(Mutex::new({
+        let mut context = Context::new(
             PackageManager {
                 catalog,
                 complete_tx: tx,
@@ -364,8 +367,10 @@ async fn run_compile(args: &CompileArgs) -> Result<(), CliError> {
             eprintln!("Error creating Context: {e}");
             e
         })
-        .unwrap(),
-    ))
+        .unwrap();
+        context.verbose = args.verbose;
+        context
+    }))
     .unwrap();
 
     // Using html output format and watch flag
