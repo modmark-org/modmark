@@ -194,7 +194,7 @@ fn transform_if_const(input: Value) {
     } else if let Ok(var_val) = env::var(var_name) {
         let case_sensitive = input["arguments"]["case-sensitive"].as_str().unwrap() == "true";
         let var_val = if case_sensitive {
-            var_val.to_string()
+            var_val
         } else {
             var_val.to_lowercase()
         };
@@ -237,27 +237,36 @@ fn transform_if_collection(input: Value, is_set: bool) {
     }
 
     let check = input["arguments"]["check"].as_str().unwrap();
-    let value = input["arguments"]["value"].as_str().unwrap();
+    let value = {
+        let arg = input["arguments"]["value"].as_str().unwrap();
+        if case_sensitive {
+            arg.to_string()
+        } else {
+            arg.to_lowercase()
+        }
+    };
+
+    // We have a Vec<String> and want to check if it contains a &str, but there is no way of doing
+    // that using .contains since it expects a &String (and you can make a &String to a &str but
+    // not the other way around). Because of that, we do .iter().any(|v| v == x) with this macro
+    macro_rules! contains {
+        ($c:expr, $str:expr) => {
+            $c.iter().any(|v| v == $str)
+        };
+    }
 
     let compile = if check == "non-empty" || check == "empty-or-undefined" {
         env_values.is_empty() == (check == "empty-or-undefined")
     } else if check == "contains" || check == "does-not-contain" {
         // cannot use .contains here due to coercion rules
-        env_values.iter().any(|v| v == value) == (check == "contains")
+        contains!(env_values, &value) == (check == "contains")
     } else {
-        let split_values: Vec<_> = if case_sensitive {
-            value
-                .split_terminator(",")
-                .map(ToString::to_string)
-                .collect()
-        } else {
-            value.split_terminator(",").map(str::to_lowercase).collect()
-        };
+        let split_values: Vec<&str> = value.split_terminator(',').collect();
 
         match check {
-            "contains-all" => split_values.iter().all(|v| env_values.contains(v)),
-            "contains-any" => split_values.iter().any(|v| env_values.contains(v)),
-            "contains-none" => split_values.iter().all(|v| !env_values.contains(v)),
+            "contains-all" => split_values.into_iter().all(|v| contains!(env_values, v)),
+            "contains-any" => split_values.into_iter().any(|v| contains!(env_values, v)),
+            "contains-none" => split_values.into_iter().all(|v| !contains!(env_values, v)),
             _ => unreachable!("Invalid check {check}"),
         }
     };
