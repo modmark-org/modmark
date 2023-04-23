@@ -32,6 +32,10 @@
       "name": "raw"
     },
     {
+      "data": "<meta charset=\"UTF-8\">",
+      "name": "raw"
+    },
+    {
       "data": "<style>",
       "name": "raw"
     },
