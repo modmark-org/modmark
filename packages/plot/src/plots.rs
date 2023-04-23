@@ -11,6 +11,9 @@ fn get_function_plots(ctx: &mut PlotContext) -> Result<Vec<Plot>, String> {
     let mut plots = Vec::new();
 
     for function in ctx.data.split('\n') {
+        if function.trim().is_empty() {
+            continue;
+        }
         let mut x_iter = ctx.rm.get_point_range('x')?;
 
         // Add extra x_values at the function's asymptotes if there are any, and store in a Vec
@@ -45,9 +48,16 @@ fn get_function_plots(ctx: &mut PlotContext) -> Result<Vec<Plot>, String> {
 
         for i in 0..points.len() {
             let &(x, y) = points.get(i).unwrap();
-            let margin = ctx.rm.y_margin(y);
+
+            // If current point is NaN, do not add it and start a new series of points
+            if y.is_nan() {
+                plot.push(Points::new());
+                plot_idx += 1;
+                continue;
+            }
 
             // If the current point is inside the function, we can always add it without extra steps
+            let margin = ctx.rm.y_margin(y);
             if margin == 0.0 {
                 plot[plot_idx].push((x, y));
                 continue;
@@ -102,25 +112,25 @@ pub fn get_function_svg(ctx: &mut PlotContext) -> Result<String, String> {
             .x_label_area_size(10)
             .y_label_area_size(15.0 + 5.0 * digits)
             .build_cartesian_2d(x_range, y_range)
-            .map_err(|_| "Failed to build coordinate system.".to_string())?;
+            .map_err(|_| String::from("Failed to build coordinate system."))?;
 
         chart
             .configure_mesh()
             .max_light_lines(0)
             .draw()
-            .map_err(|_| "Failed to draw coordinate system.".to_string())?;
+            .map_err(|_| String::from("Failed to draw coordinate system."))?;
 
         for plot in plots {
             let style = ctx.get_style();
             for points in plot {
                 chart
                     .draw_series(LineSeries::new(points, style))
-                    .map_err(|_| "Failed to plot the function.".to_string())?;
+                    .map_err(|_| String::from("Failed to plot the function."))?;
             }
         }
 
         root.present()
-            .map_err(|_| "Failed to create SVG.".to_string())?;
+            .map_err(|_| String::from("Failed to create SVG."))?;
     }
     Ok(buf)
 }
@@ -133,7 +143,7 @@ fn get_list_points(ctx: &mut PlotContext) -> Result<Points, String> {
             .filter_map(|v| v.parse::<f64>().ok())
             .collect::<Vec<f64>>();
         if values.len() != 2 {
-            return Err("Invalid data in list of values.".to_string());
+            return Err(String::from("Invalid data in list of values."));
         } else {
             points.push((values[0], values[1]))
         }
@@ -160,13 +170,13 @@ pub fn get_list_svg(ctx: &mut PlotContext) -> Result<String, String> {
             .x_label_area_size(10)
             .y_label_area_size(15.0 + 5.0 * digits)
             .build_cartesian_2d(x_range, y_range)
-            .map_err(|_| "Failed to build coordinate system.".to_string())?;
+            .map_err(|_| String::from("Failed to build coordinate system."))?;
 
         chart
             .configure_mesh()
             .max_light_lines(0)
             .draw()
-            .map_err(|_| "Failed to draw coordinate system.".to_string())?;
+            .map_err(|_| String::from("Failed to draw coordinate system."))?;
 
         let style = ctx.get_style();
 
@@ -177,17 +187,17 @@ pub fn get_list_svg(ctx: &mut PlotContext) -> Result<String, String> {
                         .iter()
                         .map(|(x, y)| Circle::new((*x, *y), size, style)),
                 )
-                .map_err(|_| "Failed to connect the points.".to_string())?;
+                .map_err(|_| String::from("Failed to plot the points."))?;
         }
 
-        if let Some(true) = ctx.connect {
+        if let Some(true) = ctx.discrete {
             chart
                 .draw_series(LineSeries::new(points.into_iter(), style))
-                .map_err(|_| "Failed to connect the points.".to_string())?;
+                .map_err(|_| String::from("Failed to connect the points."))?;
         }
 
         root.present()
-            .map_err(|_| "Failed to create SVG.".to_string())?;
+            .map_err(|_| String::from("Failed to create SVG."))?;
     }
 
     Ok(buf)

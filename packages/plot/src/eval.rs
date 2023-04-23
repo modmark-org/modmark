@@ -16,6 +16,7 @@ fn value_to_float(v: &Value) -> Option<f64> {
 // Create a new function context with functions sin, cos, tan, sqrt, log, mod
 pub fn new_function_context() -> HashMapContext {
     let mut ctx = HashMapContext::new();
+
     ctx.set_function(
         String::from("sin"),
         Function::new(|arg| match value_to_float(arg) {
@@ -70,6 +71,35 @@ pub fn new_function_context() -> HashMapContext {
         }),
     )
     .unwrap();
+    ctx.set_function(
+        String::from("arcsin"),
+        Function::new(|arg| match value_to_float(arg) {
+            Some(float) => Ok(Value::Float(float.asin())),
+            None => Err(EvalexprError::expected_float(arg.clone())),
+        }),
+    )
+    .unwrap();
+    ctx.set_function(
+        String::from("arccos"),
+        Function::new(|arg| match value_to_float(arg) {
+            Some(float) => Ok(Value::Float(float.acos())),
+            None => Err(EvalexprError::expected_float(arg.clone())),
+        }),
+    )
+    .unwrap();
+    ctx.set_function(
+        String::from("arctan"),
+        Function::new(|arg| match value_to_float(arg) {
+            Some(float) => Ok(Value::Float(float.atan())),
+            None => Err(EvalexprError::expected_float(arg.clone())),
+        }),
+    )
+    .unwrap();
+
+    ctx.set_value("PI".into(), std::f64::consts::PI.into())
+        .unwrap();
+    ctx.set_value("pi".into(), std::f64::consts::PI.into())
+        .unwrap();
 
     ctx
 }
@@ -108,12 +138,17 @@ pub fn clamp_eval(eval: f64) -> f64 {
 // This needs to match the functions added in new_function_context
 pub fn get_var_names(function: &str) -> Vec<String> {
     let replaced = function
+        .replace("arcsin", "")
+        .replace("arccos", "")
+        .replace("arctan", "")
         .replace("sin", "")
         .replace("cos", "")
         .replace("tan", "")
         .replace("sqrt", "")
         .replace("log", "")
-        .replace("mod", "");
+        .replace("mod", "")
+        .replace("pi", "")
+        .replace("PI", "");
 
     let mut vars = vec![];
     for c in replaced.chars() {
@@ -132,10 +167,11 @@ pub fn verify_functions(ctx: &mut PlotContext, var_count: usize) -> Result<(), S
     let mut idx = 1;
     for function in ctx.data.split('\n') {
         if function.is_empty() {
-            return Err(format!("Function {idx} is invalid: empty"));
+            continue;
         }
 
         let names = get_var_names(function);
+
         if names.len() > var_count {
             return Err(format!("Function {idx} is invalid: too many variables"));
         }
@@ -143,11 +179,10 @@ pub fn verify_functions(ctx: &mut PlotContext, var_count: usize) -> Result<(), S
         let values = vec![0.0; names.len()];
         update_function_context(&mut ctx.fn_ctx, &names, &values);
 
-        if eval_number_with_context_mut(function, &mut ctx.fn_ctx).is_err() {
-            return Err(format!(
-                "Function {idx} is invalid: does not produce a number"
-            ));
+        if let Err(e) = eval_number_with_context_mut(function, &mut ctx.fn_ctx) {
+            return Err(format!("Function {idx} is invalid: {e}"));
         }
+
         idx += 1;
     }
 

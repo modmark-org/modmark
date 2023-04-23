@@ -8,25 +8,14 @@ use std::fs::File;
 use std::io::Write;
 use std::ops::Range;
 
-#[macro_export]
-macro_rules! raw {
-    ($expr:expr) => {
-        json!({
-            "name": "raw",
-            "data": $expr
-        })
-    }
-}
-
-pub const COLORS: [RGBColor; 6] = [RED, BLUE, GREEN, YELLOW, CYAN, MAGENTA];
-
 pub struct PlotContext {
     pub data: String,
     pub rm: RangeManager,
     pub fn_ctx: HashMapContext,
     pub fn_idx: usize,
     pub line_width: u64,
-    pub connect: Option<bool>,
+    pub colors: Vec<RGBColor>,
+    pub discrete: Option<bool>,
     pub point_size: Option<u64>,
     pub svg_info: SVGInfo,
 }
@@ -41,8 +30,11 @@ impl PlotContext {
         let samples = input["arguments"]["samples"].as_u64().unwrap_or(0);
 
         let line_width = input["arguments"]["line_width"].as_u64().unwrap();
+        let mut color_arg = input["arguments"]["color"]
+            .as_str()
+            .unwrap_or(input["arguments"]["colors"].as_str().unwrap());
 
-        let connect = input["arguments"]["connect"].as_str().map(|s| s == "true");
+        let discrete = input["arguments"]["discrete"].as_str().map(|s| s == "true");
         let point_size = input["arguments"]["point_size"].as_u64();
 
         let width = input["arguments"]["width"]
@@ -57,6 +49,23 @@ impl PlotContext {
         let fn_ctx = new_function_context();
         let fn_idx = 0;
 
+        // use MATLAB defaults if no argument was provided
+        if color_arg.is_empty() {
+            color_arg = "0072BD,D95319,EDB120,7E2F8E,77AC30,4DBEEE,A2142F";
+        }
+
+        let mut colors = Vec::new();
+        for hex in color_arg.split(',').map(|s| s.trim()) {
+            if hex.len() != 6 {
+                return Err(String::from("Invalid length of hex."));
+            }
+            colors.push(RGBColor(
+                u8::from_str_radix(&hex[0..2], 16).map_err(|e| e.to_string())?,
+                u8::from_str_radix(&hex[2..4], 16).map_err(|e| e.to_string())?,
+                u8::from_str_radix(&hex[4..6], 16).map_err(|e| e.to_string())?,
+            ))
+        }
+
         let svg_info = SVGInfo {
             width,
             label,
@@ -70,7 +79,8 @@ impl PlotContext {
             fn_idx,
             data,
             line_width,
-            connect,
+            colors,
+            discrete,
             point_size,
             svg_info,
         })
@@ -78,11 +88,11 @@ impl PlotContext {
 
     pub fn get_style(&mut self) -> ShapeStyle {
         let style = ShapeStyle {
-            color: COLORS[self.fn_idx].into(),
+            color: self.colors[self.fn_idx].into(),
             filled: true,
             stroke_width: self.line_width as u32,
         };
-        self.fn_idx = (self.fn_idx + 1) % 6;
+        self.fn_idx = (self.fn_idx + 1) % self.colors.len();
         style
     }
 }
@@ -225,21 +235,22 @@ pub fn print_svg_html(svg: String, ctx: &PlotContext) {
     let style = format!("style=\"width:{percentage}%\"");
     let img_str = format!("<img src=\"{src}\" {style} ");
 
-    let mut v = vec![];
-    v.push(raw!("<figure>\n"));
-    v.push(raw!(img_str));
+    let mut v = Vec::new();
+    v.push(String::from("<figure>\n"));
+    v.push(img_str);
+
     if !ctx.svg_info.label.is_empty() {
-        v.push(raw!("id=\""));
-        v.push(json!({"name": "__text", "data": ctx.svg_info.label}));
-        v.push(raw!("\""));
+        v.push(String::from("id=\""));
+        v.push(json!({"name": "__text", "data": ctx.svg_info.label}).to_string());
+        v.push(String::from("\""));
     }
-    v.push(raw!("/>\n"));
+    v.push(String::from("/>\n"));
     if !ctx.svg_info.caption.is_empty() {
-        v.push(raw!("<figcaption>"));
-        v.push(json!({"name": "__text", "data": ctx.svg_info.caption}));
-        v.push(raw!("</figcaption>\n"));
+        v.push(String::from("<figcaption>"));
+        v.push(json!({"name": "__text", "data": ctx.svg_info.caption}).to_string());
+        v.push(String::from("</figcaption>\n"));
     }
-    v.push(raw!("</figure>\n"));
+    v.push(String::from("</figure>\n"));
 
     print!("{}", json!(v));
 
@@ -323,6 +334,11 @@ pub fn print_manifest() {
                             "type": "uint",
                             "default": 1,
                         },
+                        {
+                            "name": "colors",
+                            "description": "A list of colors that are used to plot the functions. They should be comma-separated and given in hexadecimal.",
+                            "default": ""
+                        },
                     ],
                 },
                 {
@@ -382,7 +398,12 @@ pub fn print_manifest() {
                             "default": 1,
                         },
                         {
-                            "name": "connect",
+                            "name": "color",
+                            "description": "The color that is used in the plot, given in hexadecimal.",
+                            "default": "",
+                        },
+                        {
+                            "name": "discrete",
                             "description": "Decides if lines will be drawn between points.",
                             "type": ["false", "true"],
                             "default": "true",
