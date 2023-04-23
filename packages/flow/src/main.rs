@@ -56,12 +56,12 @@ fn manifest() {
                             "name": "check",
                             "description": "Specifies the check to do to the value. \
                             equals: compile the content if the variable equals the given value. \
-                            differs-to: compile the content if the variable differs from the given value. \
+                            differs-from: compile the content if the variable differs from the given value. \
                             defined: compile the content if the variable is defined. \
                             undefined: compile the content if the variable is undefined.
                             ",
                             "default": "defined",
-                            "type": ["equals", "differs-to", "defined", "undefined"]
+                            "type": ["equals", "differs-from", "defined", "undefined"]
                         },
                         {
                             "name": "value",
