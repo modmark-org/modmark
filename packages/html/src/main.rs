@@ -70,6 +70,7 @@ fn transform_document(doc: Value) -> String {
 
     write!(result, "{},", raw!("<!DOCTYPE html>")).unwrap();
     write!(result, "{},", raw!("<html><head><title>Document</title>")).unwrap();
+    write!(result, "{},", raw!("<meta charset=\"UTF-8\">")).unwrap();
 
     write!(result, "{},", raw!("<style>")).unwrap();
     write!(result, "{},", raw!(include_str!("templates/html.css"))).unwrap();
