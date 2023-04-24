@@ -1,0 +1,70 @@
+{
+    "name": "bibliography",
+    "data": "@online{djot,\ntitle = {djot},\nauthor = {John MacFarlane},\nurl = {https://djot.net},\nurldate = {2023-01-23}\n}\n\n@online{AsciiDoc,\nauthor = {{Eclipse Foundation}},\ntitle = {{AsciiDoc}},\nurl = {http://asciidoc.org/},\nurldate = {2023-01-23}\n}\n\n@online{Commonmark,\nauthor = {John MacFarlane},\ntitle = {CommonMark Spec},\nyear = {2021},\nmonth = {6},\nurl = {https://spec.commonmark.org/0.30/},\nurldate = {2023-03-21}\n}\n",
+    "arguments": {
+        "style": "IEEE",
+        "visibility": "shown",
+        "file": ""
+    },
+    "inline": false,
+    "__test_transform_to": "html",
+    "__test_expected_result": [
+        {
+            "data": "J. MacFarlane, “Djot.” ",
+            "name": "__text"
+        },
+        {
+            "arguments": {
+                "label": "https://djot.net/"
+            },
+            "data": "https://djot.net/",
+            "name": "link"
+        },
+        {
+            "data": " (accessed: Jan. 23, 2023).",
+            "name": "__text"
+        },
+        {
+            "data": "",
+            "name": "newline"
+        },
+        {
+            "data": "Eclipse Foundation, “AsciiDoc.” ",
+            "name": "__text"
+        },
+        {
+            "arguments": {
+                "label": "http://asciidoc.org/"
+            },
+            "data": "http://asciidoc.org/",
+            "name": "link"
+        },
+        {
+            "data": " (accessed: Jan. 23, 2023).",
+            "name": "__text"
+        },
+        {
+            "data": "",
+            "name": "newline"
+        },
+        {
+            "data": "J. MacFarlane, “Commonmark spec.” ",
+            "name": "__text"
+        },
+        {
+            "arguments": {
+                "label": "https://spec.commonmark.org/0.30/"
+            },
+            "data": "https://spec.commonmark.org/0.30/",
+            "name": "link"
+        },
+        {
+            "data": " (accessed: Mar. 21, 2023).",
+            "name": "__text"
+        },
+        {
+            "data": "",
+            "name": "newline"
+        }
+    ]
+}
