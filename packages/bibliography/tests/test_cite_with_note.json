@@ -1,0 +1,22 @@
+{
+    "name": "cite",
+    "data": "modmark",
+    "arguments": {
+        "note": "p. 10"
+    },
+    "inline": false,
+    "__test_transform_to": "html",
+    "__test_expected_result": [
+        {
+            "name": "list-push",
+            "arguments": {
+                "name": "inline_citations"
+            },
+            "data": "{\"key\":\"modmark\",\"note\":\"p. 10\"}"
+        },
+        {
+            "name": "cite-internal-do-not-use",
+            "data": "{\"key\":\"modmark\",\"note\":\"p. 10\"}"
+        }
+    ]
+}
