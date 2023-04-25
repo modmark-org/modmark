@@ -1,0 +1,9 @@
+{
+    "name": "comment",
+    "data": "This should not be parsed",
+    "arguments": {
+    },
+    "inline": true,
+    "__test_transform_to": "html",
+    "__test_expected_result": []
+}

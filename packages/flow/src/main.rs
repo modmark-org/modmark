@@ -26,6 +26,18 @@ fn manifest() {
             "description": "This package provides modules to control flow during compilation.",
             "transforms": [
                 {
+                    "from": "hide",
+                    "to": ["any"],
+                    "description": "Does not include its content in the output.",
+                    "arguments": []
+                },
+                {
+                    "from": "comment",
+                    "to": ["any"],
+                    "description": "Does not include its content in the output.",
+                    "arguments": []
+                },
+                {
                     "from": "if",
                     "to": ["any"],
                     "description": "Conditionally compile content based on output format.",
@@ -176,6 +188,7 @@ fn transform(from: &str, to: &str) {
     };
 
     match from {
+        "hide" | "comment" => transform_hide(),
         "if" => transform_if(to, input),
         "if-const" => transform_if_const(input),
         "if-set" => transform_if_collection(input, true),
@@ -184,6 +197,10 @@ fn transform(from: &str, to: &str) {
             eprintln!("Package does not support {other}");
         }
     }
+}
+
+fn transform_hide() {
+    print!("[]");
 }
 
 fn transform_if_const(input: Value) {
