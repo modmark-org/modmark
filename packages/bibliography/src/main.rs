@@ -64,11 +64,11 @@ fn manifest() {
                     "description": "Add an inline citation to one of the sources defined in the bibliography. Example: [cite] modmark",
                     // "variables": {
                         // We really want this, but we can't since it would give cyclic dependencies
-                        // together with unknown-content. So, we disable unknown-content
+                        // together with unknown-content. So, we disable this in favour of just using
+                        // unknown-content
                         // "inline_citations": {"type": "list", "access": "push"}
                     // },
-                    "unknown-content": true // This gives cyclic dependencies if enabled together
-                    // with inline_citations/list-push, see below
+                    "unknown-content": true
                 },
                 {
                     "from": "cite-internal-do-not-use",
@@ -87,9 +87,9 @@ fn manifest() {
                     The bibliography may be read from the BibLaTeX or Hayagriva YAML format, \
                     from either the body of this module or a file passed in as the \"file\" argument.",
                     "arguments": [
-                        {"name": "style", "default": "IEEE", "type": ["IEEE", "APA", "MLA", "CMoS"], "description": "The style to have the bibliography in"},
+                        {"name": "style", "default": "IEEE", "type": ["IEEE", "APA", "MLA", "Chicago"], "description": "The style to have the bibliography in"},
                         {"name": "file", "default": "", "description": "A file containing BibLaTeX or Hayagriva YAML with the bibliography"},
-                        {"name": "visibility", "default": "shown", "type": ["shown", "hidden"], "description": "Whether the bibliography is 'shown' or 'hidden'. \
+                        {"name": "visibility", "default": "visible", "type": ["visible", "hidden"], "description": "Whether the bibliography is 'shown' or 'hidden'. \
                         Note that a [bibliography] must exist for [cite]s to work, and if you don't want a bibliography in your document, you can set this argument to 'hidden'."}
                     ],
                     "variables": {
@@ -104,7 +104,7 @@ fn manifest() {
     );
 }
 
-// Cyclic dependencies.
+// Why does cyclic dependencies occur?
 // Consider this document
 // [cite] a
 // [cite] b
@@ -132,7 +132,6 @@ fn transform(from: &str, to: &str) {
     }
 }
 
-// The name Citation clashes with Hayagriva
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct InlineCitation<'a> {
     key: &'a str,
@@ -179,7 +178,7 @@ fn transform_bibliography(_to: &str, input: &Value) {
         serde_json::from_str(&var).unwrap()
     };
 
-    // This is our database of all entries (like a db containing all biblatex-entries)
+    // This is our database of all entries
     let mut database = Database::from_entries(bibliography.iter());
 
     // What style to use (IEEE, APA etc)
@@ -199,7 +198,7 @@ fn transform_bibliography(_to: &str, input: &Value) {
             record.entry
         } else {
             eprintln!(
-                "Missing citation {0}, mentioned in [cite] {0} but not defined in the bibliography",
+                "Missing citation key '{0}', consider adding it to your bibliography",
                 citation.key
             );
             output.push(add_citation_label!(
@@ -246,7 +245,7 @@ fn transform_bibliography(_to: &str, input: &Value) {
     let visibility = input["arguments"]["visibility"].as_str().unwrap();
 
     // If the bibliography should be shown, show it!
-    if visibility == "shown" {
+    if visibility == "visible" {
         for entry in database.bibliography(bibliography_style.as_ref(), None) {
             if let Some(prefix) = &entry.prefix {
                 // If we have a prefix (which is the number in [] for IEEE), encase it in brackets
@@ -263,14 +262,14 @@ fn transform_bibliography(_to: &str, input: &Value) {
 }
 
 /// Gets the styles for the given key, as a pair of the bibliography style and citation style. If
-/// the key has no style mappings, None is returned. For the keys IEEE, APA, MLA and CMoS, Some is
+/// the key has no style mappings, None is returned. For the keys IEEE, APA, MLA and Chicago, Some is
 /// always returned, and for any other key, None is returned.
 fn get_styles(key: &str) -> Option<(Box<dyn BibliographyStyle>, Box<dyn CitationStyle>)> {
     let bibliography_style: Box<dyn BibliographyStyle> = match key {
         "IEEE" => Box::new(Ieee::new()),
         "APA" => Box::new(Apa::new()),
         "MLA" => Box::new(Mla::new()),
-        "CMoS" => Box::new(ChicagoAuthorDate::new()),
+        "Chicago" => Box::new(ChicagoAuthorDate::new()),
         _ => return None,
     };
 
@@ -278,7 +277,7 @@ fn get_styles(key: &str) -> Option<(Box<dyn BibliographyStyle>, Box<dyn Citation
         "IEEE" => Box::new(Numerical::new()),
         "APA" => Box::new(ChicagoAuthorDate::new()),
         "MLA" => Box::new(ChicagoAuthorDate::new()),
-        "CMoS" => Box::new(ChicagoAuthorDate::new()),
+        "Chicago" => Box::new(ChicagoAuthorDate::new()),
         _ => return None,
     };
 
