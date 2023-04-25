@@ -27,6 +27,16 @@ macro_rules! module {
     ($name:expr, $data:expr $(,$($args:tt)*)?) => {json!({"name": $name $(,"arguments":$($args)*)*, "data": $data})}
 }
 
+macro_rules! raw {
+    ($content:expr) => {
+        module!("raw", $content)
+    };
+}
+
+macro_rules! import {
+    ($package:expr) => {module!("set-add", $package, {"name": "imports"})}
+}
+
 macro_rules! push_citation {
     ($e:expr) => {module!("list-push", $e, {"name": "inline_citations"})}
 }
@@ -171,7 +181,7 @@ fn transform_cite_label(_to: &str, input: &Value) {
     }
 }
 
-fn transform_bibliography(_to: &str, input: &Value) {
+fn transform_bibliography(to: &str, input: &Value) {
     let Some(bibliography) = read_bibliography(input) else { return; };
 
     // This is the citations (i.e [cite]s) used in the text
@@ -192,7 +202,12 @@ fn transform_bibliography(_to: &str, input: &Value) {
     let mut output: Vec<Value> = vec![];
     let mut used_keys: HashSet<&str> = HashSet::new();
 
-    let unused_keys_is_visible = input["arguments"]["unused-entries"].as_str().unwrap() == "visible";
+    if to == "latex" {
+        output.push(import!(r"\usepackage[hidelinks]{hyperref}"));
+    }
+
+    let unused_keys_is_visible =
+        input["arguments"]["unused-entries"].as_str().unwrap() == "visible";
 
     for citation_str in &citations {
         // We parse the citation (which is a JSON obj)
@@ -231,16 +246,30 @@ fn transform_bibliography(_to: &str, input: &Value) {
         // From this, we construct our citation string (what the [cite] should be turned into).
         // We pass this as JSON format to let Hayagravia apply formatting if needed (which it
         // doesn't, in this version at least). We encase it in [] for IEE and () for others
-        let json_citation = if style_arg == "IEEE" {
+        let mut json_citation_content = if style_arg == "IEEE" {
             let mut vec = vec![text!("[")];
             vec.append(&mut display(&database_citation.display));
             vec.push(text!("]"));
-            Value::Array(vec)
+            vec
         } else {
             let mut vec = vec![text!("(")];
             vec.append(&mut display(&database_citation.display));
             vec.push(text!(")"));
+            vec
+        };
+
+        let json_citation = if to == "latex" {
+            let mut vec = vec![raw!(format!(r"\hyperlink{{bibentry:{}}}{{", entry.key()))];
+            vec.append(&mut json_citation_content);
+            vec.push(raw!("}"));
             Value::Array(vec)
+        } else if to == "html" {
+            let mut vec = vec![raw!(format!(r##"<a href="#bibentry:{}">"##, entry.key()))];
+            vec.append(&mut json_citation_content);
+            vec.push(raw!("</a>"));
+            Value::Array(vec)
+        } else {
+            Value::Array(json_citation_content)
         };
 
         // Then, we are adding that citation as the label (that the [cite], now [cite-internal],
@@ -267,7 +296,23 @@ fn transform_bibliography(_to: &str, input: &Value) {
                 output.append(&mut display(prefix));
                 output.push(text!("] "));
             }
+            if to == "latex" {
+                output.push(raw!(format!(
+                    r"\hypertarget{{bibentry:{}}}{{",
+                    entry.entry.key()
+                )));
+            } else if to == "html" {
+                output.push(raw!(format!(
+                    r#"<span id="bibentry:{}">"#,
+                    entry.entry.key()
+                )));
+            }
             output.append(&mut display(&entry.display));
+            if to == "latex" {
+                output.push(raw!("}".to_string()));
+            } else if to == "html" {
+                output.push(raw!("</span>"));
+            }
             output.push(module!("newline", ""));
         }
     }
@@ -314,6 +359,9 @@ fn read_bibliography(input: &Value) -> Option<Vec<Entry>> {
     let input_string: Cow<'_, str> = if filename.is_empty() {
         Cow::Borrowed(input["data"].as_str().unwrap())
     } else if let Ok(content) = fs::read_to_string(filename) {
+        if !input["data"].as_str().unwrap().is_empty() {
+            eprintln!("Bibliography contains body text but it is ignored since the 'file' argument is present");
+        }
         Cow::Owned(content)
     } else {
         eprintln!("Could not read file {filename}");
@@ -371,7 +419,8 @@ fn display(string: &DisplayString) -> Vec<Value> {
 }
 
 fn without_latex_comments(string: &str) -> String {
-    string.lines()
+    string
+        .lines()
         .filter(|line| !line.trim_start().starts_with('%'))
         .collect::<Vec<_>>()
         .join("\n")

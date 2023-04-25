@@ -8,8 +8,19 @@
         "unused-entries": "visible"
     },
     "inline": false,
-    "__test_transform_to": "random_format",
+    "__test_transform_to": "latex",
     "__test_expected_result": [
+        {
+            "arguments": {
+                "name": "imports"
+            },
+            "data": "\\usepackage[hidelinks]{hyperref}",
+            "name": "set-add"
+        },
+        {
+            "data": "\\hypertarget{bibentry:djot}{",
+            "name": "raw"
+        },
         {
             "data": "J. MacFarlane, “Djot.” ",
             "name": "__text"
@@ -26,8 +37,16 @@
             "name": "__text"
         },
         {
+            "data": "}",
+            "name": "raw"
+        },
+        {
             "data": "",
             "name": "newline"
+        },
+        {
+            "data": "\\hypertarget{bibentry:AsciiDoc}{",
+            "name": "raw"
         },
         {
             "data": "Eclipse Foundation, “AsciiDoc.” ",
@@ -45,8 +64,16 @@
             "name": "__text"
         },
         {
+            "data": "}",
+            "name": "raw"
+        },
+        {
             "data": "",
             "name": "newline"
+        },
+        {
+            "data": "\\hypertarget{bibentry:Commonmark}{",
+            "name": "raw"
         },
         {
             "data": "J. MacFarlane, “Commonmark spec.” ",
@@ -62,6 +89,10 @@
         {
             "data": " (accessed: Mar. 21, 2023).",
             "name": "__text"
+        },
+        {
+            "data": "}",
+            "name": "raw"
         },
         {
             "data": "",
