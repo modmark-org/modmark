@@ -29,6 +29,11 @@ fn test_package_input(file: &Path) -> datatest_stable::Result<()> {
         .parent()
         .and_then(Path::parent)
         .expect("Popping two components should give package path");
+    let package_name = package_path
+        .components()
+        .last()
+        .expect("Folder name should give package name");
+    let out_path = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(package_name);
 
     // We now need to synchronize so that we wait until other threads operating on the same package
     // is done. Since we want multiple tests in parallel but only one per package, we have a map
@@ -67,6 +72,7 @@ fn test_package_input(file: &Path) -> datatest_stable::Result<()> {
             "--manifest-path={}",
             manifest_path.to_string_lossy()
         ))
+        .arg(format!("--target-dir={}", out_path.to_string_lossy()))
         .arg("-q")
         .arg("--")
         .arg("transform")
@@ -112,6 +118,11 @@ fn test_package_conventions(file: &Path) -> datatest_stable::Result<()> {
     let package_path = file
         .parent()
         .expect("Popping one component should give package path");
+    let package_name = package_path
+        .components()
+        .last()
+        .expect("Folder name should give package name");
+    let out_path = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(package_name);
 
     // We now need to synchronize so that we wait until other threads operating on the same package
     // is done. Since we want multiple tests in parallel but only one per package, we have a map
@@ -132,6 +143,7 @@ fn test_package_conventions(file: &Path) -> datatest_stable::Result<()> {
         let cmd = Command::new(env!("CARGO"))
             .arg("run")
             .arg(format!("--manifest-path={}", file.to_string_lossy()))
+            .arg(format!("--target-dir={}", out_path.to_string_lossy()))
             .arg("-q")
             .arg("--")
             .arg("manifest")
