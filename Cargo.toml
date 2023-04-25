@@ -14,7 +14,7 @@ exclude = [
     "packages/flow",
     "packages/bibliography",
     "packages/plot",
-    "playground/web_bindings"
+    "website/web_bindings"
 ]
 
 # We need to specifiy that we use the new resolver to

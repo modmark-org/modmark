@@ -137,17 +137,7 @@ impl<T, U> Context<T, U> {
         T: Resolve,
         U: AccessPolicy,
     {
-        let policy = Arc::new(Mutex::new(policy));
-        let ctx = Context {
-            package_store: Arc::default(),
-            resolver,
-            #[cfg(feature = "native")]
-            engine: EngineBuilder::new(Cranelift::new()).engine(),
-            state: CompilationState::default(),
-            filesystem: CoreFs::new(Arc::clone(&policy)),
-            verbose: false,
-            policy,
-        };
+        let ctx = Context::new_without_standard(resolver, policy);
         #[cfg(feature = "native")]
         ctx.package_store
             .lock()
@@ -156,6 +146,25 @@ impl<T, U> Context<T, U> {
         #[cfg(not(feature = "native"))]
         ctx.package_store.lock().unwrap().load_default_packages()?;
         Ok(ctx)
+    }
+
+    /// Create a new context without the standard packages
+    pub fn new_without_standard(resolver: T, policy: U) -> Self
+    where
+        T: Resolve,
+        U: AccessPolicy,
+    {
+        let policy = Arc::new(Mutex::new(policy));
+        Context {
+            package_store: Arc::default(),
+            resolver,
+            #[cfg(feature = "native")]
+            engine: EngineBuilder::new(Cranelift::new()).engine(),
+            state: CompilationState::default(),
+            filesystem: CoreFs::new(Arc::clone(&policy)),
+            verbose: false,
+            policy,
+        }
     }
 }
 
@@ -167,7 +176,7 @@ where
     // evaluate a document having that configuration with it. It also resolves packages if needed
     // If this returns "true", it had everything it needed to compile, if "false" it is waiting for
     // more packages
-    pub(crate) fn configure(&mut self, config: Option<Config>) -> Result<bool, Vec<CoreError>> {
+    pub fn configure(&mut self, config: Option<Config>) -> Result<bool, Vec<CoreError>> {
         let config = config.unwrap_or_default();
         let mut store_guard = self.package_store.lock().unwrap();
 
