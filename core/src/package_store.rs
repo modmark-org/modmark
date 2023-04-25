@@ -177,10 +177,10 @@ impl PackageStore {
 
     /// Borrow a vector with PackageInfo from every loaded package
     pub fn get_all_package_info(&self) -> Vec<Arc<PackageInfo>> {
-        self.native_packages
+        self.external_packages
             .values()
             .chain(self.standard_packages.values())
-            .chain(self.external_packages.values())
+            .chain(self.native_packages.values())
             .map(|pkg| pkg.info.clone())
             .collect::<Vec<_>>()
     }
