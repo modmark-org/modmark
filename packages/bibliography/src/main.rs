@@ -1,12 +1,12 @@
+use std::{env, fs};
 use std::borrow::Cow;
 use std::io::{self, Read};
-use std::{env, fs};
 
+use hayagriva::Entry;
 use hayagriva::style::{
     Apa, BibliographyStyle, ChicagoAuthorDate, Citation, CitationStyle, Database, DisplayString,
     Formatting, Ieee, Mla, Numerical,
 };
-use hayagriva::Entry;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
@@ -307,7 +307,7 @@ fn read_bibliography(input: &Value) -> Option<Vec<Entry>> {
         return None;
     };
 
-    let bibliography = hayagriva::io::from_biblatex_str(&input_string)
+    let bibliography = hayagriva::io::from_biblatex_str(&without_latex_comments(&input_string))
         .or_else(|e1| hayagriva::io::from_yaml_str(&input_string).map_err(|e2| (e1, e2)));
 
     match bibliography {
@@ -355,4 +355,11 @@ fn display(string: &DisplayString) -> Vec<Value> {
     }
     values.push(text!(&string.value[last_unformatted..]));
     values
+}
+
+fn without_latex_comments(string: &str) -> String {
+    string.lines()
+        .filter(|line| !line.trim_start().starts_with('%'))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
