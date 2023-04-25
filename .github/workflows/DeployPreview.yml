@@ -27,8 +27,13 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./playground
+        working-directory: ./website
     steps:
+      - name: Find PR number
+        uses: jwalton/gh-find-current-pr@v1
+        id: findPr
+        with:
+          state: open
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup output directory
@@ -39,23 +44,27 @@ jobs:
           targets: wasm32-unknown-unknown, wasm32-wasi
       - name: Install wasm-pack
         uses: jetli/wasm-pack-action@v0.4.0
-      - name: Make build script executable
-        run: chmod +x ./build-playground.sh
-      - name: Build Playground
-        run: ./build-playground.sh
+      - name: Build website
+        run: |
+          npm ci
+          npm run wasm
+          echo "/pr-preview/pr-${PR}"
+          export BASE="/pr-preview/pr-${PR}" && npm run build 
+        env:
+          PR: ${{ steps.findPr.outputs.pr }}
       - name: Remove auto-generated .gitignore
-        run: rm build/pkg/.gitignore
+        run: rm dist/web_bindings/.gitignore
       - name: Copy deployment files
         run: |
           mkdir site-deploy
-          cp -r build/* site-deploy
+          cp -r dist/* site-deploy
       - name: Print generated files
         run: ls -R site-deploy
-      - name: Deploy Playground preview
+      - name: Deploy website preview
         uses: rossjrw/pr-preview-action@v1
         with:
           custom-url: modmark.org
-          source-dir: ./playground/site-deploy/
+          source-dir: ./website/site-deploy/
           preview-branch: gh-pages
           umbrella-dir: pr-preview
           action: deploy
@@ -65,7 +74,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Teardown Playground preview
+      - name: Teardown website preview
         uses: rossjrw/pr-preview-action@v1
         with:
           preview-branch: gh-pages

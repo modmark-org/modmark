@@ -5,6 +5,7 @@ use modmark_core::{
 use once_cell::sync::Lazy;
 use parser::ParseError;
 use serde::Serialize;
+use serde_json::json;
 use std::cell::RefCell;
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -42,18 +43,39 @@ impl From<PlaygroundError> for JsValue {
     fn from(error: PlaygroundError) -> Self {
         match error {
             PlaygroundError::Core(errors) => {
-                let mut str = String::new();
-                for error in errors {
-                    str.push_str(&format!("<p>{error}</p><pre>{error:#?}</pre>"));
-                }
-                JsValue::from_str(&str)
+                let json_errors = errors
+                    .into_iter()
+                    .map(|error| {
+                        json!({
+                            "message": error.to_string(),
+                            "raw": format!("{error:#?}")
+                        })
+                    })
+                    .collect::<Vec<_>>();
+
+                JsValue::from_str(
+                    serde_json::to_string(&json!({"type":"compilationError", "data": json_errors}))
+                        .unwrap()
+                        .as_str(),
+                )
             }
             PlaygroundError::Parsing(error) => {
-                JsValue::from_str(&format!("<p>{error}</p><pre>{error:#?}</pre>"))
+                let json_error = json!({
+                    "message": error.to_string(),
+                    "raw": format!("{error:#?}")
+                });
+
+                JsValue::from_str(
+                    serde_json::to_string(&json!({"type":"parsingError", "data": json_error}))
+                        .unwrap()
+                        .as_str(),
+                )
             }
-            PlaygroundError::NoResult => {
-                JsValue::from_str(&format!("<p>{error}</p><pre>No result</pre>"))
-            }
+            PlaygroundError::NoResult => JsValue::from_str(
+                serde_json::to_string(&json!({"type":"noResult"}))
+                    .unwrap()
+                    .as_str(),
+            ),
         }
     }
 }
@@ -76,14 +98,21 @@ pub fn is_ready_for_recompile() -> bool {
 
 #[wasm_bindgen]
 pub fn ast(source: &str) -> Result<String, PlaygroundError> {
-    let document = parser::parse(source)?;
-    Ok(document.tree_string())
+    let (ast, _) = parser::parse_with_config(source)?;
+    Ok(ast.tree_string())
 }
 
 #[wasm_bindgen]
 pub fn ast_debug(source: &str) -> Result<String, PlaygroundError> {
-    let document = parser::parse(source)?;
-    Ok(format!("{document:#?}"))
+    let (ast, _) = parser::parse_with_config(source)?;
+    Ok(format!("{ast:#?}"))
+}
+
+#[wasm_bindgen]
+pub fn blank_context() {
+    CONTEXT.with(|ctx| {
+        ctx.replace_with(|_| Context::new_without_standard(WebResolver, DefaultAccessManager))
+    });
 }
 
 #[derive(Serialize)]
@@ -166,7 +195,7 @@ fn escape(text: String) -> String {
 pub fn json_output(source: &str) -> Result<String, PlaygroundError> {
     let result = CONTEXT.with(|ctx| {
         let ctx = ctx.borrow_mut();
-        let doc = Element::try_from_ast(parser::parse(source)?, GranularId::root())
+        let doc = Element::try_from_ast(parser::parse_with_config(source)?.0, GranularId::root())
             .map_err(|e| vec![e])?;
         ctx.serialize_element(&doc, &OutputFormat::new("html"))
             .map_err(|e| vec![e])
@@ -174,6 +203,19 @@ pub fn json_output(source: &str) -> Result<String, PlaygroundError> {
     })?;
 
     Ok(result)
+}
+
+/// Read a file and load the packages found
+/// in the config, but never evaluate the actual document
+#[wasm_bindgen]
+pub fn configure_from_source(source: &str) -> Result<bool, PlaygroundError> {
+    CONTEXT
+        .with(|ctx| {
+            let mut ctx = ctx.borrow_mut();
+            let (_, config) = parser::parse_with_config(source).unwrap();
+            ctx.configure(config)
+        })
+        .map_err(Into::into)
 }
 
 #[wasm_bindgen]
@@ -242,7 +284,7 @@ pub fn remove_file(path: &str) -> String {
 }
 
 #[wasm_bindgen]
-pub fn remove_dir(path: &str) -> String {
+pub fn remove_folder(path: &str) -> String {
     CONTEXT.with(|ctx| {
         let ctx = ctx.borrow();
         match ctx.filesystem.remove_dir(Path::new(path)) {
