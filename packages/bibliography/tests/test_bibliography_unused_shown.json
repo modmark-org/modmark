@@ -4,7 +4,8 @@
     "arguments": {
         "style": "IEEE",
         "visibility": "visible",
-        "file": ""
+        "file": "",
+        "unused-entries": "visible"
     },
     "inline": false,
     "__test_transform_to": "html",
