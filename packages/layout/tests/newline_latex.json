@@ -7,7 +7,7 @@
     "__test_expected_result": [
         {
             "name": "raw",
-            "data": "\\\\"
+            "data": "\\\\{}"
         }
     ]
 }

@@ -107,7 +107,7 @@ fn transform_newline(to: &str, input: Value) {
     }
 
     match to {
-        "latex" => println!("[{}]", json!({"name": "raw", "data": "\\\\"})),
+        "latex" => println!("[{}]", json!({"name": "raw", "data": "\\\\{}"})),
         "html" => println!("[{}]", json!({"name": "raw", "data": "<br/>"})),
         other => eprintln!("Cannot convert to '{other}' format."),
     }
