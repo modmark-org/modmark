@@ -1,5 +1,6 @@
 use std::{env, fs};
 use std::borrow::Cow;
+use std::collections::HashSet;
 use std::io::{self, Read};
 
 use hayagriva::Entry;
@@ -89,8 +90,9 @@ fn manifest() {
                     "arguments": [
                         {"name": "style", "default": "IEEE", "type": ["IEEE", "APA", "MLA", "Chicago"], "description": "The style to have the bibliography in"},
                         {"name": "file", "default": "", "description": "A file containing BibLaTeX or Hayagriva YAML with the bibliography"},
-                        {"name": "visibility", "default": "visible", "type": ["visible", "hidden"], "description": "Whether the bibliography is 'shown' or 'hidden'. \
-                        Note that a [bibliography] must exist for [cite]s to work, and if you don't want a bibliography in your document, you can set this argument to 'hidden'."}
+                        {"name": "visibility", "default": "visible", "type": ["visible", "hidden"], "description": "Whether the bibliography is 'visible' or 'hidden'. \
+                        Note that a [bibliography] must exist for [cite]s to work, and if you don't want a bibliography in your document, you can set this argument to 'hidden'."},
+                        {"name": "unused-entries", "default": "hidden", "type": ["visible", "hidden"], "description": "Whether unused entries in the database should be hidden or visible"}
                     ],
                     "variables": {
                         "inline_citations": {"type": "list", "access": "read"},
@@ -188,6 +190,9 @@ fn transform_bibliography(_to: &str, input: &Value) {
     let (bibliography_style, mut citation_style) = get_styles(style_arg).unwrap();
 
     let mut output: Vec<Value> = vec![];
+    let mut used_keys: HashSet<&str> = HashSet::new();
+
+    let unused_keys_is_visible = input["arguments"]["unused-entries"].as_str().unwrap() == "visible";
 
     for citation_str in &citations {
         // We parse the citation (which is a JSON obj)
@@ -195,6 +200,12 @@ fn transform_bibliography(_to: &str, input: &Value) {
 
         // We find the record by the key
         let entry = if let Some(record) = database.records.get(citation.key) {
+            if !unused_keys_is_visible {
+                // If unused keys isn't visible, we need to keep track of the used keys
+                // This if is used to not having to store all used keys if we aren't gonna use
+                // them later
+                used_keys.insert(citation.key);
+            }
             record.entry
         } else {
             eprintln!(
@@ -242,11 +253,14 @@ fn transform_bibliography(_to: &str, input: &Value) {
         ));
     }
 
-    let visibility = input["arguments"]["visibility"].as_str().unwrap();
+    let is_visible = input["arguments"]["visibility"].as_str().unwrap() == "visible";
 
     // If the bibliography should be shown, show it!
-    if visibility == "visible" {
+    if is_visible {
         for entry in database.bibliography(bibliography_style.as_ref(), None) {
+            if !unused_keys_is_visible && !used_keys.contains(&entry.entry.key()) {
+                continue;
+            }
             if let Some(prefix) = &entry.prefix {
                 // If we have a prefix (which is the number in [] for IEEE), encase it in brackets
                 output.push(text!("["));
