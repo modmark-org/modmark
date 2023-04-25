@@ -20,6 +20,8 @@ use serde_json::Value;
 // lock after we have done everything.
 static LOCK: Lazy<Mutex<HashMap<PathBuf, Arc<Mutex<()>>>>> = Lazy::new(Mutex::default);
 
+// Return value must be datatest_stable::Result
+#[allow(clippy::unnecessary_wraps)]
 fn test_package_input(file: &Path) -> datatest_stable::Result<()> {
     // path is ../packages/package-name/tests/file-name.json
     // to get the path to the package, we pop last 2 components
@@ -84,7 +86,7 @@ fn test_package_input(file: &Path) -> datatest_stable::Result<()> {
         .expect("Spawn `cargo run` process");
     // This gets the stdin for the child, and writes the entire input file to it
     let mut stdin = cmd.stdin.as_ref().unwrap();
-    write!(stdin, "{}", input_file).expect("Expected stdin to be writable");
+    write!(stdin, "{input_file}").expect("Expected stdin to be writable");
 
     // Step 4: Get the result and compare
     let result = String::from_utf8(cmd.wait_with_output().unwrap().stdout)
@@ -113,6 +115,8 @@ fn test_package_input(file: &Path) -> datatest_stable::Result<()> {
     Ok(())
 }
 
+// Return value must be datatest_stable::Result
+#[allow(clippy::unnecessary_wraps)]
 fn test_package_conventions(file: &Path) -> datatest_stable::Result<()> {
     // path is ../packages/package-name/Cargo.toml
     let package_path = file
@@ -303,10 +307,9 @@ fn check_transform(transform: &Transform) {
         transform.arguments.iter().all(|arg| arg
             .default
             .as_ref()
-            .map(|d| arg.r#type.can_be_parsed_from(d))
-            .unwrap_or(true)),
+            .map_or(true, |d| arg.r#type.can_be_parsed_from(d))),
         "Argument default values should be of the same type as the specified type"
-    )
+    );
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
