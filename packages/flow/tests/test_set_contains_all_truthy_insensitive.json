@@ -3,9 +3,9 @@
     "data": "This should be parsed",
     "arguments": {
         "set": "foo",
-        "check": "contains-none",
-        "value": "bar,baz",
-        "case-sensitive": "case-sensitive"
+        "check": "contains-all",
+        "value": "AbC,dEf",
+        "case-sensitive": "case-insensitive"
     },
     "inline": true,
     "__test_transform_to": "html",
@@ -14,5 +14,12 @@
             "name": "inline_content",
             "data": "This should be parsed"
         }
-    ]
+    ],
+    "__test_env": {
+        "foo": [
+            "abC",
+            "dEf",
+            "ghi"
+        ]
+    }
 }

@@ -1,0 +1,23 @@
+{
+    "name": "if-list",
+    "data": "This should be parsed",
+    "arguments": {
+        "list": "foo",
+        "check": "non-empty",
+        "value": "",
+        "case-sensitive": "case-sensitive"
+    },
+    "inline": true,
+    "__test_transform_to": "html",
+    "__test_expected_result": [
+        {
+            "name": "inline_content",
+            "data": "This should be parsed"
+        }
+    ],
+    "__test_env": {
+        "foo": [
+            "bar"
+        ]
+    }
+}

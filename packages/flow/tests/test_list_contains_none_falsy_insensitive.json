@@ -1,0 +1,19 @@
+{
+    "name": "if-list",
+    "data": "This should not be parsed",
+    "arguments": {
+        "list": "foo",
+        "check": "contains-none",
+        "value": "ABc,baz",
+        "case-sensitive": "case-insensitive"
+    },
+    "inline": true,
+    "__test_transform_to": "html",
+    "__test_expected_result": [],
+    "__test_env": {
+        "foo": [
+            "abC",
+            "def"
+        ]
+    }
+}
