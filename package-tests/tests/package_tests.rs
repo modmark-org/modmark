@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 use diffy::create_patch;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{value::Map, Value};
 
 // Unfortunately, if we run multiple tests at the very same time, some of them will sometimes
 // fail without reason. This makes sure that only one test is running at a time per package.
@@ -63,6 +63,15 @@ fn test_package_input(file: &Path) -> datatest_stable::Result<()> {
     let to = input_json["__test_transform_to"]
         .as_str()
         .expect("Example has __test_transform_to");
+    let empty_map = Map::new();
+    let env = input_json["__test_env"]
+        .as_object()
+        .unwrap_or(&empty_map)
+        .iter()
+        // If the value is a string, it is put in the environment as-is. If the value is an array,
+        // it is JSON encoded. This map either clones the string if it is a string or serializes
+        // the value if it is any other type.
+        .map(|(k, v)| (k, v.as_str().map_or(v.to_string(), ToString::to_string)));
     let expected_result: &Value = &input_json["__test_expected_result"];
 
     // Step 3: Run the program
@@ -80,6 +89,7 @@ fn test_package_input(file: &Path) -> datatest_stable::Result<()> {
         .arg("transform")
         .arg(from)
         .arg(to)
+        .envs(env)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
