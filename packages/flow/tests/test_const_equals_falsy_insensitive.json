@@ -1,0 +1,16 @@
+{
+    "name": "if-const",
+    "data": "This should not be parsed",
+    "arguments": {
+        "constant": "foo",
+        "check": "equals",
+        "value": "bar",
+        "case-sensitive": "case-insensitive"
+    },
+    "inline": true,
+    "__test_transform_to": "html",
+    "__test_expected_result": [],
+    "__test_env": {
+        "foo": "abc"
+    }
+}
