@@ -1,0 +1,57 @@
+{
+    "name": "__document",
+    "arguments": {},
+    "children": [
+        {
+            "name": "raw",
+            "data": "Raw stuff",
+            "arguments": {},
+            "inline": true
+        },
+        {
+            "name": "__bold",
+            "arguments": {},
+            "children": [
+                {
+                    "name": "__text",
+                    "data": "Hello, world",
+                    "arguments": {},
+                    "inline": true
+                }
+            ]
+        }
+    ],
+    "__test_transform_to": "latex",
+    "__test_expected_result": [
+        "\\documentclass{article}",
+        "\n",
+        "\n\\usepackage{foo}",
+        "\n\\usepackage[baz]{bar}",
+        "\n\n\\begin{document}\n\n",
+        {
+            "arguments": {},
+            "data": "Raw stuff",
+            "inline": true,
+            "name": "raw"
+        },
+        {
+            "arguments": {},
+            "children": [
+                {
+                    "arguments": {},
+                    "data": "Hello, world",
+                    "inline": true,
+                    "name": "__text"
+                }
+            ],
+            "name": "__bold"
+        },
+        "\n\n\\end{document}"
+    ],
+    "__test_env": {
+        "imports": [
+            "\\usepackage{foo}",
+            "\\usepackage[baz]{bar}"
+        ]
+    }
+}
