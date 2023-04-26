@@ -209,7 +209,7 @@ fn transform_if_const(input: Value) {
     let compile = if check == "defined" || check == "undefined" {
         (check == "defined") == (env::var(var_name).is_ok())
     } else if let Ok(var_val) = env::var(var_name) {
-        let case_sensitive = input["arguments"]["case-sensitive"].as_str().unwrap() == "true";
+        let case_sensitive = input["arguments"]["case-sensitive"].as_str().unwrap() == "case-sensitive";
         let var_val = if case_sensitive {
             var_val
         } else {
