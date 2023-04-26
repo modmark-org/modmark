@@ -1,10 +1,10 @@
 {
-    "name": "if-list",
+    "name": "if-set",
     "data": "This should be parsed",
     "arguments": {
-        "list": "foo",
-        "check": "does-not-contain",
-        "value": "bar",
+        "set": "foo",
+        "check": "contains-none",
+        "value": "bar,baz",
         "case-sensitive": "case-sensitive"
     },
     "inline": true,
@@ -14,5 +14,11 @@
             "name": "inline_content",
             "data": "This should be parsed"
         }
-    ]
+    ],
+    "__test_env": {
+        "foo": [
+            "abc",
+            "def"
+        ]
+    }
 }

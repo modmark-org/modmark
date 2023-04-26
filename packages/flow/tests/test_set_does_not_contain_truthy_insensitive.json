@@ -1,0 +1,24 @@
+{
+    "name": "if-set",
+    "data": "This should be parsed",
+    "arguments": {
+        "set": "foo",
+        "check": "does-not-contain",
+        "value": "bar",
+        "case-sensitive": "case-insensitive"
+    },
+    "inline": true,
+    "__test_transform_to": "html",
+    "__test_expected_result": [
+        {
+            "name": "inline_content",
+            "data": "This should be parsed"
+        }
+    ],
+    "__test_env": {
+        "foo": [
+            "barz",
+            "baz"
+        ]
+    }
+}

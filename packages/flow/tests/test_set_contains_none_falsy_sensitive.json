@@ -3,11 +3,17 @@
     "data": "This should not be parsed",
     "arguments": {
         "set": "foo",
-        "check": "contains",
-        "value": "bar",
+        "check": "contains-none",
+        "value": "abc,baz",
         "case-sensitive": "case-sensitive"
     },
     "inline": true,
     "__test_transform_to": "html",
-    "__test_expected_result": []
+    "__test_expected_result": [],
+    "__test_env": {
+        "foo": [
+            "abc",
+            "def"
+        ]
+    }
 }

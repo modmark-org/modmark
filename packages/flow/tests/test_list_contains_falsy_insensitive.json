@@ -5,9 +5,14 @@
         "list": "foo",
         "check": "contains",
         "value": "bar",
-        "case-sensitive": "case-sensitive"
+        "case-sensitive": "case-insensitive"
     },
     "inline": true,
     "__test_transform_to": "html",
-    "__test_expected_result": []
+    "__test_expected_result": [],
+    "__test_env": {
+        "foo": [
+            "baz"
+        ]
+    }
 }
