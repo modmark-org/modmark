@@ -138,6 +138,7 @@ impl Schedule {
         let Dependencies {
             var_accesses,
             has_unknown_content,
+            evaluate_before_children,
         } = &ctx.get_dependencies(element, format)?;
 
         if *has_unknown_content {
@@ -194,14 +195,28 @@ impl Schedule {
             deps.push((this_schedule_id, *access));
             self.dep_info.insert(var.clone(), deps);
         }
-        //}
 
         // If the element is a parent, also add the children
         if let Element::Parent { children, .. } = element {
             children
                 .iter()
-                .map(|child| self.add_element(child, ctx, format))
-                .collect::<Result<(), CoreError>>()?;
+                .try_for_each(|child| self.add_element(child, ctx, format))?;
+
+            // Also, since we added children, we can now check if this must be evaluated before its
+            // children and then add dependencies
+            if *evaluate_before_children {
+                let end_range = this_id
+                    .next_siblings()
+                    .next()
+                    .unwrap_or(GranularId::max_value());
+                self.id_map
+                    .left_range(this_id..&end_range)
+                    .for_each(|(_gid, sid)| {
+                        if sid != &this_schedule_id {
+                            self.dag.add_dependency(this_schedule_id, *sid);
+                        }
+                    });
+            }
         }
 
         Ok(())

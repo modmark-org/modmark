@@ -264,8 +264,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use serde_json::Value;
     use std::collections::HashMap;
+
+    use serde_json::Value;
 
     use crate::package::{ArgType, PrimitiveArgType};
     use crate::package_store::ResolveTask;
@@ -273,6 +274,7 @@ mod tests {
     use super::*;
 
     struct UnimplementedResolver;
+
     impl Resolve for UnimplementedResolver {
         fn resolve_all(&self, _: Vec<ResolveTask>) {
             unimplemented!()
@@ -328,11 +330,12 @@ mod tests {
                         name: "strip_whitespace".to_string(),
                         default: Some(Value::String("true".to_string())),
                         description: "true/false to strip/don't strip whitespace in cells".to_string(),
-                        r#type: ArgType::Enum(vec!["true".to_string(), "false".to_string()])
+                        r#type: ArgType::Enum(vec!["true".to_string(), "false".to_string()]),
                     },
                 ],
                 variables: HashMap::new(),
-                unknown_content: true
+                unknown_content: true,
+                evaluate_before_children: false
             }],
         };
 

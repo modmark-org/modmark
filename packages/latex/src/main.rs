@@ -271,6 +271,7 @@ fn manifest() -> String {
                     "from": "__math",
                     "to": ["latex"],
                     "arguments": [],
+                    "evaluate-before-children": true
                 },
                 {
                     "from": "__document",
@@ -294,6 +295,7 @@ fn manifest() -> String {
                     "from": "__verbatim",
                     "to": ["latex"],
                     "arguments": [],
+                    "evaluate-before-children": true
                 },
                 {
                   "from": "__heading",

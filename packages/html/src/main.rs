@@ -264,6 +264,7 @@ fn manifest() -> String {
                     "from": "__math",
                     "to": ["html"],
                     "arguments": [],
+                    "evaluate-before-children": true
                 },
                 {
                     "from": "__paragraph",

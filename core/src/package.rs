@@ -24,6 +24,9 @@ pub struct Transform {
     #[serde(default)]
     #[serde(rename = "unknown-content")]
     pub unknown_content: bool,
+    #[serde(default)]
+    #[serde(rename = "evaluate-before-children")]
+    pub evaluate_before_children: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
