@@ -13,6 +13,7 @@ exclude = [
     "packages/files",
     "packages/flow",
     "packages/bibliography",
+    "packages/plot",
     "playground/web_bindings"
 ]
 
