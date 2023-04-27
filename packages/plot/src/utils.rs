@@ -30,9 +30,10 @@ impl PlotContext {
         let samples = input["arguments"]["samples"].as_u64().unwrap_or(0);
 
         let line_width = input["arguments"]["line_width"].as_u64().unwrap();
-        let mut color_arg = input["arguments"]["color"]
-            .as_str()
-            .unwrap_or(input["arguments"]["colors"].as_str().unwrap());
+        let color_arg = match input["arguments"]["color"].as_str() {
+            Some(color_arg) => color_arg,
+            None => input["arguments"]["colors"].as_str().unwrap(),
+        };
 
         let discrete = input["arguments"]["discrete"].as_str().map(|s| s == "true");
         let point_size = input["arguments"]["point_size"].as_u64();
@@ -49,21 +50,20 @@ impl PlotContext {
         let fn_ctx = new_function_context();
         let fn_idx = 0;
 
-        // use MATLAB defaults if no argument was provided
-        if color_arg.is_empty() {
-            color_arg = "0072BD,D95319,EDB120,7E2F8E,77AC30,4DBEEE,A2142F";
-        }
-
         let mut colors = Vec::new();
         for hex in color_arg.split(',').map(|s| s.trim()) {
-            if hex.len() != 6 {
-                return Err(String::from("Invalid length of hex."));
+            let color = match hex.strip_prefix('#') {
+                Some(color) => color,
+                None => return Err(String::from("Each hex code should start with a hashtag.")),
+            };
+            if color.len() != 6 {
+                return Err(String::from("Invalid length of hex code."));
             }
             colors.push(RGBColor(
-                u8::from_str_radix(&hex[0..2], 16).map_err(|e| e.to_string())?,
-                u8::from_str_radix(&hex[2..4], 16).map_err(|e| e.to_string())?,
-                u8::from_str_radix(&hex[4..6], 16).map_err(|e| e.to_string())?,
-            ))
+                u8::from_str_radix(&color[0..2], 16).map_err(|e| e.to_string())?,
+                u8::from_str_radix(&color[2..4], 16).map_err(|e| e.to_string())?,
+                u8::from_str_radix(&color[4..6], 16).map_err(|e| e.to_string())?,
+            ));
         }
 
         let svg_info = SVGInfo {
@@ -336,8 +336,8 @@ pub fn print_manifest() {
                         },
                         {
                             "name": "colors",
-                            "description": "A list of colors that are used to plot the functions. They should be comma-separated and given in hexadecimal.",
-                            "default": ""
+                            "description": "A list of colors that are used to plot the functions. They should be comma-separated and given in hexadecimal. Each hex code should be preceded by a hashtag.",
+                            "default": "#0072BD,#D95319,#EDB120,#7E2F8E,#77AC30,#4DBEEE,#A2142F"
                         },
                     ],
                 },
@@ -399,8 +399,8 @@ pub fn print_manifest() {
                         },
                         {
                             "name": "color",
-                            "description": "The color that is used in the plot, given in hexadecimal.",
-                            "default": "",
+                            "description": "The color that is used in the plot, given in hexadecimal. The hex code should be preceded by a hashtag.",
+                            "default": "#0072BD",
                         },
                         {
                             "name": "discrete",
