@@ -42,7 +42,8 @@ macro_rules! define_native_packages {
                                     description: Some($tdesc.to_string()),
                                     arguments: $arg_info,
                                     variables: $vars.into(),
-                                    unknown_content: $ukwn
+                                    unknown_content: $ukwn,
+                                    evaluate_before_children: false
                                 }),
                             )*
                         ]

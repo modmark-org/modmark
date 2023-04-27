@@ -209,6 +209,7 @@ where
 pub struct Dependencies {
     pub var_accesses: Vec<((String, VarType), VarAccess)>,
     pub has_unknown_content: bool,
+    pub evaluate_before_children: bool,
 }
 
 impl<T, U> Context<T, U> {
@@ -255,6 +256,7 @@ impl<T, U> Context<T, U> {
                     .map(|(name, access)| ((name, access.get_type()), access))
                     .collect(),
                 has_unknown_content: transform.unknown_content,
+                evaluate_before_children: transform.evaluate_before_children,
             });
         }
 
@@ -330,6 +332,7 @@ impl<T, U> Context<T, U> {
                 .map(|(name, access)| ((name, access.get_type()), access))
                 .collect(),
             has_unknown_content: transform.unknown_content,
+            evaluate_before_children: transform.evaluate_before_children,
         })
     }
 }
