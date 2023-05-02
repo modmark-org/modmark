@@ -422,12 +422,28 @@ impl PackageStore {
     }
 }
 
+/// The suffix each local file must have (a dot and the file extension)
+static LOCAL_FILE_EXTENSION: &'static str = ".wasm";
+
 impl From<&str> for PackageID {
     fn from(s: &str) -> Self {
         #[inline]
         fn prefix<'a, T>(s: &'a str, prefix: &'static str, t: T) -> Option<(&'a str, T)> {
             s.starts_with(prefix)
                 .then(|| (s.split_at(prefix.len()).1, t))
+        }
+
+        // Asserts that the name has the correct file extension. If it does, the &str is copied
+        // and if it doesn't, the file extension is appended. Note that the copying here is OK since
+        // we would need to copy the value once anyways, and we don't do another copy after this
+        // point
+        #[inline]
+        fn assert_extension(name: &str) -> String {
+            if name.ends_with(LOCAL_FILE_EXTENSION) {
+                name.to_string()
+            } else {
+                format!("{name}{LOCAL_FILE_EXTENSION}")
+            }
         }
 
         let (name, target) = None
@@ -437,8 +453,9 @@ impl From<&str> for PackageID {
                 (s.starts_with("http://") | s.starts_with("https://"))
                     .then_some((s, PackageSource::Url))
             })
-            .unwrap_or((s, PackageSource::Local));
-        let name = name.to_string();
+            .map(|(a, b)| (a.to_string(), b))
+            .unwrap_or((assert_extension(s), PackageSource::Local));
+
         PackageID {
             name,
             source: target,

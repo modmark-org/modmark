@@ -140,16 +140,12 @@ impl PackageManager {
     }
 
     fn fetch_local(&self, package_path: &str) -> Result<Vec<u8>, CliError> {
-        let mut package_path = package_path.to_string();
-        package_path.push_str(".wasm");
+        let path = current_dir()?.join(package_path);
 
-        let mut local_path = current_dir()?;
-        local_path.push(PathBuf::from(&package_path));
-
-        if !local_path.exists() {
-            return Err(CliError::Local(package_path));
+        if !path.exists() {
+            return Err(CliError::Local(package_path.to_string()));
         }
 
-        Ok(fs::read(local_path)?)
+        Ok(fs::read(path)?)
     }
 }
