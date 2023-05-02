@@ -178,17 +178,17 @@ async fn fetch_url(url: &str) -> Result<Response, WebResolveError> {
         .map_err(|_| WebResolveError::Url(url.to_string()))?;
 
     // This only fails if we have an invalid header name
-    request
-        .headers()
-        .set("Accept", "text/plain,application/json")
-        .unwrap();
+    request.headers().set("Accept", "*/*").unwrap();
 
     // This doesn't fail on 404s, but does on invalid URL/headers/etc, see
     // https://developer.mozilla.org/en-US/docs/Web/API/fetch#exceptions
+    // It may also fail due to a "network error", possibly CORS-related.
     let resp_value =
         JsFuture::from(WORKER_SCOPE.with(|w| w.fetch_with_request_and_init(&request, &opts)))
             .await
-            .unwrap();
+            .map_err(|x| {
+                WebResolveError::Fetch(url.to_string(), format!("Error fetching resource {x:?}"))
+            })?;
 
     // This should always succeed
     debug_assert!(resp_value.is_instance_of::<Response>());
