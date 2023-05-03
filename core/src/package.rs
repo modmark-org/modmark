@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 #[cfg(feature = "native")]
 use wasmer::Engine;
-use wasmer::{Instance, Module, Store};
-use wasmer_wasi::{Pipe, WasiState};
+use wasmer::{Instance, Module, RuntimeError, Store};
+use wasmer_wasi::{Pipe, WasiError, WasiState};
 
 use crate::package::PackageImplementation::Native;
 use crate::variables::VarAccess;
@@ -452,10 +452,17 @@ impl Package {
         let fn_res = main_fn.call(store, &[]);
 
         if let Err(e) = fn_res {
-            // TODO: See if this can be done without string comparison
-            let error_msg = e.to_string();
-            if !error_msg.contains("WASI exited with code: 0") {
-                return Err(CoreError::WasmerRuntimeError(Box::new(e)));
+            let downcast = e.downcast::<WasiError>();
+            match downcast {
+                Ok(WasiError::Exit(0)) => {}
+                Ok(wasi_error) => {
+                    return Err(CoreError::WasmerRuntimeError(Box::new(RuntimeError::user(
+                        Box::new(wasi_error),
+                    ))))
+                }
+                Err(original_error) => {
+                    return Err(CoreError::WasmerRuntimeError(Box::new(original_error)))
+                }
             }
         }
 
