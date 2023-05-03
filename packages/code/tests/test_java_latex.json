@@ -1,0 +1,68 @@
+{
+    "name": "code",
+    "arguments": {
+        "lang": "java",
+        "font_size": 16,
+        "tab_size": 4,
+        "theme": "mocha",
+        "bg": "06080A"
+    },
+    "data": "public static void main(String[] args){\\n    String msg = \\\"Hello ModMark\\\";\\n    System.out.println(msg);\\n}",
+    "inline": false,
+    "__test_transform_to": "latex",
+    "__test_expected_result": [
+        "\\definecolor{background}{RGB}{59,50,40}\n",
+        "\\begin{tcolorbox}[colback=background, outer arc=0pt]\n",
+        "\\begin{Verbatim}[commandchars=\\\\\\{\\}]\n",
+        "\\textcolor[RGB]{168,155,185}{public}",
+        "\\textcolor[RGB]{208,200,198}{ }",
+        "\\textcolor[RGB]{168,155,185}{static}",
+        "\\textcolor[RGB]{208,200,198}{ }",
+        "\\textcolor[RGB]{168,155,185}{void}",
+        "\\textcolor[RGB]{208,200,198}{ }",
+        "\\textcolor[RGB]{138,179,181}{main}",
+        "\\textcolor[RGB]{208,200,198}{(}",
+        "\\textcolor[RGB]{244,188,135}{String}",
+        "\\textcolor[RGB]{168,155,185}{[]}",
+        "\\textcolor[RGB]{208,200,198}{ args}",
+        "\\textcolor[RGB]{208,200,198}{)}",
+        "\\textcolor[RGB]{208,200,198}{\\{}",
+        "\\textcolor[RGB]{208,200,198}{\\textbackslash{}n    }",
+        "\\textcolor[RGB]{244,188,135}{String}",
+        "\\textcolor[RGB]{208,200,198}{ msg }",
+        "\\textcolor[RGB]{208,200,198}{=}",
+        "\\textcolor[RGB]{208,200,198}{ \\textbackslash{}}",
+        "\\textcolor[RGB]{208,200,198}{\"}",
+        "\\textcolor[RGB]{190,181,91}{Hello ModMark}",
+        "\\textcolor[RGB]{123,189,164}{\\textbackslash{}\"}",
+        "\\textcolor[RGB]{190,181,91}{;}",
+        "\\textcolor[RGB]{123,189,164}{\\textbackslash{}n}",
+        "\\textcolor[RGB]{190,181,91}{    System.out.println(msg);}",
+        "\\textcolor[RGB]{123,189,164}{\\textbackslash{}n}",
+        "\\textcolor[RGB]{190,181,91}{\\}}",
+        "\n",
+        "\\end{Verbatim}\n",
+        "\\end{tcolorbox}",
+        {
+          "arguments": {
+            "name": "imports"
+          },
+          "data": "\\usepackage{fancyvrb}",
+          "name": "set-add"
+        },
+        {
+          "arguments": {
+            "name": "imports"
+          },
+          "data": "\\usepackage{tcolorbox}",
+          "name": "set-add"
+        },
+        {
+          "arguments": {
+            "name": "imports"
+          },
+          "data": "\\makeatletter\n\\def\\verbatim@nolig@list{\\do\\`\\do\\<\\do\\>\\do\\'\\do\\-}\n\\makeatother",
+          "name": "set-add"
+        }
+    ]
+}
