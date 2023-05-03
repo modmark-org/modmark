@@ -47,4 +47,7 @@ pub enum CliError {
 
     #[error("Second argument OUTPUT_FILE missing. You may only omit this when compiling to html and using the live preview.")]
     MissingOutputFile,
+
+    #[error("Could not resolve template tag: '{0}'.")]
+    TemplateTag(String),
 }

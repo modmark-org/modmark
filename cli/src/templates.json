@@ -1,0 +1,10 @@
+{
+  "https://github.com/modmark-org/rust_template": ["rust", "rs"],
+  "https://github.com/modmark-org/cpp_template": ["c++", "cpp"],
+  "https://github.com/modmark-org/c_template": ["c"],
+  "https://github.com/modmark-org/assemblyscript_template": [
+    "assemblyscript",
+    "assembly-script",
+    "as"
+  ]
+}
