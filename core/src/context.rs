@@ -14,7 +14,7 @@ use serde_json::Value;
 #[cfg(feature = "native")]
 use wasmer::{Cranelift, Engine, EngineBuilder};
 use wasmer::{Instance, Module, Store};
-use wasmer_wasi::{Pipe, WasiState};
+use wasmer_wasi::{Pipe, WasiError, WasiState};
 
 use parser::config::{self, Config, HideConfig, ImportConfig};
 use parser::ModuleArguments;
@@ -514,17 +514,33 @@ where
         let fn_res = main_fn.call(&mut store, &[]);
 
         if let Err(e) = fn_res {
-            // TODO: See if this can be done without string comparison
-            let error_msg = e.to_string();
-            if !error_msg.contains("WASI exited with code: 0") {
-                // An error occurred when executing Wasm module =>
-                // it probably crashed, so just insert an error node
-                return Ok(create_issue(
-                    true,
-                    format!("Wasm module crash: {error_msg}"),
-                    &input_data,
-                    module_id.clone(),
-                ));
+            let downcast = e.downcast::<WasiError>();
+            match downcast {
+                Ok(WasiError::Exit(0)) => {}
+                Ok(WasiError::Exit(x)) => {
+                    return Ok(create_issue(
+                        true,
+                        format!("Wasm module exited with exit code '{x}'"),
+                        &input_data,
+                        module_id.clone(),
+                    ))
+                }
+                Ok(WasiError::UnknownWasiVersion) => {
+                    return Ok(create_issue(
+                        true,
+                        format!("Could not determine WASI version for Wasm module"),
+                        &input_data,
+                        module_id.clone(),
+                    ))
+                }
+                Err(e) => {
+                    return Ok(create_issue(
+                        true,
+                        format!("Wasm module crash: {e}"),
+                        &input_data,
+                        module_id.clone(),
+                    ))
+                }
             }
         }
 
