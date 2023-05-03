@@ -4,11 +4,10 @@ use std::io::{self, Read};
 
 use serde_json::{json, Value};
 use syntect::easy::HighlightLines;
-use syntect::highlighting::{Color, ThemeSet, Theme, Style};
+use syntect::highlighting::{Color, ThemeSet, Theme};
 use syntect::html::{styled_line_to_highlighted_html, IncludeBackground};
 use syntect::parsing::{SyntaxSet, SyntaxReference};
 
-use syntect::util::{as_latex_escaped,LinesWithEndings};
 
 const VERBATIM_FIX : &str = r"\makeatletter
 \def\verbatim@nolig@list{\do\`\do\<\do\>\do\'\do\-}
@@ -169,14 +168,13 @@ fn highlight_latex(code: &str, tab_size: u64, theme: &Theme, syntax: &SyntaxRefe
     let r = background_color.r;
     let g = background_color.g;
     let b = background_color.b;
-    let space_size = 0.5;
 
     let code = replace_tabs(code, tab_size);
 
     result.push(format!(
         "\\definecolor{{background}}{{RGB}}{{{r},{g},{b}}}\n"
     ));
-    result.push("\\begin{tcolorbox}[colback=background]\n".to_string());
+    result.push("\\begin{tcolorbox}[colback=background, outer arc=0pt]\n".to_string());
     result.push("\\begin{Verbatim}[commandchars=\\\\\\{\\}]\n".to_string());
 
     for line in code.split('\n').map(|s| s.trim_end_matches('\r')) {
