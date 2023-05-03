@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     env,
-    fs::{self, File},
+    fs::{self, remove_dir_all, remove_file, File},
     io::{stdout, Write},
     path::{Path, PathBuf},
     sync::{
@@ -149,6 +149,15 @@ impl CompileArgs {
     }
 }
 
+#[derive(Parser)]
+struct InitArgs {
+    #[arg(
+        index = 1,
+        help = "What language the template will be made in. Enter 'list' for a list of languages."
+    )]
+    language: String,
+}
+
 #[derive(Subcommand)]
 enum Command {
     Compile(CompileArgs),
@@ -156,6 +165,7 @@ enum Command {
         #[command(subcommand)]
         command: CacheCommand,
     },
+    Init(InitArgs),
 }
 
 #[derive(Subcommand)]
@@ -340,6 +350,15 @@ async fn main() {
                     .unwrap();
             }
         },
+        Command::Init(init_args) => match run_init(init_args).await {
+            Ok(_) => (),
+            Err(error) => {
+                let mut stdout = stdout();
+                stdout
+                    .execute(style::PrintStyledContent(format!("{error}").red()))
+                    .unwrap();
+            }
+        },
     }
 }
 
@@ -461,6 +480,54 @@ async fn run_cache(command: &CacheCommand) -> Result<(), CliError> {
     }
 
     Ok(())
+}
+
+async fn run_init(args: &InitArgs) -> Result<(), CliError> {
+    let template_json = include_str!("templates.json");
+    let mappings: HashMap<String, Vec<String>> = serde_json::from_str(template_json)?;
+
+    match args.language.to_lowercase().trim() {
+        "list" => {
+            println!("These are the available languages:");
+            mappings
+                .iter()
+                .for_each(|(_, languages)| println!("\t{}", languages[0]));
+            Ok(())
+        }
+        language => {
+            let language = language.to_string();
+
+            let Some(url) = mappings
+        .iter()
+        .find_map(|(k, v)| v.contains(&language).then_some(k)) else {
+            return Err(CliError::TemplateTag(language));
+        };
+
+            let Some(folder_name) = url.rsplit_once('/').map(|(_, second)| second) else {
+            return Err(CliError::TemplateTag(language));
+        };
+
+            std::process::Command::new("git")
+                .arg("clone")
+                .arg(url)
+                .output()?;
+
+            let project_path = fs::canonicalize(folder_name)?;
+
+            let mut git_path = project_path.clone();
+            git_path.push(".git");
+
+            let mut gitignore_path = project_path.clone();
+            gitignore_path.push(".gitignore");
+
+            remove_dir_all(&git_path)?;
+            remove_file(&gitignore_path)?;
+
+            println!("{}{}", "Package template created in: ", folder_name);
+
+            Ok(())
+        }
+    }
 }
 
 /// Choose a free port for hosting the html live preview
