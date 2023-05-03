@@ -1,0 +1,24 @@
+{
+    "name": "code",
+    "arguments": {
+        "lang": "rs",
+        "font_size": 12,
+        "tab_size": 4,
+        "theme": "mocha",
+        "bg": "default"
+    },
+    "data": "let v = vec![]",
+    "inline": true,
+    "__test_transform_to": "latex",
+    "__test_expected_result": [
+        {
+            "data": "\\verb|",
+            "name": "raw"
+          },
+          "let v = vec![]",
+          {
+            "data": "|",
+            "name": "raw"
+          }
+    ]
+}

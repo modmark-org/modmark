@@ -1,0 +1,46 @@
+{
+    "name": "code",
+    "arguments": {
+        "lang": "txt",
+        "font_size": 12,
+        "tab_size": 4,
+        "theme": "mocha",
+        "bg": "default"
+    },
+    "data": "def coolFunction():\n    print(\"Wow!\")",
+    "inline": false,
+    "__test_transform_to": "latex",
+    "__test_expected_result": [
+        "\\definecolor{background}{RGB}{59,50,40}\n",
+        "\\begin{tcolorbox}[colback=background, outer arc=0pt]\n",
+        "\\begin{Verbatim}[commandchars=\\\\\\{\\}]\n",
+        "\\textcolor[RGB]{208,200,198}{def coolFunction():}",
+        "\n",
+        "\\textcolor[RGB]{208,200,198}{    print(\"Wow!\")}",
+        "\n",
+        "\\end{Verbatim}\n",
+        "\\end{tcolorbox}",
+        {
+          "arguments": {
+            "name": "imports"
+          },
+          "data": "\\usepackage{fancyvrb}",
+          "name": "set-add"
+        },
+        {
+          "arguments": {
+            "name": "imports"
+          },
+          "data": "\\usepackage{tcolorbox}",
+          "name": "set-add"
+        },
+        {
+          "arguments": {
+            "name": "imports"
+          },
+          "data": "\\makeatletter\n\\def\\verbatim@nolig@list{\\do\\`\\do\\<\\do\\>\\do\\'\\do\\-}\n\\makeatother",
+          "name": "set-add"
+        }
+    ]
+}
+
