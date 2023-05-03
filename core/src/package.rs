@@ -448,8 +448,16 @@ impl Package {
         wasi_env.data_mut(store).set_memory(memory.clone());
 
         // Retrieve manifest of package
-        let manifest = instance.exports.get_function("_start")?;
-        manifest.call(store, &[])?;
+        let main_fn = instance.exports.get_function("_start")?;
+        let fn_res = main_fn.call(store, &[]);
+
+        if let Err(e) = fn_res {
+            // TODO: See if this can be done without string comparison
+            let error_msg = e.to_string();
+            if !error_msg.contains("WASI exited with code: 0") {
+                return Err(CoreError::WasmerRuntimeError(Box::new(e)));
+            }
+        }
 
         // Read package info from stdin
         let manifest: PackageInfo = {
