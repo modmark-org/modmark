@@ -53,6 +53,7 @@ fn transform(from: &str) -> String {
         "__superscript" => transform_tag(input, "sup"),
         "__subscript" => transform_tag(input, "sub"),
         "__underlined" => transform_tag(input, "u"),
+        "__verbatim" => transform_tag(input, "code"),
         "__strikethrough" => transform_tag(input, "del"),
         "__paragraph" => transform_tag(input, "p"),
         "__math" => transform_math(input),
@@ -249,6 +250,11 @@ fn manifest() -> String {
                     "from": "__underlined",
                     "to": ["html"],
                     "arguments": [],
+                },
+                {
+                    "from": "__verbatim",
+                    "to": ["html"],
+                    "arguments": []
                 },
                 {
                     "from": "__document",
