@@ -4,15 +4,13 @@ use std::io::{self, Read};
 
 use serde_json::{json, Value};
 use syntect::easy::HighlightLines;
-use syntect::highlighting::{Color, ThemeSet, Theme};
+use syntect::highlighting::{Color, Theme, ThemeSet};
 use syntect::html::{styled_line_to_highlighted_html, IncludeBackground};
-use syntect::parsing::{SyntaxSet, SyntaxReference};
+use syntect::parsing::{SyntaxReference, SyntaxSet};
 
-
-const VERBATIM_FIX : &str = r"\makeatletter
+const VERBATIM_OVERRIDE_LATEX: &str = r"\makeatletter
 \def\verbatim@nolig@list{\do\`\do\<\do\>\do\'\do\-}
 \makeatother";
-
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -49,7 +47,6 @@ fn manifest() {
                 ],
                 "variables": {"imports": {"type": "set", "access": "add"}}
             }
-        
         ]
         }
     ))
@@ -130,7 +127,7 @@ fn transform_code(to: &str) {
                     }
                     print!("{}", highlight_latex(code, tab_size, theme, syntax, &ss));
                 }
-            } 
+            }
         }
         other => {
             eprintln!("Cannot convert code to {other}");
@@ -138,26 +135,13 @@ fn transform_code(to: &str) {
     }
 }
 
-fn replace_tabs(s: &str, tab_size: u64) -> String {
-    let mut result = String::new();
-    let mut col = 0;
-    for c in s.chars() {
-        if c == '\t' {
-            let spaces = tab_size - col % tab_size;
-            for _ in 0..spaces {
-                result.push(' ');
-            }
-            col += spaces;
-        } else {
-            result.push(c);
-            col += 1;
-        }
-    }
-    result
-}
-
-
-fn highlight_latex(code: &str, tab_size: u64, theme: &Theme, syntax: &SyntaxReference, ss: &SyntaxSet) -> String {
+fn highlight_latex(
+    code: &str,
+    tab_size: u64,
+    theme: &Theme,
+    syntax: &SyntaxReference,
+    ss: &SyntaxSet,
+) -> String {
     macro_rules! import {
         ($e:expr) => {json!({"name": "set-add", "arguments": {"name": "imports"}, "data": $e})}
     }
@@ -169,7 +153,7 @@ fn highlight_latex(code: &str, tab_size: u64, theme: &Theme, syntax: &SyntaxRefe
     let g = background_color.g;
     let b = background_color.b;
 
-    let code = replace_tabs(code, tab_size);
+    let code = code.replace('\t', &" ".repeat(tab_size.try_into().unwrap()));
 
     result.push(format!(
         "\\definecolor{{background}}{{RGB}}{{{r},{g},{b}}}\n"
@@ -187,18 +171,21 @@ fn highlight_latex(code: &str, tab_size: u64, theme: &Theme, syntax: &SyntaxRefe
             let b = colors[i].b;
             let word = words[i];
             let escaped = escape_latex_text(word.to_string());
-                result.push(format!("\\textcolor[RGB]{{{r},{g},{b}}}{{{escaped}}}"));
+            result.push(format!("\\textcolor[RGB]{{{r},{g},{b}}}{{{escaped}}}"));
         }
         result.push("\n".to_string());
     }
     result.push("\\end{Verbatim}\n".to_string());
     result.push(r"\end{tcolorbox}".to_string());
 
-    let mut json = result.iter().map(|s| Value::String(s.to_string())).collect::<Vec<_>>();
+    let mut json = result
+        .iter()
+        .map(|s| Value::String(s.to_string()))
+        .collect::<Vec<_>>();
 
     json.push(import!(r"\usepackage{fancyvrb}"));
     json.push(import!(r"\usepackage{tcolorbox}"));
-    json.push(import!(VERBATIM_FIX));
+    json.push(import!(VERBATIM_OVERRIDE_LATEX));
     serde_json::to_string(&json).unwrap()
 }
 
@@ -224,7 +211,12 @@ fn latex_inline(text: &str) -> String {
     let mut result = String::new();
     result.push('[');
     write!(result, r#"{{"name": "raw", "data": "\\verb|"}},"#,).unwrap();
-    write!(result, "{},", serde_json::to_string(&text.replace('|', "\\|")).unwrap()).unwrap();
+    write!(
+        result,
+        "{},",
+        serde_json::to_string(&text.replace('|', "\\|")).unwrap()
+    )
+    .unwrap();
     write!(result, r#"{{"name": "raw", "data": "|"}}"#,).unwrap();
     result.push(']');
 
@@ -261,7 +253,7 @@ fn get_highlighted_html(
     code: &str,
     theme: &Theme,
     syntax: &SyntaxReference,
-    ss: &SyntaxSet
+    ss: &SyntaxSet,
 ) -> (String, Option<Color>) {
     let mut h = HighlightLines::new(syntax, theme);
     let incl_bg = IncludeBackground::No;
