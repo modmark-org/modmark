@@ -19,10 +19,11 @@ serde_json = "1.0.93"
 futures = "0.3.26"
 tokio = { version = "1.26.0", features = ["full"] }
 tokio-stream = "0.1.12"
-warp = "0.3.3"
+warp = "0.3.5"
 futures-util = "0.3.27"
 portpicker = "0.1.1"
 notify =  { version = "5.1.0", default-features = false, features = ["macos_kqueue"] }
 walkdir = "2"
+
 [features]
 default = ["modmark_core/bundle_std_packages"]
