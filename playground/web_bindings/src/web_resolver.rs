@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::atomic::Ordering::Release;
 
-use js_sys::{ArrayBuffer, JsString};
+use js_sys::{encode_uri_component, ArrayBuffer, JsString};
 use modmark_core::package_store::Resolve;
 use modmark_core::package_store::{PackageSource, ResolveTask};
 use once_cell::sync::OnceCell;
@@ -167,7 +167,10 @@ async fn fetch_catalog(url: &str) -> Result<Catalog, WebResolveError> {
 
 async fn fetch_url(url: &str) -> Result<Response, WebResolveError> {
     // Use a proxy to set the Access-Control-Allow-Origin header (otherwise CORS is blocked)
-    let proxy_url = format!("https://proxy.modmark.workers.dev/?apiurl={url}");
+    let proxy_url = format!(
+        "https://proxy.modmark.workers.dev/?apiurl={}",
+        encode_uri_component(url)
+    );
 
     // Since this is interfacing with JS api:s, we have to use dynamic casting and refer to
     // API docs for knowing when it is safe or not. Comments will be added when appropriate.
