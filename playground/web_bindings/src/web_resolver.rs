@@ -166,6 +166,9 @@ async fn fetch_catalog(url: &str) -> Result<Catalog, WebResolveError> {
 }
 
 async fn fetch_url(url: &str) -> Result<Response, WebResolveError> {
+    // Use a proxy to set the Access-Control-Allow-Origin header (otherwise CORS is blocked)
+    let proxy_url = format!("https://proxy.modmark.workers.dev/?apiurl={url}");
+
     // Since this is interfacing with JS api:s, we have to use dynamic casting and refer to
     // API docs for knowing when it is safe or not. Comments will be added when appropriate.
     let mut opts = RequestInit::new();
@@ -174,7 +177,7 @@ async fn fetch_url(url: &str) -> Result<Response, WebResolveError> {
     // it here as well
 
     // This only fails if we have credentials (user:password@url.com) in FF
-    let request = Request::new_with_str_and_init(url, &opts)
+    let request = Request::new_with_str_and_init(&proxy_url, &opts)
         .map_err(|_| WebResolveError::Url(url.to_string()))?;
 
     // This only fails if we have an invalid header name
