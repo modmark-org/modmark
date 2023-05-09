@@ -158,7 +158,7 @@ fn highlight_latex(
     result.push(format!(
         "\\definecolor{{background}}{{RGB}}{{{r},{g},{b}}}\n"
     ));
-    result.push("\\begin{tcolorbox}[colback=background, outer arc=0pt]\n".to_string());
+    result.push("\\begin{tcolorbox}[colback=background, frame empty]\n".to_string());
     result.push("\\begin{Verbatim}[commandchars=\\\\\\{\\}]\n".to_string());
 
     for line in code.split('\n').map(|s| s.trim_end_matches('\r')) {

@@ -12,7 +12,7 @@
     "__test_transform_to": "latex",
     "__test_expected_result": [
         "\\definecolor{background}{RGB}{59,50,40}\n",
-        "\\begin{tcolorbox}[colback=background, outer arc=0pt]\n",
+        "\\begin{tcolorbox}[colback=background, frame empty]\n",
         "\\begin{Verbatim}[commandchars=\\\\\\{\\}]\n",
         "\\textcolor[RGB]{168,155,185}{public}",
         "\\textcolor[RGB]{208,200,198}{ }",
