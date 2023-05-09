@@ -269,7 +269,7 @@ export default function Homepage() {
       </Feature>
 
       <Feature
-        action={<a href="https://github.com/modmark-org/modmark">Github <FiExternalLink /> </a>}
+        action={<a href="https://github.com/modmark-org/modmark">GitHub <FiExternalLink /> </a>}
         color="#C1666B"
       >
         <h1>Free and open source</h1>
