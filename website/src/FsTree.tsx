@@ -16,6 +16,14 @@ const Container = styled.div`
     width: 30rem;
     box-sizing: border-box;
     border-right: solid 1px #00000013;
+
+    .clickable {
+        transition: color 0.2s ease-in-out;
+    }
+
+    .clickable:hover {
+        background:#e7e7e7;
+    }
 `;
 
 const EntryContainer = styled.div`
@@ -164,13 +172,13 @@ function Entry({ name, isDir, onRemove, onDownload, onRename, onMove }: EntryPro
 
                     <Name style={isDir ? { cursor: "pointer" } : {}} onClick={nameClick}>
                         {isDir && <FiFolder />}
-                        {name}
+                        <span className={isDir ? "clickable" : ""} >{name}</span>
                     </Name>
 
                     <Actions>
                         <Action onClick={() => setRenaming(true)}> <MdDriveFileRenameOutline /></Action>
-                        <Action onClick={onRemove}><MdOutlineDelete /></Action>
                         {!isDir && <Action onClick={onDownload}><FiDownload /></Action>}
+                        <Action onClick={onRemove}><MdOutlineDelete /></Action>
                     </Actions>
                 </>
         }
@@ -215,7 +223,7 @@ export default function FsTree({ listFiles, addFile, readFile, removeFolder, rem
                 let arrayBuffer = reader.result as ArrayBuffer;
                 let bytes = new Uint8Array(arrayBuffer);
 
-                await addFile(file.name, bytes);
+                await addFile(workingDir + file.name, bytes);
                 updateList();
             }
         }
