@@ -57,7 +57,7 @@ const compiler = {
 
     add_file(path, bytes) {
         if (!this.loaded) return;
-        console.log(wasm_bindgen.add_file(path, bytes));
+        wasm_bindgen.add_file(path, bytes);
     },
 
     add_folder(path) {
