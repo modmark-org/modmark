@@ -41,8 +41,7 @@ fn manifest() {
                     {"name": "font_size", "default": 12, "description": "The size of the font", "type": "uint"},
                     {"name": "tab_size", "default": 4, "description": "The size tabs will be adjusted to", "type": "uint"},
                     {"name": "theme", "default": "mocha", "description":
-                        "Theme of the code section. For available themes, see \
-                        https://docs.rs/syntect/latest/syntect/highlighting/struct.ThemeSet.html#method.load_defaults"},
+                        "Theme of the code section.", "type": ["ocean_dark", "ocean_light", "mocha", "eighties", "github", "solar_dark", "solar_light"]},
                     {"name": "bg", "default": "default", "description": "Background of the code section"},
                 ],
                 "variables": {"imports": {"type": "set", "access": "add"}}
@@ -95,7 +94,7 @@ fn transform_code(to: &str) {
         "github" => &ts.themes["InspiredGitHub"],
         "solar_dark" => &ts.themes["Solarized (dark)"],
         "solar_light" => &ts.themes["Solarized (light)"],
-        _ => &ts.themes["InspiredGitHub"],
+        _ => unreachable!()
     };
 
     let syntax = ss.find_syntax_by_token(lang).unwrap_or_else(|| {
