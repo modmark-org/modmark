@@ -4,8 +4,6 @@ use std::io::{self, Read};
 use list::List;
 use serde_json::{json, Value};
 
-// FIXME: latex requires enumitem package
-
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
     let action = &args[0];
@@ -21,7 +19,7 @@ fn main() {
 fn manifest() {
     print!(
         "{}",
-        serde_json::to_string(&json!(
+        json!(
             {
             "name": "list",
             "version": "0.1",
@@ -45,9 +43,8 @@ fn manifest() {
                 },
             ]
             }
-        ))
-        .unwrap()
-    );
+        )
+    )
 }
 
 fn transform(from: &str, to: &str) {
@@ -69,7 +66,7 @@ fn transform_list(to: &str) {
             };
 
             let body = input["data"].as_str().unwrap();
-            let indent = input["arguments"]["indent"].as_u64().unwrap_or(4);
+            let indent = input["arguments"]["indent"].as_u64().unwrap();
 
             if let Ok(list) = List::from_str(body, indent) {
                 print!("{}", list.to_html())
@@ -85,11 +82,7 @@ fn transform_list(to: &str) {
             };
 
             let body = input["data"].as_str().unwrap();
-            let indent = input["arguments"]["indent"]
-                .as_str()
-                .unwrap_or("4")
-                .parse()
-                .unwrap_or(4);
+            let indent = input["arguments"]["indent"].as_u64().unwrap();
 
             if let Ok(list) = List::from_str(body, indent) {
                 print!("{}", list.to_latex())

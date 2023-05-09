@@ -2,8 +2,24 @@ use std::str::FromStr;
 
 use serde_json::{json, Value};
 
+macro_rules! module {
+    ($name:expr, $data:expr $(,$($args:tt)*)?) => {json!({"name": $name $(,"arguments":$($args)*)*, "data": $data})}
+}
+
 macro_rules! import {
-    ($e:expr) => {json!({"name": "set-add", "arguments": {"name": "imports"}, "data": $e})}
+    ($package:expr) => {module!("set-add", $package, {"name": "imports"})}
+}
+
+macro_rules! raw {
+    ($package:expr) => {
+        module!("raw", $package, {})
+    };
+}
+
+macro_rules! inline_content {
+    ($package:expr) => {
+        module!("inline_content", $package, {})
+    };
 }
 
 #[derive(Debug)]
@@ -51,28 +67,26 @@ impl FromStr for ListType {
                 && start_str.chars().next().unwrap().is_ascii_alphabetic()
             {
                 let c = start_str.chars().next().unwrap();
-                let order = alpha_to_start(&c);
+                let order = alpha_to_start(c);
                 if let Some(start) = order {
-                    if c.is_ascii_lowercase() {
-                        return Ok(OrderedList(start, LowerAlpha));
+                    return if c.is_ascii_lowercase() {
+                        Ok(OrderedList(start, LowerAlpha))
                     } else {
-                        return Ok(OrderedList(start, UpperAlpha));
-                    }
+                        Ok(OrderedList(start, UpperAlpha))
+                    };
                 }
             } else if let Some(start) = roman::from(&start_str.to_ascii_uppercase()) {
-                if start_str.chars().next().unwrap().is_ascii_lowercase() {
-                    return Ok(OrderedList(start.unsigned_abs(), LowerRoman));
+                return if start_str.chars().next().unwrap().is_ascii_lowercase() {
+                    Ok(OrderedList(start.unsigned_abs(), LowerRoman))
                 } else {
-                    return Ok(OrderedList(start.unsigned_abs(), UpperRoman));
-                }
+                    Ok(OrderedList(start.unsigned_abs(), UpperRoman))
+                };
             }
         }
 
         // If we have not already returned it is a bullet item or invalid.
         match s {
-            "-" => Ok(UnorderedList),
-            "+" => Ok(UnorderedList),
-            "*" => Ok(UnorderedList),
+            "-" | "+" | "*" => Ok(UnorderedList),
             _ => Err(InvalidItem),
         }
     }
@@ -96,9 +110,9 @@ impl ListItem {
         match self {
             Content(content) => {
                 let mut json_vec = vec![];
-                json_vec.push(json!({"name": "raw", "data": "<li>"}));
-                json_vec.push(json!({"name": "raw", "data": content}));
-                json_vec.push(json!({"name": "raw", "data": "</li>"}));
+                json_vec.push(raw!("<li>"));
+                json_vec.push(inline_content!(content));
+                json_vec.push(raw!("</li>"));
                 json_vec
             }
             List(list) => list.to_html_vec(),
@@ -110,10 +124,9 @@ impl ListItem {
         match self {
             Content(content) => {
                 let mut json_vec = vec![];
-                json_vec.push(json!({"name": "raw", "data": "\\item "}));
-                let mut item = content.clone();
-                item.push('\n');
-                json_vec.push(json!({"name": "raw", "data": item}));
+                json_vec.push(raw!(r"\item"));
+                json_vec.push(inline_content!(content));
+                json_vec.push(raw!("\n"));
                 json_vec
             }
             List(list) => list.to_latex_vec(),
@@ -184,15 +197,11 @@ impl List {
 
     fn to_html_vec(&self) -> Vec<Value> {
         let mut json_vec: Vec<Value> = vec![];
-
-        json_vec.push(json!({"name": "raw", "data": &self.opening_html_tag()}));
-
+        json_vec.push(raw!(&self.opening_html_tag()));
         for item in &self.items {
             json_vec.extend(item.to_html_vec());
         }
-
-        json_vec.push(json!({"name": "raw", "data": &self.closing_html_tag()}));
-
+        json_vec.push(raw!(&self.closing_html_tag()));
         json_vec
     }
 
@@ -252,16 +261,12 @@ impl List {
 
     fn to_latex_vec(&self) -> Vec<Value> {
         let mut json_vec: Vec<Value> = vec![];
-
         json_vec.push(import!(r"\usepackage{enumitem}"));
-        json_vec.push(json!({"name": "raw", "data": self.opening_latex_command()}));
-
+        json_vec.push(raw!(self.opening_latex_command()));
         for item in &self.items {
             json_vec.extend(item.to_latex_vec());
         }
-
-        json_vec.push(json!({"name": "raw", "data": self.closing_latex_command()}));
-
+        json_vec.push(raw!(self.closing_latex_command()));
         json_vec
     }
 
@@ -274,7 +279,7 @@ impl List {
 
         for line in s.lines() {
             if let Ok(list_type) = line.parse::<ListType>() {
-                lines.push((line.to_string(), list_type))
+                lines.push((line.to_string(), list_type));
             } else {
                 let last_index = lines.len() - 1;
                 let last = lines.get_mut(last_index).unwrap();
@@ -350,60 +355,8 @@ impl List {
     }
 }
 
-fn alpha_to_start(c: &char) -> Option<u32> {
-    match c {
-        'a' => Some(1),
-        'b' => Some(2),
-        'c' => Some(3),
-        'd' => Some(4),
-        'e' => Some(5),
-        'f' => Some(6),
-        'g' => Some(7),
-        'h' => Some(8),
-        'i' => Some(9),
-        'j' => Some(10),
-        'k' => Some(11),
-        'l' => Some(12),
-        'm' => Some(13),
-        'n' => Some(14),
-        'o' => Some(15),
-        'p' => Some(16),
-        'q' => Some(17),
-        'r' => Some(18),
-        's' => Some(19),
-        't' => Some(20),
-        'u' => Some(21),
-        'v' => Some(22),
-        'w' => Some(23),
-        'x' => Some(24),
-        'y' => Some(25),
-        'z' => Some(26),
-        'A' => Some(1),
-        'B' => Some(2),
-        'C' => Some(3),
-        'D' => Some(4),
-        'E' => Some(5),
-        'F' => Some(6),
-        'G' => Some(7),
-        'H' => Some(8),
-        'I' => Some(9),
-        'J' => Some(10),
-        'K' => Some(11),
-        'L' => Some(12),
-        'M' => Some(13),
-        'N' => Some(14),
-        'O' => Some(15),
-        'P' => Some(16),
-        'Q' => Some(17),
-        'R' => Some(18),
-        'S' => Some(19),
-        'T' => Some(20),
-        'U' => Some(21),
-        'V' => Some(22),
-        'W' => Some(23),
-        'X' => Some(24),
-        'Y' => Some(25),
-        'Z' => Some(26),
-        _ => None,
-    }
+fn alpha_to_start(c: char) -> Option<u32> {
+    let lowercase = c.is_ascii_lowercase().then_some(c as u8 - b'a' + 1);
+    let uppercase = c.is_ascii_uppercase().then_some(c as u8 - b'A' + 1);
+    lowercase.or(uppercase).map(u32::from)
 }
