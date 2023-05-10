@@ -10,12 +10,6 @@ macro_rules! import {
     ($package:expr) => {module!("set-add", $package, {"name": "imports"})}
 }
 
-macro_rules! raw {
-    ($package:expr) => {
-        module!("raw", $package, {})
-    };
-}
-
 macro_rules! inline_content {
     ($package:expr) => {
         module!("inline_content", $package, {})
@@ -110,9 +104,9 @@ impl ListItem {
         match self {
             Content(content) => {
                 let mut json_vec = vec![];
-                json_vec.push(raw!("<li>"));
+                json_vec.push(Value::from("<li>"));
                 json_vec.push(inline_content!(content));
-                json_vec.push(raw!("</li>"));
+                json_vec.push(Value::from("</li>"));
                 json_vec
             }
             List(list) => list.to_html_vec(),
@@ -124,9 +118,9 @@ impl ListItem {
         match self {
             Content(content) => {
                 let mut json_vec = vec![];
-                json_vec.push(raw!(r"\item"));
+                json_vec.push(Value::from(r"\item"));
                 json_vec.push(inline_content!(content));
-                json_vec.push(raw!("\n"));
+                json_vec.push(Value::from("\n"));
                 json_vec
             }
             List(list) => list.to_latex_vec(),
@@ -197,11 +191,11 @@ impl List {
 
     fn to_html_vec(&self) -> Vec<Value> {
         let mut json_vec: Vec<Value> = vec![];
-        json_vec.push(raw!(&self.opening_html_tag()));
+        json_vec.push(Value::String(self.opening_html_tag()));
         for item in &self.items {
             json_vec.extend(item.to_html_vec());
         }
-        json_vec.push(raw!(&self.closing_html_tag()));
+        json_vec.push(Value::String(self.closing_html_tag()));
         json_vec
     }
 
@@ -262,11 +256,11 @@ impl List {
     fn to_latex_vec(&self) -> Vec<Value> {
         let mut json_vec: Vec<Value> = vec![];
         json_vec.push(import!(r"\usepackage{enumitem}"));
-        json_vec.push(raw!(self.opening_latex_command()));
+        json_vec.push(Value::String(self.opening_latex_command()));
         for item in &self.items {
             json_vec.extend(item.to_latex_vec());
         }
-        json_vec.push(raw!(self.closing_latex_command()));
+        json_vec.push(Value::String(self.closing_latex_command()));
         json_vec
     }
 

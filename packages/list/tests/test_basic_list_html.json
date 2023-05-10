@@ -7,295 +7,119 @@
   "inline": false,
   "__test_transform_to": "html",
   "__test_expected_result": [
-    {
-      "arguments": {},
-      "data": "<ol type=\"i\" start=\"3\">",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<li>",
-      "name": "raw"
-    },
+    "<ol type=\"i\" start=\"3\">",
+    "<li>",
     {
       "arguments": {},
       "data": "awefawef",
       "name": "inline_content"
     },
-    {
-      "arguments": {},
-      "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<li>",
-      "name": "raw"
-    },
+    "</li>",
+    "<li>",
     {
       "arguments": {},
       "data": "qwer",
       "name": "inline_content"
     },
-    {
-      "arguments": {},
-      "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<li>",
-      "name": "raw"
-    },
+    "</li>",
+    "<li>",
     {
       "arguments": {},
       "data": "awe",
       "name": "inline_content"
     },
-    {
-      "arguments": {},
-      "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<ol type=\"1\" start=\"6\">",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<li>",
-      "name": "raw"
-    },
+    "</li>",
+    "<ol type=\"1\" start=\"6\">",
+    "<li>",
     {
       "arguments": {},
       "data": "wef",
       "name": "inline_content"
     },
-    {
-      "arguments": {},
-      "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<li>",
-      "name": "raw"
-    },
+    "</li>",
+    "<li>",
     {
       "arguments": {},
       "data": "awef",
       "name": "inline_content"
     },
-    {
-      "arguments": {},
-      "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "</ol>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<li>",
-      "name": "raw"
-    },
+    "</li>",
+    "</ol>",
+    "<li>",
     {
       "arguments": {},
       "data": "awfe",
       "name": "inline_content"
     },
-    {
-      "arguments": {},
-      "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<ul>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<ol type=\"1\" start=\"1\">",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<ol type=\"a\" start=\"6\">",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<li>",
-      "name": "raw"
-    },
+    "</li>",
+    "<ul>",
+    "<ol type=\"1\" start=\"1\">",
+    "<ol type=\"a\" start=\"6\">",
+    "<li>",
     {
       "arguments": {},
       "data": "awef",
       "name": "inline_content"
     },
-    {
-      "arguments": {},
-      "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "</ol>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<li>",
-      "name": "raw"
-    },
+    "</li>",
+    "</ol>",
+    "<li>",
     {
       "arguments": {},
       "data": "qwef",
       "name": "inline_content"
     },
-    {
-      "arguments": {},
-      "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<ol type=\"1\" start=\"1\">",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<li>",
-      "name": "raw"
-    },
+    "</li>",
+    "<ol type=\"1\" start=\"1\">",
+    "<li>",
     {
       "arguments": {},
       "data": "wqfe",
       "name": "inline_content"
     },
-    {
-      "arguments": {},
-      "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "</ol>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<li>",
-      "name": "raw"
-    },
+    "</li>",
+    "</ol>",
+    "<li>",
     {
       "arguments": {},
       "data": "qwef",
       "name": "inline_content"
     },
-    {
-      "arguments": {},
-      "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<ul>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<li>",
-      "name": "raw"
-    },
+    "</li>",
+    "<ul>",
+    "<li>",
     {
       "arguments": {},
       "data": "qwef",
       "name": "inline_content"
     },
-    {
-      "arguments": {},
-      "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<li>",
-      "name": "raw"
-    },
+    "</li>",
+    "<li>",
     {
       "arguments": {},
       "data": "qwef",
       "name": "inline_content"
     },
-    {
-      "arguments": {},
-      "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "</ul>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "</ol>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "</ul>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<li>",
-      "name": "raw"
-    },
+    "</li>",
+    "</ul>",
+    "</ol>",
+    "</ul>",
+    "<li>",
     {
       "arguments": {},
       "data": "qwfe",
       "name": "inline_content"
     },
-    {
-      "arguments": {},
-      "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<ol type=\"a\" start=\"2\">",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "<li>",
-      "name": "raw"
-    },
+    "</li>",
+    "<ol type=\"a\" start=\"2\">",
+    "<li>",
     {
       "arguments": {},
       "data": "qwre",
       "name": "inline_content"
     },
-    {
-      "arguments": {},
-      "data": "</li>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "</ol>",
-      "name": "raw"
-    },
-    {
-      "arguments": {},
-      "data": "</ol>",
-      "name": "raw"
-    }
+    "</li>",
+    "</ol>",
+    "</ol>"
   ]
 }
