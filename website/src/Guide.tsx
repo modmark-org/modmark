@@ -1,3 +1,3 @@
-export default function GuidePage() {
+export default function Guide() {
     return <>TODO: write this guide :-)</>
 }
