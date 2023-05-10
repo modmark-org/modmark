@@ -42,10 +42,10 @@ jobs:
       - name: Build website
         run: |
           npm ci
-          npm run wasm
-          export BASE="/pr-preview/pr-${PR}" && npm run build 
+          chmod +x ./build_playground.sh
+          ./build_playground.sh
         env:
-          PR: ${{ github.event.number }}
+          BASE: ${{ github.event.number }}
       - name: Remove auto-generated .gitignore
         run: rm dist/web_bindings/.gitignore
       - name: Copy deployment files
