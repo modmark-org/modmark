@@ -8,7 +8,7 @@ use parser::ModuleArguments;
 
 use crate::context::Issue;
 use crate::element::GranularId;
-use crate::package::{ArgValue, PrimitiveArgType};
+use crate::package::{ArgValue, PrimitiveArgType, TransformType};
 use crate::package_store::PackageStore;
 use crate::std_packages_macros::{define_native_packages, define_standard_package_loader};
 use crate::variables::{self, ConstantAccess, ListAccess, SetAccess, VarAccess, VarType};
@@ -338,7 +338,7 @@ pub fn const_read<T, U>(
             present_type: value.get_type(),
         }),
         None => {
-            let default = args.get("default").map(ArgValue::as_str).flatten().unwrap();
+            let default = args.get("default").and_then(ArgValue::as_str).unwrap();
             if default == "<log error>" {
                 // No default was provided as fallback, let's log a error
                 Ok(get_read_error(name, "const-read", id, format))
@@ -382,7 +382,7 @@ pub fn list_read<T, U>(
             present_type: value.get_type(),
         }),
         None => {
-            let default = args.get("default").map(ArgValue::as_str).flatten().unwrap();
+            let default = args.get("default").and_then(ArgValue::as_str).unwrap();
             if default == "<log error>" {
                 // No default was provided as fallback, let's log a error
                 Ok(get_read_error(name, "list-read", id, format))
@@ -426,7 +426,7 @@ pub fn set_read<T, U>(
             present_type: value.get_type(),
         }),
         None => {
-            let default = args.get("default").map(ArgValue::as_str).flatten().unwrap();
+            let default = args.get("default").and_then(ArgValue::as_str).unwrap();
             if default == "<log error>" {
                 // No default was provided as fallback, let's log a error
                 Ok(get_read_error(name, "set-read", id, format))
@@ -516,7 +516,9 @@ pub fn native_err<T, U>(
         .transforms
         .get("__error")
         .and_then(|t| t.find_transform_to(output_format))
-        .is_none()
+        .map_or(true, |t| {
+            !matches!(t.0.r#type, TransformType::Module | TransformType::Any)
+        })
         || source == "__error"
     {
         // If we don't have, don't add an __error parent since that would yield an CoreError

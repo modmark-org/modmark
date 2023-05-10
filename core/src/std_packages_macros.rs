@@ -43,7 +43,8 @@ macro_rules! define_native_packages {
                                     arguments: $arg_info,
                                     variables: $vars.into(),
                                     unknown_content: $ukwn,
-                                    evaluate_before_children: false
+                                    evaluate_before_children: false,
+                                    r#type: $crate::package::TransformType::Module
                                 }),
                             )*
                         ]
