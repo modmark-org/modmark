@@ -12,7 +12,7 @@ import styled from "styled-components";
 import { useState } from 'react';
 import { Button } from './Buttons.tsx';
 import PackageDocsPage from './PackageDocsPage.tsx';
-import GuidePage from './GuidePage.tsx';
+import Guide from './Guide.tsx';
 
 const DebugMessage = styled.div<{ bg?: string, color?: string }>`
 padding: 0.5rem;
@@ -67,7 +67,7 @@ const router = createHashRouter([
       },
       {
         path: "/guide",
-        element: <GuidePage />,
+        element: <Guide />,
       },
     ],
   },

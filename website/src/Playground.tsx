@@ -8,12 +8,12 @@ import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import { Link } from "react-router-dom";
 import welcomeMessage from "./welcomeMessage";
 import { Preview, Mode } from "./Preview";
-import { FiClock, FiFolder, FiPackage } from "react-icons/fi";
+import { FiBook, FiClock, FiFolder, FiPackage } from "react-icons/fi";
 import { MdOutlineAutoAwesome, MdOutlineDownloading, MdOutlineKeyboardAlt } from "react-icons/md";
 import FsTree from "./FsTree";
 import PackageDocs from "./PackageDocs";
 import { CompilationResult, Compiler, PackageInfo, handleException } from "./compilerTypes";
-import { parse } from "path";
+import Guide from "./Guide";
 
 
 type Monaco = typeof monaco;
@@ -122,7 +122,7 @@ const COMPILE_INTERVAL = 300;
 function Playground() {
     const [content, setContent] = useState("");
     const [showFiles, setShowFiles] = useState(false);
-    const [showPackageDocs, setShowPackageDocs] = useState(false);
+    const [activeView, setActiveView] = useState<"preview" | "docs" | "guide">("preview");
     const [packages, setPackages] = useState<PackageInfo[]>([]);
     const [loadingPackage, setLoadingPackage] = useState(false);
     const [selectedMode, setSelectedMode] = useState<Mode>("render-html");
@@ -310,7 +310,19 @@ function Playground() {
                     }
                 </div>
                 <div>
-                    <Button active={showPackageDocs} onClick={() => setShowPackageDocs((showDocs => !showDocs))}><FiPackage /> Package docs </Button>
+                    <Button
+                        active={activeView === "guide"}
+                        onClick={() => setActiveView(activeView === "guide" ? "preview" : "guide")}
+                    >
+                        <FiBook /> Guide
+                    </Button>
+
+                    <Button
+                        active={activeView === "docs"}
+                        onClick={() => setActiveView(activeView === "docs" ? "preview" : "docs")}
+                    >
+                        <FiPackage /> Package docs
+                    </Button>
                 </div>
             </Menu>
             <Main>
@@ -338,18 +350,23 @@ function Playground() {
                     />
                 </EditorContainer>
                 <View>
-                    {showPackageDocs ?
+                    {activeView === "docs" &&
                         <div style={{ maxWidth: 800, paddingBottom: "3rem", height: "100%", overflow: "auto", width: "100%", marginLeft: "auto", marginRight: "auto" }}>
                             <PackageDocs packages={packages} />
-                        </div> :
-                        <>
+                        </div>
+                    }
+                    {
+                        activeView === "guide" &&
+                        <Guide />
+                    }
+                    {
+                        activeView === "preview" && <>
                             <IssuesReport warnings={warnings} errors={errors} />
                             {loadingPackage && <LoadingPackage><FiPackage size="20" /> Attempting to load package ...</LoadingPackage>}
                             {statusElem}
                             <Preview content={content} mode={activeMode} valid={validPreview} />
                         </>
                     }
-
                 </View>
             </Main>
         </Container >
