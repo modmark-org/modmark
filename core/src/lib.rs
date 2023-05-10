@@ -34,7 +34,7 @@ pub trait AccessPolicy: Send + Sync + 'static {
     fn allowed_to_read(&self) -> bool;
     fn allowed_to_write(&self) -> bool;
     fn allowed_to_create(&self) -> bool;
-    fn allowed_access(&mut self, path: &Path, module_name: &String) -> bool;
+    fn allowed_access(&mut self, path: &Path, module_name: &str) -> bool;
 }
 
 pub struct DefaultAccessManager;
@@ -56,7 +56,7 @@ impl AccessPolicy for DefaultAccessManager {
         true
     }
 
-    fn allowed_access(&mut self, _path: &Path, _module_name: &String) -> bool {
+    fn allowed_access(&mut self, _path: &Path, _module_name: &str) -> bool {
         true
     }
 }

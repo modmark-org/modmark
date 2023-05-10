@@ -35,12 +35,12 @@ impl AccessPolicy for CliAccessManager {
         !self.deny_create
     }
 
-    fn allowed_access(&mut self, path: &Path, module_name: &String) -> bool {
+    fn allowed_access(&mut self, path: &Path, module_name: &str) -> bool {
         if self.allow_every_module {
             return true;
         }
 
-        let module = self.modules.entry(module_name.clone()).or_default();
+        let module = self.modules.entry(module_name.to_string()).or_default();
         let path_str = path.to_str().expect("Could not convert path to &str");
 
         if let Some(access) = module.permissions.get(path_str) {
