@@ -10,7 +10,7 @@ use wasmer_wasi::{Pipe, WasiError, WasiState};
 
 use crate::package::PackageImplementation::Native;
 use crate::variables::VarAccess;
-use crate::{error::CoreError, OutputFormat};
+use crate::{error::CoreError, Element, OutputFormat};
 
 /// Transform from a node into another node
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -27,6 +27,49 @@ pub struct Transform {
     #[serde(default)]
     #[serde(rename = "evaluate-before-children")]
     pub evaluate_before_children: bool,
+    #[serde(default)]
+    pub r#type: TransformType,
+}
+
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum TransformType {
+    #[default]
+    Module,
+    InlineModule,
+    MultilineModule,
+    Parent,
+    #[serde(alias = "*")]
+    Any,
+}
+
+impl TransformType {
+    pub fn verify_element_type(&self, element: &Element) -> Result<(), CoreError> {
+        let Some(name) = element.name() else {
+            unreachable!("Cannot transform compound element")
+        };
+
+        use CoreError::{
+            ExpectedInlineModule, ExpectedModule, ExpectedMultilineModule, ExpectedParent,
+        };
+
+        use TransformType::*;
+        match self {
+            Module => matches!(element, Element::Module { .. })
+                .then_some(())
+                .ok_or_else(|| ExpectedModule(name.to_string())),
+            InlineModule => matches!(element, Element::Module { inline: true, .. })
+                .then_some(())
+                .ok_or_else(|| ExpectedInlineModule(name.to_string())),
+            MultilineModule => matches!(element, Element::Module { inline: false, .. })
+                .then_some(())
+                .ok_or_else(|| ExpectedMultilineModule(name.to_string())),
+            Parent => matches!(element, Element::Parent { .. })
+                .then_some(())
+                .ok_or_else(|| ExpectedParent(name.to_string())),
+            Any => Ok(()),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -368,9 +411,9 @@ impl ArgValue {
     }
 }
 
-/// Implements PartialEq for PackageImplementation in a way where two
-/// `PackageImplementation::Native` gives `true` but any other combination gives `false`
 impl PartialEq for PackageImplementation {
+    /// Implements PartialEq for PackageImplementation in a way where two
+    /// `PackageImplementation::Native` gives `true` but any other combination gives `false`
     fn eq(&self, other: &Self) -> bool {
         match self {
             Native => match other {
