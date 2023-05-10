@@ -29,11 +29,6 @@ jobs:
       run:
         working-directory: ./website
     steps:
-      - name: Find PR number
-        uses: jwalton/gh-find-current-pr@v1
-        id: findPr
-        with:
-          state: open
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup output directory
@@ -48,10 +43,9 @@ jobs:
         run: |
           npm ci
           npm run wasm
-          echo "/pr-preview/pr-${PR}"
           export BASE="/pr-preview/pr-${PR}" && npm run build 
         env:
-          PR: ${{ steps.findPr.outputs.pr }}
+          PR: ${{ github.event.number }}
       - name: Remove auto-generated .gitignore
         run: rm dist/web_bindings/.gitignore
       - name: Copy deployment files
