@@ -235,7 +235,7 @@ export default function Homepage() {
             ModMark is a modular markup language. It has a lightweight syntax akin to Markdown but also offers a lot more flexibility and expressive power. Import packages and use modules to add extra functionality in your document or even add support for a new output format.
           </p>
           <p>
-            ModMark comes bundled with multiple useful packages and can by default output both HTML and LaTeX documents using a web tool or a command-line interface.
+            ModMark comes bundled with multiple useful packages and can by default output both HTML and LaTeX documents. It is still a early protype but you can use it both on the web and in your terminal.
           </p>
         </About>
         <ActionButton onClick={(_e) => navigate("/playground")}>Try it in your browser <FiPlay /></ActionButton>
