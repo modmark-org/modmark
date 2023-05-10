@@ -41,9 +41,9 @@ jobs:
         run: |
           npm ci
           chmod +x ./build_website.sh
-          ./build_website.sh
+          export BASE="/pr-preview/pr-${PR}" && ./build_website.sh
         env:
-          BASE: ${{ github.event.number }}
+          PR: ${{ github.event.number }}
       - name: Remove auto-generated .gitignore
         run: rm dist/web_bindings/.gitignore
       - name: Copy deployment files
