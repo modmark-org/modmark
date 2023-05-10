@@ -238,21 +238,25 @@ fn manifest() -> String {
                     "from": "__bold",
                     "to": ["latex"],
                     "arguments": [],
+                    "type": "parent"
                 },
                 {
                     "from": "__italic",
                     "to": ["latex"],
                     "arguments": [],
+                    "type": "parent"
                 },
                 {
                     "from": "__superscript",
                     "to": ["latex"],
                     "arguments": [],
+                    "type": "parent"
                 },
                 {
                     "from": "__subscript",
                     "to": ["latex"],
                     "arguments": [],
+                    "type": "parent"
                 },
                 {
                     "from": "__strikethrough",
@@ -260,18 +264,21 @@ fn manifest() -> String {
                     "arguments": [],
                     "variables": {
                         "imports": {"type": "set", "access": "add"}
-                    }
+                    },
+                    "type": "parent"
                 },
                 {
                     "from": "__underlined",
                     "to": ["latex"],
                     "arguments": [],
+                    "type": "parent"
                 },
                 {
                     "from": "__math",
                     "to": ["latex"],
                     "arguments": [],
-                    "evaluate-before-children": true
+                    "evaluate-before-children": true,
+                    "type": "parent"
                 },
                 {
                     "from": "__document",
@@ -279,26 +286,29 @@ fn manifest() -> String {
                     "arguments": [],
                     "variables": {
                         "imports": {"type": "set", "access": "read"}
-                    }
+                    },
+                    "type": "parent"
                 },
                 {
                     "from": "__text",
                     "to": ["latex"],
-                    "arguments": [],
+                    "arguments": []
                 },
                 {
                     "from": "__paragraph",
                     "to": ["latex"],
                     "arguments": [],
+                    "type": "parent"
                 },
                 {
                     "from": "__verbatim",
                     "to": ["latex"],
                     "arguments": [],
-                    "evaluate-before-children": true
+                    "evaluate-before-children": true,
+                    "type": "parent"
                 },
                 {
-                  "from": "__heading",
+                    "from": "__heading",
                     "to": ["latex"],
                     "arguments": [
                         {
@@ -307,6 +317,7 @@ fn manifest() -> String {
                             "default": "1"
                         }
                     ],
+                    "type": "parent"
                 },
 
             ]

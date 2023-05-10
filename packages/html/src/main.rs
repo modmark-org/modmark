@@ -225,41 +225,49 @@ fn manifest() -> String {
                     "from": "__bold",
                     "to": ["html"],
                     "arguments": [],
+                   "type": "parent"
                 },
                 {
                     "from": "__italic",
                     "to": ["html"],
                     "arguments": [],
+                   "type": "parent"
                 },
                 {
                     "from": "__superscript",
                     "to": ["html"],
                     "arguments": [],
+                   "type": "parent"
                 },
                 {
                     "from": "__subscript",
                     "to": ["html"],
                     "arguments": [],
+                   "type": "parent"
                 },
                 {
                     "from": "__strikethrough",
                     "to": ["html"],
                     "arguments": [],
+                   "type": "parent"
                 },
                 {
                     "from": "__underlined",
                     "to": ["html"],
                     "arguments": [],
+                   "type": "parent"
                 },
                 {
                     "from": "__verbatim",
                     "to": ["html"],
-                    "arguments": []
+                    "arguments": [],
+                   "type": "parent"
                 },
                 {
                     "from": "__document",
                     "to": ["html"],
                     "arguments": [],
+                   "type": "parent"
                 },
                 {
                     "from": "__text",
@@ -270,36 +278,38 @@ fn manifest() -> String {
                     "from": "__math",
                     "to": ["html"],
                     "arguments": [],
-                    "evaluate-before-children": true
+                    "evaluate-before-children": true,
+                    "type": "parent"
                 },
                 {
                     "from": "__paragraph",
                     "to": ["html"],
                     "arguments": [],
+                    "type": "parent"
                 },
                 {
                     "from": "__error",
                     "to": ["html"],
                     "arguments": [
-                    {
-                        "name":"source",
-                        "description":"Source for the error",
-                        "default":"<unknown>"
-                    },
-                    {
-                        "name":"target",
-                        "description":"Target for the error",
-                        "default":"<unknown>"
-                    },
-                    {
-                        "name":"input",
-                        "description":"Input for the error",
-                        "default":"<unknown>"
-                    },
-                ],
+                        {
+                            "name":"source",
+                            "description":"Source for the error",
+                            "default":"<unknown>"
+                        },
+                        {
+                            "name":"target",
+                            "description":"Target for the error",
+                            "default":"<unknown>"
+                        },
+                        {
+                            "name":"input",
+                            "description":"Input for the error",
+                            "default":"<unknown>"
+                        },
+                    ],
                 },
                 {
-                  "from": "__heading",
+                    "from": "__heading",
                     "to": ["html"],
                     "arguments": [
                         {
@@ -308,8 +318,8 @@ fn manifest() -> String {
                             "default": "1"
                         }
                     ],
-                },
-
+                    "type": "parent"
+                }
             ]
         }
     ))
