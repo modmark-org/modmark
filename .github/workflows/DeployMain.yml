@@ -41,8 +41,6 @@ jobs:
           npm ci
           chmod +x ./build_website.sh
           ./build_website.sh
-        env:
-          BASE: ${{ github.event.number }}
       - name: Remove auto-generated .gitignore
         run: rm dist/pkg/.gitignore
       - name: Copy deployment files
