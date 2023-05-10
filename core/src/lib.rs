@@ -268,7 +268,7 @@ mod tests {
 
     use serde_json::Value;
 
-    use crate::package::{ArgType, PrimitiveArgType};
+    use crate::package::{ArgType, PrimitiveArgType, TransformType};
     use crate::package_store::ResolveTask;
 
     use super::*;
@@ -335,7 +335,8 @@ mod tests {
                 ],
                 variables: HashMap::new(),
                 unknown_content: true,
-                evaluate_before_children: false
+                evaluate_before_children: false,
+                r#type: TransformType::Module
             }],
         };
 
