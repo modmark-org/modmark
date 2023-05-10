@@ -126,6 +126,14 @@ pub enum CoreError {
     Schedule,
     #[error("Could not flatten structure, internal scheduling error")]
     Flat,
+    #[error("'{0}' may only appear as a module")]
+    ExpectedModule(String),
+    #[error("'{0}' may only be invoked as an inline module")]
+    ExpectedInlineModule(String),
+    #[error("'{0}' may only be invoked as a multiline module")]
+    ExpectedMultilineModule(String),
+    #[error("'{0}' may only appear as a parent")]
+    ExpectedParent(String),
 }
 
 impl From<WasiError> for CoreError {
