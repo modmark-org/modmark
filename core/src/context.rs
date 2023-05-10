@@ -24,7 +24,6 @@ use crate::fs::CoreFs;
 use crate::package::{ArgValue, PackageImplementation};
 use crate::package_store::{PackageID, PackageStore};
 use crate::variables::{VarAccess, VarType, VariableStore};
-use crate::CoreError::MissingTransform;
 use crate::{std_packages, AccessPolicy, Element, Resolve};
 use crate::{ArgInfo, CoreError, OutputFormat, Package, Transform};
 
@@ -59,7 +58,7 @@ pub struct Issue {
 
 impl fmt::Display for Issue {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self.input.as_ref().map(String::as_str) {
+        match self.input.as_deref() {
             None => write!(
                 f,
                 "{} -> {}: {}",
@@ -248,9 +247,9 @@ impl<T, U> Context<T, U> {
             unreachable!("Unexpected use of compound or raw element in get_var_dependencies")
         };
 
-        // Now, let's find the relevent transform for provided output format
+        // Now, let's find the relevant transform for provided output format
         let Some((transform, package)) = self.package_store.lock().unwrap().find_transform(name, format) else {
-            return Err(MissingTransform(name.to_string(), format.to_string()));
+            return Err(CoreError::MissingTransform(name.to_string(), format.to_string()));
         };
 
         // Check if there are argument dependent variables, for example [list-push name=...](.)
@@ -375,13 +374,29 @@ where
                 inline: _,
                 id,
             } => {
-                let Some(package) = ({
+                let Some((transform, package)) = ({
                     let store_guard = self.package_store.lock().unwrap();
                     store_guard.find_transform(name, output_format)
-                        .map(|(_, package)| package)
                 }) else {
                     return Err(CoreError::MissingTransform(name.clone(), output_format.to_string()));
                 };
+
+                // We could just do `transform.r#type.verify_element_type(from)?;`, but then
+                // it would be a fatal error, ending the compilation altogether. Doing it by
+                // making an error module we ensure that we just replace the element with an
+                // error element, and continue compilation
+                if let Err(e) = transform.r#type.verify_element_type(from) {
+                    return Ok(Module {
+                        name: "error".to_string(),
+                        args: ModuleArguments::from([
+                            ("source".to_string(), name.to_string()),
+                            ("target".to_string(), output_format.to_string()),
+                        ]),
+                        body: e.to_string(),
+                        inline: false,
+                        id: id.clone(),
+                    });
+                }
 
                 match &package.implementation {
                     PackageImplementation::Wasm(wasm_module) => {
@@ -438,19 +453,15 @@ where
                 } else {
                     "warning".to_string()
                 },
-                args: ModuleArguments {
-                    positioned: None,
-                    named: Some({
-                        let mut map = HashMap::new();
-                        map.insert("source".to_string(), name.to_string());
-                        map.insert("target".to_string(), output_format.to_string());
-                        // these two ifs can't be joined, unfortunately, or it won't run on stable
-                        if self.verbose {
-                            map.insert("input".to_string(), data.to_string());
-                        }
-                        map
-                    }),
-                },
+                args: ModuleArguments::from({
+                    let mut map = HashMap::new();
+                    map.insert("source".to_string(), name.to_string());
+                    map.insert("target".to_string(), output_format.to_string());
+                    if self.verbose {
+                        map.insert("input".to_string(), data.to_string());
+                    }
+                    map
+                }),
                 body,
                 inline: false,
                 id,
@@ -537,7 +548,7 @@ where
                 Ok(WasiError::UnknownWasiVersion) => {
                     return Ok(create_issue(
                         true,
-                        format!("Could not determine WASI version for Wasm module"),
+                        "Could not determine WASI version for Wasm module".to_string(),
                         &input_data,
                         module_id.clone(),
                     ))

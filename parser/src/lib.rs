@@ -30,6 +30,19 @@ pub struct ModuleArguments {
     pub named: Option<HashMap<String, String>>,
 }
 
+impl<P, T> From<P> for ModuleArguments
+where
+    HashMap<String, String>: FromIterator<T>,
+    P: IntoIterator<Item = T>,
+{
+    fn from(value: P) -> Self {
+        Self {
+            positioned: None,
+            named: Some(value.into_iter().collect()),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum MaybeArgs {
     ModuleArguments(ModuleArguments),
