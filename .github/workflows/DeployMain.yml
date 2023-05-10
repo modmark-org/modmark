@@ -24,36 +24,37 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./playground
+        working-directory: ./website
     steps:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup Pages
         uses: actions/configure-pages@v2
-      - name: Setup output directory
-        run: mkdir build
       - name: Install toolchain (minimal, stable, wasm32-unknown-unknown + wasm32-wasi)
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown, wasm32-wasi
       - name: Install wasm-pack
         uses: jetli/wasm-pack-action@v0.4.0
-      - name: Make build script executable
-        run: chmod +x ./build-playground.sh
-      - name: Build Playground
-        run: ./build-playground.sh
+      - name: Build website
+        run: |
+          npm ci
+          chmod +x ./build_website.sh
+          ./build_website.sh
+        env:
+          BASE: ${{ github.event.number }}
       - name: Remove auto-generated .gitignore
-        run: rm build/pkg/.gitignore
+        run: rm dist/pkg/.gitignore
       - name: Copy deployment files
         run: |
           mkdir site-deploy
-          cp -r build/* site-deploy
+          cp -r dist/* site-deploy
       - name: Print generated files
         run: ls -R site-deploy
-      - name: Deploy Playground
+      - name: Deploy website
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: ./playground/site-deploy/
+          folder: ./website/site-deploy/
           branch: gh-pages
           clean: true
           clean-exclude: pr-preview

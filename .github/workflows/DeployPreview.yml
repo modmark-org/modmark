@@ -31,8 +31,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Setup output directory
-        run: mkdir build
       - name: Install toolchain (minimal, stable, wasm32-unknown-unknown + wasm32-wasi)
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -42,8 +40,8 @@ jobs:
       - name: Build website
         run: |
           npm ci
-          chmod +x ./build_playground.sh
-          ./build_playground.sh
+          chmod +x ./build_website.sh
+          ./build_website.sh
         env:
           BASE: ${{ github.event.number }}
       - name: Remove auto-generated .gitignore
