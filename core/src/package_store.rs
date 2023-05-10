@@ -423,7 +423,7 @@ impl PackageStore {
 }
 
 /// The suffix each local file must have (a dot and the file extension)
-static LOCAL_FILE_EXTENSION: &'static str = ".wasm";
+static LOCAL_FILE_EXTENSION: &str = ".wasm";
 
 impl From<&str> for PackageID {
     fn from(s: &str) -> Self {
