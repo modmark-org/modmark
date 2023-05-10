@@ -49,6 +49,7 @@ fn manifest() {
                 {
                     "from": "image",
                     "to": ["html", "latex"],
+                    "type": "multiline-module",
                     "arguments": [
                         {"name": "alt", "default": "", "description": "Alternative text for the image"},
                         {
