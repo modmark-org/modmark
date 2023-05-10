@@ -7,15 +7,6 @@ use std::path::Path;
 use base64::{engine::general_purpose, Engine as _};
 use serde_json::{json, Value};
 
-macro_rules! raw {
-    ($expr:expr) => {
-        json!({
-            "name": "raw",
-            "data": $expr
-        })
-    }
-}
-
 macro_rules! import {
     ($e:expr) => {json!({"name": "set-add", "arguments": {"name": "imports"}, "data": $e})}
 }
@@ -79,6 +70,12 @@ fn manifest() {
                             "type": ["true", "false"],
                             "description": "Decides if the provided image should be embedded in the HTML document."
                         },
+                        {
+                            "name": "caption-alignment",
+                            "default": "center",
+                            "type": ["left", "center", "right"],
+                            "description": "The alignment of the image caption."
+                        },
                     ],
                     "variables": {
                         "imports": {"type": "set", "access": "add"}
@@ -135,6 +132,10 @@ fn transform_text(input: Value, to: &str) {
 fn transform_image(input: Value, to: &str) {
     match to {
         "html" => {
+            if let Some(true) = input["inline"].as_bool() {
+                eprintln!("The [image] module should not be invoked inline.")
+            }
+
             let path = input["data"].as_str().unwrap().trim();
             let alt = {
                 let alt_text = input["arguments"]["alt"].as_str().unwrap();
@@ -150,6 +151,7 @@ fn transform_image(input: Value, to: &str) {
                 .unwrap()
                 .clamp(0.0, f64::MAX);
             let caption = input["arguments"]["caption"].as_str().unwrap();
+            let cap_align = input["arguments"]["caption-alignment"].as_str().unwrap();
             let label = input["arguments"]["label"].as_str().unwrap();
             let embed = input["arguments"]["embed"].as_str().unwrap();
 
@@ -186,19 +188,22 @@ fn transform_image(input: Value, to: &str) {
                     return;
                 }
             };
-            let img_str = format!("<img src=\"{img_src}\" {id} {style} alt=\"");
 
+            let fig_str = format!("<figure {style}>");
+            let img_str = format!("<img src=\"{img_src}\" {id} style=\"width:100%\" alt=\"");
             let mut v = vec![];
-            v.push(raw!("<figure>\n"));
-            v.push(raw!(img_str));
+
+            v.push(json!(fig_str));
+            v.push(json!(img_str));
             v.push(json!({"name": "__text", "data": alt}));
-            v.push(raw!("\"/>\n"));
+            v.push(json!("\"/>\n"));
             if !caption.is_empty() {
-                v.push(raw!("<figcaption>"));
+                let cap_str = format!("<figcaption style=\"text-align: {cap_align}\">");
+                v.push(json!(cap_str));
                 v.push(json!({"name": "inline_content", "data": caption}));
-                v.push(raw!("</figcaption>\n"));
+                v.push(json!("</figcaption>\n"));
             }
-            v.push(raw!("</figure>\n"));
+            v.push(json!("</figure>\n"));
 
             print!("{}", json!(v));
         }
@@ -233,20 +238,20 @@ fn transform_image(input: Value, to: &str) {
 
             v.push(import!(r"\usepackage{graphicx}"));
             v.push(import!(r"\usepackage{float}"));
-            v.push(raw!("\\begin{figure}[H]\n"));
-            v.push(raw!("\\centering\n"));
-            v.push(raw!(img_str));
+            v.push(json!("\\begin{figure}[H]\n"));
+            v.push(json!("\\centering\n"));
+            v.push(json!(img_str));
             if !caption.is_empty() {
-                v.push(raw!("\\caption{"));
+                v.push(json!("\\caption{"));
                 v.push(json!({"name": "inline_content", "data": caption}));
-                v.push(raw!("}\n"));
+                v.push(json!("}\n"));
             }
             if !label.is_empty() {
-                v.push(raw!("\\label{"));
+                v.push(json!("\\label{"));
                 v.push(json!({"name": "inline_content", "data": label}));
-                v.push(raw!("}\n"))
+                v.push(json!("}\n"))
             }
-            v.push(raw!("\\end{figure}\n"));
+            v.push(json!("\\end{figure}\n"));
 
             print!("{}", json!(v));
         }
