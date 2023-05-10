@@ -279,7 +279,7 @@ export default function Homepage() {
         <FiGithub size={80} style={{ marginTop: "0.3rem", float: "right" }} />
       </Feature>
       <Feature
-        action={<a href="">Read developer guide <FiCode /></a>}
+        action={<a href=""><del>Read developer guide</del>TODO <FiCode /></a>}
         color="#748E54"
         gridStart="start"
         gridEnd="right"
@@ -293,7 +293,7 @@ export default function Homepage() {
         <img width="70%" src="./languages.svg" />
 
       </Feature>
-      <Feature action={<>Download thesis <FiDownload /> </>} color="#0F8B8D">
+      <Feature action={<><del>Download thesis</del> TODO <FiDownload /></>} color="#0F8B8D">
         <h1>Learn more</h1>
         <p>
           ModMark was created as a bachelor's thesis project at Chalmers University of Technology in Gothenburg, Sweden.
