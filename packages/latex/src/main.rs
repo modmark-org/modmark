@@ -1,10 +1,39 @@
 use std::{
+    collections::HashMap,
     env,
     fmt::Write,
     io::{self, Read},
 };
 
-use serde_json::{from_str, json, Value};
+use serde::{Deserialize, Serialize};
+use serde_json::{from_str, json, to_value, Value};
+
+#[derive(Serialize, Deserialize)]
+#[serde(untagged)]
+enum JsonEntry {
+    ParentNode {
+        name: String,
+        arguments: HashMap<String, Value>,
+        children: Vec<Self>,
+    },
+    Module {
+        name: String,
+        #[serde(default)]
+        data: String,
+        #[serde(default)]
+        arguments: HashMap<String, Value>,
+        #[serde(default = "default_inline")]
+        inline: bool,
+    },
+    Compound(Vec<Self>),
+    Raw(String),
+}
+
+/// This is just a helper to ensure that omitted "inline" fields
+/// default to true.
+fn default_inline() -> bool {
+    true
+}
 
 macro_rules! import {
     ($e:expr) => {json!({"name": "set-add", "arguments": {"name": "imports"}, "data": $e})}
@@ -13,6 +42,34 @@ macro_rules! import {
 macro_rules! single_import {
     ($e:expr) => {
         vec![import![$e]]
+    };
+}
+
+macro_rules! inline_content {
+    ($expr:expr) => {
+        json!({
+            "name": "inline_content",
+            "data": $expr
+        })
+    }
+}
+
+macro_rules! block_content {
+    ($expr:expr) => {
+        json!({
+            "name": "block_content",
+            "data": $expr
+        })
+    }
+}
+
+macro_rules! dynamic_content {
+    ($cond:expr, $expr:expr) => {
+        if $cond {
+            block_content!($expr)
+        } else {
+            inline_content!($expr)
+        }
     };
 }
 
@@ -42,25 +99,25 @@ fn main() {
 }
 
 fn transform(from: &str) -> String {
-    let input: Value = {
+    let input: JsonEntry = {
         let mut buffer = String::new();
         io::stdin().read_to_string(&mut buffer).unwrap();
         from_str(&buffer).unwrap()
     };
 
     match from {
-        "__bold" => transform_tag(input, "textbf"),
-        "__italic" => transform_tag(input, "textit"),
-        "__superscript" => transform_tag(input, "textsuperscript"),
-        "__subscript" => transform_tag(input, "textsubscript"),
-        "__underlined" => transform_tag(input, "underline"),
-        "__strikethrough" => transform_tag(input, "sout"), //fixme: needs a package to use
+        "__bold" => transform_tag(input, "textbf", true),
+        "__italic" => transform_tag(input, "textit", true),
+        "__superscript" => transform_tag(input, "textsuperscript", true),
+        "__subscript" => transform_tag(input, "textsubscript", true),
+        "__underlined" => transform_tag(input, "underline", true),
+        "__strikethrough" => transform_tag(input, "sout", true),
         "__verbatim" => transform_verbatim(input),
-        "__paragraph" => transform_paragraph(input),
-        "__document" => transform_document(input),
-        "__math" => transform_math(input),
-        "__text" => escape_text(input),
-        "__heading" => transform_heading(input),
+        "__paragraph" => transform_paragraph(to_value(input).unwrap()),
+        "__document" => transform_document(to_value(input).unwrap()),
+        "__math" => transform_math(to_value(input).unwrap()),
+        "__text" => escape_text(to_value(input).unwrap()),
+        "__heading" => transform_heading(to_value(input).unwrap()),
         _ => panic!("element not supported"),
     }
 }
@@ -81,12 +138,24 @@ fn transform_paragraph(paragraph: Value) -> String {
     result
 }
 
-fn transform_tag(mut node: Value, latex_function: &str) -> String {
+fn transform_tag(node: JsonEntry, latex_function: &str, reparse: bool) -> String {
     let mut result: Vec<Value> = vec![];
     result.push(Value::from(format!("\\{latex_function}{{")));
-    if let Some(children) = node.get_mut("children").and_then(Value::as_array_mut) {
-        result.append(children);
+
+    match node {
+        JsonEntry::ParentNode { children, .. } => {
+            result.extend(children.into_iter().map(|x| to_value(x).unwrap()));
+        }
+        JsonEntry::Module { data, inline, .. } => {
+            if reparse {
+                result.push(dynamic_content!(inline, data));
+            } else {
+                result.push(json!({"name": "__text", "data": data}));
+            }
+        }
+        _ => {}
     }
+
     result.push(Value::from("}"));
     result.append(&mut get_imports_for_tag(latex_function));
     serde_json::to_string(&result).unwrap()
@@ -102,13 +171,41 @@ fn get_imports_for_tag(latex_function: &str) -> Vec<Value> {
     }
 }
 
-fn transform_verbatim(mut text: Value) -> String {
+fn transform_verbatim(node: JsonEntry) -> String {
     let mut result: Vec<Value> = vec![];
-    result.push(Value::from("\\verb|"));
-    if let Some(children) = text.get_mut("children").and_then(Value::as_array_mut) {
-        result.append(children);
+
+    match node {
+        JsonEntry::Module { data, inline, .. } => {
+            if inline {
+                result.push(Value::from("\\verb|"));
+                result.push(Value::from(data.replace('|', r"\|")));
+                result.push(Value::from("|"));
+            } else {
+                result.push(Value::from("\n\\begin{verbatim}\n"));
+                result.push(Value::from(data));
+                result.push(Value::from("\n\\end{verbatim}\n"));
+            }
+        }
+        JsonEntry::ParentNode { children, .. } => {
+            result.push(Value::from("\\verb|"));
+            for child in children {
+                if let JsonEntry::Module {
+                    ref name, ref data, ..
+                } = child
+                {
+                    if name == "__text" {
+                        result.push(Value::from(data.replace('|', r"\|")));
+                    } else {
+                        result.push(to_value(child).unwrap());
+                    }
+                } else {
+                    result.push(to_value(child).unwrap());
+                }
+            }
+            result.push(Value::from("|"));
+        }
+        _ => {}
     }
-    result.push(Value::from("|"));
     serde_json::to_string(&result).unwrap()
 }
 
@@ -238,25 +335,25 @@ fn manifest() -> String {
                     "from": "__bold",
                     "to": ["latex"],
                     "arguments": [],
-                    "type": "parent"
+                    "type": "any"
                 },
                 {
                     "from": "__italic",
                     "to": ["latex"],
                     "arguments": [],
-                    "type": "parent"
+                    "type": "any"
                 },
                 {
                     "from": "__superscript",
                     "to": ["latex"],
                     "arguments": [],
-                    "type": "parent"
+                    "type": "any"
                 },
                 {
                     "from": "__subscript",
                     "to": ["latex"],
                     "arguments": [],
-                    "type": "parent"
+                    "type": "any"
                 },
                 {
                     "from": "__strikethrough",
@@ -265,13 +362,13 @@ fn manifest() -> String {
                     "variables": {
                         "imports": {"type": "set", "access": "add"}
                     },
-                    "type": "parent"
+                    "type": "any"
                 },
                 {
                     "from": "__underlined",
                     "to": ["latex"],
                     "arguments": [],
-                    "type": "parent"
+                    "type": "any"
                 },
                 {
                     "from": "__math",
@@ -305,7 +402,7 @@ fn manifest() -> String {
                     "to": ["latex"],
                     "arguments": [],
                     "evaluate-before-children": true,
-                    "type": "parent"
+                    "type": "any"
                 },
                 {
                     "from": "__heading",

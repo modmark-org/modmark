@@ -2,9 +2,38 @@ use std::{
     env,
     fmt::Write,
     io::{self, Read},
+    collections::HashMap
 };
 
-use serde_json::{from_str, json, Value};
+use serde::{Deserialize, Serialize};
+use serde_json::{from_str, json, to_value, Value};
+
+#[derive(Serialize, Deserialize)]
+#[serde(untagged)]
+enum JsonEntry {
+    ParentNode {
+        name: String,
+        arguments: HashMap<String, Value>,
+        children: Vec<Self>,
+    },
+    Module {
+        name: String,
+        #[serde(default)]
+        data: String,
+        #[serde(default)]
+        arguments: HashMap<String, Value>,
+        #[serde(default = "default_inline")]
+        inline: bool,
+    },
+    Compound(Vec<Self>),
+    Raw(String),
+}
+
+/// This is just a helper to ensure that omitted "inline" fields
+/// default to true.
+fn default_inline() -> bool {
+    true
+}
 
 macro_rules! raw {
     ($expr:expr) => {
@@ -13,6 +42,34 @@ macro_rules! raw {
             "data": $expr
         })
     }
+}
+
+macro_rules! inline_content {
+    ($expr:expr) => {
+        json!({
+            "name": "inline_content",
+            "data": $expr
+        })
+    }
+}
+
+macro_rules! block_content {
+    ($expr:expr) => {
+        json!({
+            "name": "block_content",
+            "data": $expr
+        })
+    }
+}
+
+macro_rules! dynamic_content {
+    ($cond:expr, $expr:expr) => {
+        if $cond {
+            block_content!($expr)
+        } else {
+            inline_content!($expr)
+        }
+    };
 }
 
 fn main() {
@@ -41,26 +98,26 @@ fn main() {
 }
 
 fn transform(from: &str) -> String {
-    let input: Value = {
+    let input: JsonEntry = {
         let mut buffer = String::new();
         io::stdin().read_to_string(&mut buffer).unwrap();
         from_str(&buffer).unwrap()
     };
 
     match from {
-        "__bold" => transform_tag(input, "strong"),
-        "__italic" => transform_tag(input, "em"),
-        "__superscript" => transform_tag(input, "sup"),
-        "__subscript" => transform_tag(input, "sub"),
-        "__underlined" => transform_tag(input, "u"),
-        "__verbatim" => transform_tag(input, "code"),
-        "__strikethrough" => transform_tag(input, "del"),
-        "__paragraph" => transform_tag(input, "p"),
-        "__math" => transform_math(input),
-        "__document" => transform_document(input),
-        "__text" => escape_text(input),
-        "__heading" => transform_heading(input),
-        "__error" => transform_error(input),
+        "__bold" => transform_tag(input, "strong", true),
+        "__italic" => transform_tag(input, "em", true),
+        "__superscript" => transform_tag(input, "sup", true),
+        "__subscript" => transform_tag(input, "sub", true),
+        "__underlined" => transform_tag(input, "u", true),
+        "__verbatim" => transform_tag(input, ("code", "pre"), false),
+        "__strikethrough" => transform_tag(input, "del", true),
+        "__paragraph" => transform_tag(input, "p", true),
+        "__math" => transform_math(to_value(input).unwrap()),
+        "__document" => transform_document(to_value(input).unwrap()),
+        "__text" => escape_text(to_value(input).unwrap()),
+        "__heading" => transform_heading(to_value(input).unwrap()),
+        "__error" => transform_error(to_value(input).unwrap()),
         _ => panic!("element not supported"),
     }
 }
@@ -161,23 +218,60 @@ fn escape(text: &str) -> String {
         .replace('\'', "&#39;")
 }
 
-fn transform_tag(node: Value, html_tag: &str) -> String {
-    let mut result = String::new();
-    result.push('[');
+trait HtmlTag {
+    fn inline(&self) -> &str;
+    fn multiline(&self) -> &str;
 
-    write!(result, "{},", raw!(format!("<{html_tag}>"))).unwrap();
-
-    if let Value::Array(children) = &node["children"] {
-        for child in children {
-            result.push_str(&serde_json::to_string(child).unwrap());
-            result.push(',');
+    fn dynamic(&self, inline: bool) -> &str {
+        if inline {
+            self.inline()
+        } else {
+            self.multiline()
         }
     }
+}
 
-    write!(result, "{}", raw!(format!("</{html_tag}>"))).unwrap();
-    result.push(']');
+impl HtmlTag for &str {
+    fn inline(&self) -> &str {
+        self
+    }
 
-    result
+    fn multiline(&self) -> &str {
+        self
+    }
+}
+
+impl HtmlTag for (&str, &str) {
+    fn inline(&self) -> &str {
+        self.0
+    }
+
+    fn multiline(&self) -> &str {
+        self.1
+    }
+}
+
+fn transform_tag<T: HtmlTag>(node: JsonEntry, html_tag: T, reparse: bool) -> String {
+    let mut result: Vec<Value> = vec![];
+
+    match node {
+        JsonEntry::ParentNode {children, ..} => {
+            result.push(Value::from(format!("<{}>", html_tag.inline())));
+            result.extend(children.into_iter().map(|x| to_value(x).unwrap()));
+            result.push(Value::from(format!("</{}>", html_tag.inline())));
+        }
+        JsonEntry::Module { data, inline, .. } => {
+            result.push(Value::from(format!("<{}>", html_tag.dynamic(inline))));
+            if reparse {
+                result.push(dynamic_content!(inline, data));
+            } else {
+                result.push(json!({"name": "__text", "data": data}));
+            }
+            result.push(Value::from(format!("</{}>", html_tag.dynamic(inline))));
+        }
+        _ => {}
+    }
+    serde_json::to_string(&result).unwrap()
 }
 
 fn transform_math(node: Value) -> String {
@@ -225,43 +319,43 @@ fn manifest() -> String {
                     "from": "__bold",
                     "to": ["html"],
                     "arguments": [],
-                    "type": "parent"
+                    "type": "any"
                 },
                 {
                     "from": "__italic",
                     "to": ["html"],
                     "arguments": [],
-                    "type": "parent"
+                    "type": "any"
                 },
                 {
                     "from": "__superscript",
                     "to": ["html"],
                     "arguments": [],
-                    "type": "parent"
+                    "type": "any"
                 },
                 {
                     "from": "__subscript",
                     "to": ["html"],
                     "arguments": [],
-                    "type": "parent"
+                    "type": "any"
                 },
                 {
                     "from": "__strikethrough",
                     "to": ["html"],
                     "arguments": [],
-                    "type": "parent"
+                    "type": "any"
                 },
                 {
                     "from": "__underlined",
                     "to": ["html"],
                     "arguments": [],
-                    "type": "parent"
+                    "type": "any"
                 },
                 {
                     "from": "__verbatim",
                     "to": ["html"],
                     "arguments": [],
-                    "type": "parent"
+                    "type": "any"
                 },
                 {
                     "from": "__document",
