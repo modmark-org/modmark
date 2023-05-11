@@ -292,52 +292,94 @@ mod tests {
             version: "0.1".to_string(),
             description: "This package supports [table] modules".to_string(),
             transforms: vec![Transform {
-                from: "table".to_string(),
-                to: vec![OutputFormat::new("html"), OutputFormat::new("latex")],
-                description: None,
-                arguments: vec![
-                    ArgInfo {
-                        name: "caption".to_string(),
-                        default: Some(Value::String("".to_string())),
-                        description: "The caption for the table".to_string(),
-                        r#type: PrimitiveArgType::String.into()
-                    }, ArgInfo {
-                        name: "label".to_string(),
-                        default: Some(Value::String("".to_string())),
-                        description: "The label to use for the table, to be able to refer to it from the document".to_string(),
-                        r#type: PrimitiveArgType::String.into()
-                    }, ArgInfo {
-                        name: "header".to_string(),
-                        default: Some(Value::String("none".to_string())),
-                        description: "Style to apply to heading, none/bold".to_string(),
-                        r#type: ArgType::Enum(vec!["none".to_string(), "bold".to_string()])
-                    }, ArgInfo {
-                        name: "alignment".to_string(),
-                        default: Some(Value::String("left".to_string())),
-                        description: "Horizontal alignment in cells, left/center/right or l/c/r for each column".to_string(),
-                        r#type: PrimitiveArgType::String.into()
-                    }, ArgInfo {
-                        name: "borders".to_string(),
-                        default: Some(Value::String("all".to_string())),
-                        description: "Which borders to draw".to_string(),
-                        r#type: ArgType::Enum(vec!["all".to_string(), "horizontal".to_string(), "vertical".to_string(), "outer".to_string(), "none".to_string()])
-                    }, ArgInfo {
-                        name: "delimiter".to_string(),
-                        default: Some(Value::String("|".to_string())),
-                        description: "The delimiter between cells".to_string(),
-                        r#type: PrimitiveArgType::String.into()
-                    }, ArgInfo {
-                        name: "strip_whitespace".to_string(),
-                        default: Some(Value::String("true".to_string())),
-                        description: "true/false to strip/don't strip whitespace in cells".to_string(),
-                        r#type: ArgType::Enum(vec!["true".to_string(), "false".to_string()]),
-                    },
-                ],
-                variables: HashMap::new(),
-                unknown_content: true,
-                evaluate_before_children: false,
-                r#type: TransformType::Module
-            }],
+                    from: "table".to_string(),
+                    to: vec![OutputFormat::new("html"), OutputFormat::new("latex")],
+                    description: Some("Makes a table. Use one row for each row in the table, and separate the columns by the delimiter (default = |)".to_string()),
+                    arguments: vec![
+                        ArgInfo {
+                            name: "caption".to_string(),
+                            default: Some(Value::String("".to_string())),
+                            description: "The caption for the table".to_string(),
+                            r#type: PrimitiveArgType::String.into(),
+                        }, ArgInfo {
+                            name: "label".to_string(),
+                            default: Some(Value::String("".to_string())),
+                            description: "The label to use for the table, to be able to refer to it from the document".to_string(),
+                            r#type: PrimitiveArgType::String.into(),
+                        }, ArgInfo {
+                            name: "header".to_string(),
+                            default: Some(Value::String("none".to_string())),
+                            description: "Style to apply to heading, none/bold".to_string(),
+                            r#type: ArgType::Enum(vec!["none".to_string(), "bold".to_string()]),
+                        }, ArgInfo {
+                            name: "alignment".to_string(),
+                            default: Some(Value::String("left".to_string())),
+                            description: "Horizontal alignment in cells, left/center/right or l/c/r for each column".to_string(),
+                            r#type: PrimitiveArgType::String.into(),
+                        }, ArgInfo {
+                            name: "borders".to_string(),
+                            default: Some(Value::String("all".to_string())),
+                            description: "Which borders to draw".to_string(),
+                            r#type: ArgType::Enum(vec!["all".to_string(), "horizontal".to_string(), "vertical".to_string(), "outer".to_string(), "none".to_string()]),
+                        }, ArgInfo {
+                            name: "delimiter".to_string(),
+                            default: Some(Value::String("|".to_string())),
+                            description: "The delimiter between cells".to_string(),
+                            r#type: PrimitiveArgType::String.into(),
+                        }, ArgInfo {
+                            name: "strip_whitespace".to_string(),
+                            default: Some(Value::String("true".to_string())),
+                            description: "true/false to strip/don't strip whitespace in cells".to_string(),
+                            r#type: ArgType::Enum(vec!["true".to_string(), "false".to_string()]),
+                        },
+                    ],
+                    variables: HashMap::new(),
+                    unknown_content: true,
+                    evaluate_before_children: false,
+                    r#type: TransformType::Module,
+                }, Transform {
+                     from: "big-table".to_string(),
+                     to: vec![OutputFormat::new("html"), OutputFormat::new("latex")],
+                     description: Some("Large variant of the table, which accepts block content. Write the content of each cell on multiple lines, and use column-delimiter between cells on the same row. Then, use row-delimiter between rows.".to_string()),
+                     arguments: vec![
+                         ArgInfo {
+                             name: "caption".to_string(),
+                             default: Some(Value::String("".to_string())),
+                             description: "The caption for the table".to_string(),
+                             r#type: PrimitiveArgType::String.into(),
+                         }, ArgInfo {
+                             name: "label".to_string(),
+                             default: Some(Value::String("".to_string())),
+                             description: "The label to use for the table, to be able to refer to it from the document".to_string(),
+                             r#type: PrimitiveArgType::String.into(),
+                         }, ArgInfo {
+                             name: "alignment".to_string(),
+                             default: Some(Value::String("left".to_string())),
+                             description: "Horizontal alignment in cells, left/center/right or l/c/r for each column".to_string(),
+                             r#type: PrimitiveArgType::String.into(),
+                         }, ArgInfo {
+                             name: "borders".to_string(),
+                             default: Some(Value::String("all".to_string())),
+                             description: "Which borders to draw".to_string(),
+                             r#type: ArgType::Enum(vec!["all".to_string(), "horizontal".to_string(), "vertical".to_string(), "outer".to_string(), "none".to_string()]),
+                         }, ArgInfo {
+                             name: "column-delimiter".to_string(),
+                             default: Some(Value::String("[next-column]".to_string())),
+                             description: "The delimiter between columns".to_string(),
+                             r#type: PrimitiveArgType::String.into(),
+                         }, ArgInfo {
+                             name: "row-delimiter".to_string(),
+                             default: Some(Value::String("[next-row]".to_string())),
+                             description: "The delimiter between rows".to_string(),
+                             r#type: PrimitiveArgType::String.into(),
+                         },
+                     ],
+                     variables: HashMap::new(),
+                     unknown_content: true,
+                     evaluate_before_children: false,
+                     r#type: TransformType::Module,
+                }
+            ],
         };
 
         assert_eq!(info.as_ref(), &foo);

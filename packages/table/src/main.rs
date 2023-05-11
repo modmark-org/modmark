@@ -22,6 +22,25 @@ macro_rules! inline_content {
     }
 }
 
+macro_rules! block_content {
+    ($expr:expr) => {
+        json!({
+            "name": "block_content",
+            "data": $expr
+        })
+    }
+}
+
+macro_rules! dynamic_content {
+    ($cond:expr, $expr:expr) => {
+        if $cond {
+            block_content!($expr)
+        } else {
+            inline_content!($expr)
+        }
+    };
+}
+
 macro_rules! import {
     ($e:expr) => {json!({"name": "set-add", "arguments": {"name": "imports"}, "data": $e})}
 }
@@ -59,7 +78,22 @@ fn manifest() {
                         {"name": "delimiter", "default": "|", "description": "The delimiter between cells"},
                         {"name": "strip_whitespace", "default": "true", "type": ["true", "false"], "description": "true/false to strip/don't strip whitespace in cells"}
                     ],
-                    "unknown-content": true
+                    "unknown-content": true,
+                    "description": "Makes a table. Use one row for each row in the table, and separate the columns by the delimiter (default = |)"
+                },
+                {
+                    "from": "big-table",
+                    "to": ["html", "latex"],
+                    "arguments": [
+                        {"name": "caption", "default": "", "description": "The caption for the table"},
+                        {"name": "label", "default":"", "description": "The label to use for the table, to be able to refer to it from the document"},
+                        {"name": "alignment", "default": "left", "description": "Horizontal alignment in cells, left/center/right or l/c/r for each column"},
+                        {"name": "borders", "default": "all", "type": ["all", "horizontal", "vertical", "outer", "none"], "description": "Which borders to draw"},
+                        {"name": "column-delimiter", "default": "[next-column]", "description": "The delimiter between columns"},
+                        {"name": "row-delimiter", "default": "[next-row]", "description": "The delimiter between rows"},
+                    ],
+                    "unknown-content": true,
+                    "description": "Large variant of the table, which accepts block content. Write the content of each cell on multiple lines, and use column-delimiter between cells on the same row. Then, use row-delimiter between rows."
                 }
             ],
             "variables": {
@@ -71,14 +105,15 @@ fn manifest() {
 
 fn transform(from: &str, to: &str) {
     match from {
-        "table" => transform_table(to),
+        "table" => transform_table(to, false),
+        "big-table" => transform_table(to, true),
         other => {
             eprintln!("Package does not support {other}");
         }
     }
 }
 
-fn transform_table(to: &str) {
+fn transform_table(to: &str, big: bool) {
     // We make sure to exit early if invalid format, not to do unnecessary calculations
     if to != "latex" && to != "html" {
         eprintln!("Unsupported format {to}, only HTML and LaTeX are supported!");
@@ -94,7 +129,7 @@ fn transform_table(to: &str) {
 
     // Try to parse it as a table. If none, parse_table made sure to log the errors and we exit
     // without returning valid JSON
-    let Some(table) = parse_table(&input) else {
+    let Some(table) = parse_table(&input, big) else {
         return;
     };
 
@@ -258,6 +293,7 @@ struct Table<'a> {
     header: bool,
     caption: Option<&'a str>,
     label: Option<&'a str>,
+    big: bool,
 }
 
 impl Table<'_> {
@@ -293,11 +329,11 @@ impl Table<'_> {
             let values = if idx == 0 && self.header {
                 row.iter()
                     .map(|c| format!("**{c}**"))
-                    .map(|c| inline_content!(c))
+                    .map(|c| dynamic_content!(self.big, c))
                     .collect::<Vec<Value>>()
             } else {
                 row.iter()
-                    .map(|c| inline_content!(c))
+                    .map(|c| dynamic_content!(self.big, c))
                     .collect::<Vec<Value>>()
             };
 
@@ -375,7 +411,7 @@ impl Table<'_> {
                     vec.push(raw!(format!(
                         r#"<th style="{alignment}{inside_border_style}">"#
                     )));
-                    vec.push(inline_content!(elem));
+                    vec.push(dynamic_content!(self.big, elem));
                     vec.push(raw!("</th>"));
                 }
             } else {
@@ -384,7 +420,7 @@ impl Table<'_> {
                     vec.push(raw!(format!(
                         r#"<td style="{alignment}{inside_border_style}">"#
                     )));
-                    vec.push(inline_content!(elem));
+                    vec.push(dynamic_content!(self.big, elem));
                     vec.push(raw!("</td>"));
                 }
             }
@@ -399,13 +435,7 @@ impl Table<'_> {
 
 // Parses the JSON input to a table, if possible. Warnings/errors are printed out when running this.
 // Many of the arguments uses try_into() to optionally get a Border, Alignment etc
-fn parse_table(input: &Value) -> Option<Table> {
-    let delimiter = input["arguments"]["delimiter"].as_str().unwrap();
-    if delimiter.contains('\\') {
-        eprintln!("The delimiter may not contain backslashes");
-        return None;
-    }
-
+fn parse_table(input: &Value, big: bool) -> Option<Table> {
     let borders = match input["arguments"]["borders"].as_str().unwrap().try_into() {
         Ok(border) => border,
         Err(()) => {
@@ -436,7 +466,7 @@ fn parse_table(input: &Value) -> Option<Table> {
 
     let strip_whitespace = match input["arguments"]["strip_whitespace"]
         .as_str()
-        .unwrap()
+        .unwrap_or("false")
         .to_ascii_lowercase()
         .as_str()
     {
@@ -451,7 +481,7 @@ fn parse_table(input: &Value) -> Option<Table> {
 
     let header = match input["arguments"]["header"]
         .as_str()
-        .unwrap()
+        .unwrap_or("none")
         .to_ascii_lowercase()
         .as_str()
     {
@@ -465,7 +495,20 @@ fn parse_table(input: &Value) -> Option<Table> {
     };
 
     let body = input["data"].as_str().unwrap();
-    let mut content = parse_content(body, delimiter, strip_whitespace);
+
+    let mut content = if big {
+        let row_delimiter = input["arguments"]["row-delimiter"].as_str().unwrap();
+        let column_delimiter = input["arguments"]["column-delimiter"].as_str().unwrap();
+        parse_big_content(body, row_delimiter, column_delimiter)
+    } else {
+        let delimiter = input["arguments"]["delimiter"].as_str().unwrap();
+        if delimiter.contains('\\') {
+            eprintln!("The delimiter may not contain backslashes");
+            return None;
+        }
+        parse_content(body, delimiter, strip_whitespace)
+    };
+
     let height = content.len();
 
     if height == 0 {
@@ -479,6 +522,7 @@ fn parse_table(input: &Value) -> Option<Table> {
             header,
             caption: None,
             label: None,
+            big,
         });
     }
 
@@ -508,6 +552,7 @@ fn parse_table(input: &Value) -> Option<Table> {
         header,
         caption,
         label,
+        big,
     })
 }
 
@@ -515,6 +560,17 @@ fn parse_content<'a>(input: &'a str, delimiter: &'a str, trim: bool) -> Vec<Vec<
     input
         .lines()
         .map(|row| split_by_delimiter(row, delimiter, trim))
+        .collect()
+}
+
+fn parse_big_content<'a>(
+    input: &'a str,
+    row_delimiter: &'a str,
+    col_delimiter: &'a str,
+) -> Vec<Vec<&'a str>> {
+    input
+        .split(row_delimiter)
+        .map(|row| row.split(col_delimiter).collect::<Vec<_>>())
         .collect()
 }
 
