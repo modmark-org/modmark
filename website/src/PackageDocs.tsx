@@ -1,15 +1,14 @@
-import { useState } from "react";
-import { FiPackage } from "react-icons/fi";
-import { MdExpandLess, MdExpandMore } from "react-icons/md";
+import {useState} from "react";
+import {FiPackage} from "react-icons/fi";
+import {MdExpandLess, MdExpandMore} from "react-icons/md";
 import styled from "styled-components";
-import Button from "./Buttons";
-import { PackageInfo, Transform as TransformType } from "./compilerTypes";
+import {PackageInfo, Transform as TransformType} from "./compilerTypes";
 
 
 const PackageContainer = styled.div`
-    padding: 0.5rem;
-    width: 100%;
-    box-sizing: border-box;
+  padding: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
 `;
 
 const PackageName = styled.h1`
@@ -84,7 +83,13 @@ const To = styled.div`
 const TransformHeading = styled.div`
     display: flex;  
     justify-content: space-between;
+    align-items: center;
     user-select: none;
+  
+    & > div {
+      gap: 1rem;
+      display: flex;
+    }
 `;
 
 const TransformList = styled.div`
@@ -105,8 +110,11 @@ const Default = styled.code`
     opacity: 0.7;
 `
 
-const ArgTypeContainer = styled.code<{ color: string }>`
+const TypeContainer = styled.code<{ color: string }>`
     background: ${(props) => props.color};
+    display:inline-flex;
+    justify-content: center;
+    align-items: center;
     padding: 0.1rem 0.3rem;
     border-radius: 0.3rem;
     color: white;
@@ -138,20 +146,50 @@ function ArgType({ type }: { type: string | string[] }) {
         str = type;
     }
 
-    return <ArgTypeContainer color={color ?? "#748e54"}>{str}</ArgTypeContainer>
+    return <TypeContainer color={color ?? "#748e54"}>{str}</TypeContainer>
 }
 
-function Transform({ transform }: { transform: TransformType }) {
+function TransformTypeLabel({type}: { type: string }) {
+    let color = "";
+    let text = "";
+    switch (type) {
+        case "module":
+            color = "#831fa4";
+            text = "Module";
+            break;
+        case "inline-module":
+            color = "#372cd3";
+            text = "Inline-only module";
+            break;
+        case "multiline-module":
+            color = "#bf2ccb";
+            text = "Multiline-only module";
+            break;
+        case "parent":
+            color = "#b0962e"
+            text = "Parent"
+            break;
+        case "any":
+            color = "#fa6606";
+            text = "Any";
+            break;
+    }
+
+    return <TypeContainer color={color ?? "#123456"} >{text}</TypeContainer>;
+}
+
+
+function Transform({transform}: { transform: TransformType }) {
     const [expanded, SetExpanded] = useState(false);
     return <TransformContainer onClick={() => SetExpanded((expanded) => !expanded)}>
         <TransformHeading>
             <div>
                 {
                     expanded ?
-                        <MdExpandLess style={{ marginRight: 5 }} /> : <MdExpandMore style={{ marginRight: 5 }} />
+                        <MdExpandLess style={{marginRight: 5}}/> : <MdExpandMore style={{marginRight: 5}}/>
                 }
-
                 <From>{transform.from}</From>
+                <TransformTypeLabel type={transform.type} />
             </div>
             <To>supports {transform.to.length === 0 && "any"} {transform.to.map((to) => <span key={to}>{to}</span>)}</To>
         </TransformHeading>

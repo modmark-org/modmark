@@ -48,6 +48,7 @@ export type Transform = {
     variables: Record<string, VarInfo>,
     "unknown-content": boolean,
     "evaluate-before-children": boolean,
+    type: string
 }
 
 export type PackageInfo = {
