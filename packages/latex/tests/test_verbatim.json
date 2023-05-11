@@ -12,12 +12,7 @@
     "__test_transform_to": "latex",
     "__test_expected_result": [
         "\\verb|",
-        {
-            "arguments": {},
-            "data": "Hello, world",
-            "inline": true,
-            "name": "__text"
-        },
+        "Hello, world",
         "|"
     ]
 }
