@@ -1,10 +1,10 @@
 import styled from "styled-components";
 import PackageDocs from "./PackageDocs";
-import { CompilationException, Compiler, PackageInfo, handleException } from "./compilerTypes";
-import { useEffect, useState, useMemo } from "react";
+import {CompilationException, Compiler, handleException, PackageInfo} from "./compilerTypes";
+import {useEffect, useMemo, useState} from "react";
 import * as Comlink from "comlink";
-import { Link } from "react-router-dom";
-import { FileUploader } from "react-drag-drop-files";
+import {Link} from "react-router-dom";
+import {FileUploader} from "react-drag-drop-files";
 
 const Container = styled.div`
 `;
@@ -124,7 +124,7 @@ export default function PackageDocsPage() {
         <Hero>
             <div>
                 <Link to="../">
-                    <img src="./logo.svg" alt="Logo" width="80" />
+                    <img src="./logo.svg" alt="Logo" width="80"/>
                 </Link>
                 <h1>Package documentation</h1>
                 <p>Read documentation for the standard library, or drag and drop one of your own packages.</p>
@@ -137,10 +137,14 @@ export default function PackageDocsPage() {
                 {
                     error !== null && <Errors>
                         {
-                            error.type === "compilationError" && error.data.map((e, i) => <div key={i}><p>{e.message}</p><pre>{e.raw}</pre></div>)
+                            error.type === "compilationError" && error.data.map((e, i) => <div key={i}><p>{e.message}</p>
+                                <pre>{e.raw}</pre>
+                            </div>)
                         }
                         {
-                            error.type === "parsingError" && <div><p>{error.data.message}</p><pre>{error.data.raw}</pre></div>
+                            error.type === "parsingError" && <div><p>{error.data.message}</p>
+                                <pre>{error.data.raw}</pre>
+                            </div>
                         }
                     </Errors>
                 }
@@ -149,9 +153,9 @@ export default function PackageDocsPage() {
         </Hero>
         <Main>
             {
-                loaded ? <PackageDocs packages={packages} /> : <p>Loading compiler...</p>
+                loaded ? <PackageDocs packages={packages}/> : <p>Loading compiler...</p>
             }
         </Main>
 
-    </Container >
+    </Container>
 }

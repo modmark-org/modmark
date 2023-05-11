@@ -225,49 +225,49 @@ fn manifest() -> String {
                     "from": "__bold",
                     "to": ["html"],
                     "arguments": [],
-                   "type": "parent"
+                    "type": "parent"
                 },
                 {
                     "from": "__italic",
                     "to": ["html"],
                     "arguments": [],
-                   "type": "parent"
+                    "type": "parent"
                 },
                 {
                     "from": "__superscript",
                     "to": ["html"],
                     "arguments": [],
-                   "type": "parent"
+                    "type": "parent"
                 },
                 {
                     "from": "__subscript",
                     "to": ["html"],
                     "arguments": [],
-                   "type": "parent"
+                    "type": "parent"
                 },
                 {
                     "from": "__strikethrough",
                     "to": ["html"],
                     "arguments": [],
-                   "type": "parent"
+                    "type": "parent"
                 },
                 {
                     "from": "__underlined",
                     "to": ["html"],
                     "arguments": [],
-                   "type": "parent"
+                    "type": "parent"
                 },
                 {
                     "from": "__verbatim",
                     "to": ["html"],
                     "arguments": [],
-                   "type": "parent"
+                    "type": "parent"
                 },
                 {
                     "from": "__document",
                     "to": ["html"],
                     "arguments": [],
-                   "type": "parent"
+                    "type": "parent"
                 },
                 {
                     "from": "__text",

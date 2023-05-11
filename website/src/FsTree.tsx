@@ -1,10 +1,10 @@
-import { FiDownload, FiFolder, FiFolderPlus, FiUpload } from "react-icons/fi";
-import { MdDriveFileRenameOutline, MdOutlineDelete } from "react-icons/md";
-import { IoMdArrowBack, IoMdCheckmark, IoMdClose } from "react-icons/io";
+import {FiDownload, FiFolder, FiFolderPlus, FiUpload} from "react-icons/fi";
+import {MdDriveFileRenameOutline, MdOutlineDelete} from "react-icons/md";
+import {IoMdArrowBack, IoMdCheckmark, IoMdClose} from "react-icons/io";
 import styled from "styled-components";
 import Button from "./Buttons";
-import { useEffect, useState } from "react";
-import { FileUploader } from "react-drag-drop-files";
+import {useEffect, useState} from "react";
+import {FileUploader} from "react-drag-drop-files";
 
 
 const Container = styled.div`
@@ -124,7 +124,7 @@ type EntryProps = {
     onMove: () => void,
 }
 
-function Entry({ name, isDir, onRemove, onDownload, onRename, onMove }: EntryProps) {
+function Entry({name, isDir, onRemove, onDownload, onRename, onMove}: EntryProps) {
     const [renaming, setRenaming] = useState(false);
     const [newName, setNewName] = useState(name);
 
@@ -150,39 +150,39 @@ function Entry({ name, isDir, onRemove, onDownload, onRename, onMove }: EntryPro
             renaming ?
                 <>
                     <Name>
-                        {isDir && <FiFolder />}
+                        {isDir && <FiFolder/>}
                         <input autoFocus type="text" onKeyDown={(e) => {
                             if (e.key === "Enter") rename();
                             else if (e.key === "Escape") cancelRename();
-                        }} value={newName} onChange={(e) => setNewName(e.target.value)} />
+                        }} value={newName} onChange={(e) => setNewName(e.target.value)}/>
                     </Name>
 
                     <Actions>
                         <Action onClick={rename}>
-                            <IoMdCheckmark />
+                            <IoMdCheckmark/>
                         </Action>
                         <Action
                             onClick={cancelRename}
                         >
-                            <IoMdClose />
+                            <IoMdClose/>
                         </Action>
                     </Actions>
                 </> :
                 <>
 
-                    <Name style={isDir ? { cursor: "pointer" } : {}} onClick={nameClick}>
-                        {isDir && <FiFolder />}
-                        <span className={isDir ? "clickable" : ""} >{name}</span>
+                    <Name style={isDir ? {cursor: "pointer"} : {}} onClick={nameClick}>
+                        {isDir && <FiFolder/>}
+                        <span className={isDir ? "clickable" : ""}>{name}</span>
                     </Name>
 
                     <Actions>
-                        <Action onClick={() => setRenaming(true)}> <MdDriveFileRenameOutline /></Action>
-                        {!isDir && <Action onClick={onDownload}><FiDownload /></Action>}
-                        <Action onClick={onRemove}><MdOutlineDelete /></Action>
+                        <Action onClick={() => setRenaming(true)}> <MdDriveFileRenameOutline/></Action>
+                        {!isDir && <Action onClick={onDownload}><FiDownload/></Action>}
+                        <Action onClick={onRemove}><MdOutlineDelete/></Action>
                     </Actions>
                 </>
         }
-    </EntryContainer >
+    </EntryContainer>
 }
 
 
@@ -199,7 +199,17 @@ export type FsTreeProps = {
 };
 
 
-export default function FsTree({ listFiles, addFile, readFile, removeFolder, removeFile, renameEntry, addFolder, incFolderCounter, folderCounter }: FsTreeProps) {
+export default function FsTree({
+                                   listFiles,
+                                   addFile,
+                                   readFile,
+                                   removeFolder,
+                                   removeFile,
+                                   renameEntry,
+                                   addFolder,
+                                   incFolderCounter,
+                                   folderCounter
+                               }: FsTreeProps) {
     const [workingDir, setWorkingDir] = useState("/");
     const [entries, setEntries] = useState<[string, boolean][]>([]);
 
@@ -272,13 +282,13 @@ export default function FsTree({ listFiles, addFile, readFile, removeFolder, rem
         <Top>
             <strong>Current directory: {workingDir}</strong>
             <Buttons>
-                <Button onClick={handleBack} disabled={workingDir === "/"}><IoMdArrowBack /> Back</Button>
+                <Button onClick={handleBack} disabled={workingDir === "/"}><IoMdArrowBack/> Back</Button>
                 <Button onClick={() => {
                     addFolder(workingDir + "Folder" + folderCounter);
                     incFolderCounter();
                     updateList();
                 }}>
-                    <FiFolderPlus /> New folder
+                    <FiFolderPlus/> New folder
                 </Button>
             </Buttons>
             <FileUploader
@@ -288,7 +298,7 @@ export default function FsTree({ listFiles, addFile, readFile, removeFolder, rem
                 label="Upload or drag and drop a file here"
             >
                 <Upload>
-                    <FiUpload size={30} /> Click or drag and drop to upload a file
+                    <FiUpload size={30}/> Click or drag and drop to upload a file
                 </Upload>
             </FileUploader>
         </Top>
@@ -305,5 +315,5 @@ export default function FsTree({ listFiles, addFile, readFile, removeFolder, rem
                 />)
             }
         </Entries>
-    </Container >
+    </Container>
 }
