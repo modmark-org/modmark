@@ -253,7 +253,7 @@ export default function Homepage() {
           If you have used Markdown before you will quickly feel right at home.
         </p>
         <p>
-          Read the getting started guide to learn more about different ways to <CodeFont>**style** ==text==</CodeFont> and include other elements in your document like a <CodeFont>[image](./image.png)</CodeFont> or a <CodeFont>[link](https://modmark.org)</CodeFont>.
+          Read the getting started guide to learn more about different ways to <CodeFont>**style** ==text==</CodeFont> and include other elements in your document like a <CodeFont>[cite](modmark)</CodeFont> or a <CodeFont>[link](https://modmark.org)</CodeFont>.
         </p>
       </Feature>
 
