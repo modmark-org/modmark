@@ -22,8 +22,8 @@ const Container = styled.div`
     position: relative;
     display: flex;
     flex-direction: column;
-    height: 100vh;
     width:100%;
+    height: calc(100vh - 3rem);
     box-sizing: border-box;
 `;
 
@@ -97,6 +97,7 @@ const Status = styled.div`
     gap: 0.5rem;
     right: 1rem;
     bottom: 1rem;
+    box-sizing: border-box;
     padding: 0.5rem 1rem 0.5rem 1rem;
     font-size: 0.9rem;
     background: #f7f7f7;
@@ -150,6 +151,10 @@ function Playground() {
     }, []);
 
     const compile = (input: string, mode: Mode, instant: boolean) => {
+        if (!compilerLoaded) {
+            return;
+        }
+
         const compile_helper = () => {
             setStatus({ type: "compiling" });
             let start = new Date();

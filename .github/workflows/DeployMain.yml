@@ -42,7 +42,7 @@ jobs:
           chmod +x ./build_website.sh
           ./build_website.sh
       - name: Remove auto-generated .gitignore
-        run: rm dist/pkg/.gitignore
+        run: rm dist/web_bindings/.gitignore
       - name: Copy deployment files
         run: |
           mkdir site-deploy
