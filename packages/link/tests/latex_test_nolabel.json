@@ -1,22 +1,30 @@
 {
-  "name": "link",
-  "data": "https://google.com",
-  "arguments": {
-    "label": ""
-  },
-  "inline": true,
-  "__test_transform_to": "latex",
-  "__test_expected_result": [
-    {
-      "data": "\\href{https://google.com}{https://google.com}",
-      "name": "raw"
+    "name": "link",
+    "data": "https://google.com",
+    "arguments": {
+        "label": ""
     },
-    {
-      "arguments": {
-        "name": "imports"
-      },
-      "data": "\\usepackage[hidelinks]{hyperref}",
-      "name": "set-add"
-    }
-  ]
+    "inline": true,
+    "__test_transform_to": "latex",
+    "__test_expected_result": [
+        {
+            "data": "\\href{https://google.com}{",
+            "name": "raw"
+        },
+        {
+            "data": "https://google.com",
+            "name": "inline_content"
+        },
+        {
+            "data": "}",
+            "name": "raw"
+        },
+        {
+            "arguments": {
+                "name": "imports"
+            },
+            "data": "\\usepackage[hidelinks]{hyperref}",
+            "name": "set-add"
+        }
+    ]
 }

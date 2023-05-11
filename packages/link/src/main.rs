@@ -103,10 +103,12 @@ fn transform_link(to: &str) {
             let link = input["data"].as_str().unwrap();
 
             let text = if label.is_empty() { link } else { label };
-            let data = format!(r#"\href{{{}}}{{{}}}"#, link, text);
+            let prefix = format!(r#"\href{{{}}}{{"#, link);
 
             let output = json!([
-                {"name": "raw", "data": data},
+                {"name": "raw", "data": prefix},
+                {"name": "inline_content", "data": text},
+                {"name": "raw", "data": "}"},
                 import![r"\usepackage[hidelinks]{hyperref}"]
             ]);
             print!("{output}");

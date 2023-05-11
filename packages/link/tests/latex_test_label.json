@@ -1,22 +1,30 @@
 {
-  "name": "link",
-  "data": "https://google.com",
-  "arguments": {
-    "label": "Google"
-  },
-  "inline": true,
-  "__test_transform_to": "latex",
-  "__test_expected_result": [
-    {
-      "data": "\\href{https://google.com}{Google}",
-      "name": "raw"
+    "name": "link",
+    "data": "https://google.com",
+    "arguments": {
+        "label": "Google"
     },
-    {
-      "arguments": {
-        "name": "imports"
-      },
-      "data": "\\usepackage[hidelinks]{hyperref}",
-      "name": "set-add"
-    }
-  ]
+    "inline": true,
+    "__test_transform_to": "latex",
+    "__test_expected_result": [
+        {
+            "data": "\\href{https://google.com}{",
+            "name": "raw"
+        },
+        {
+            "data": "Google",
+            "name": "inline_content"
+        },
+        {
+            "data": "}",
+            "name": "raw"
+        },
+        {
+            "arguments": {
+                "name": "imports"
+            },
+            "data": "\\usepackage[hidelinks]{hyperref}",
+            "name": "set-add"
+        }
+    ]
 }
