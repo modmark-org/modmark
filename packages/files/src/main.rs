@@ -132,10 +132,6 @@ fn transform_text(input: Value, to: &str) {
 fn transform_image(input: Value, to: &str) {
     match to {
         "html" => {
-            if let Some(true) = input["inline"].as_bool() {
-                eprintln!("The [image] module should not be invoked inline.")
-            }
-
             let path = input["data"].as_str().unwrap().trim();
             let alt = {
                 let alt_text = input["arguments"]["alt"].as_str().unwrap();
