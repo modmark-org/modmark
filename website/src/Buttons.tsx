@@ -17,7 +17,7 @@ export const Button = styled.button<{ active?: boolean }>`
     ${(props) => props.active && `
         background-color: rgb(219, 219, 219);
         box-shadow: 0 0 1px rgba(0, 0, 0, 0.637);`
-    }
+}
 
     &:hover {
         background-color: rgb(206, 206, 206);

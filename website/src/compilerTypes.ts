@@ -30,11 +30,11 @@ export type CompilationException = {
     type: "compilationError",
     data: { message: string, raw: string }[]
 } |
-{
-    type: "parsingError",
-    data: { message: string, raw: string }
-} |
-{ type: "noResult" }
+    {
+        type: "parsingError",
+        data: { message: string, raw: string }
+    } |
+    { type: "noResult" }
 
 export function handleException(expection: string): CompilationException {
     return JSON.parse(expection) as CompilationException
