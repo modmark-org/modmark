@@ -18,7 +18,7 @@ permissions:
 
 # Allow one concurrent deployment
 concurrency:
-  group: "preview-${{ github.event.number }}"
+  group: preview-${{ github.event.number }}
   cancel-in-progress: true
 
 jobs:
@@ -35,6 +35,11 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown, wasm32-wasi
+      - name: Install wasm-opt
+        run: |
+          npm i wasm-opt -g
+          mkdir $(dirname $(which wasm-opt))/bin
+          ln -s $(which wasm-opt) $(dirname $(which wasm-opt))/bin/wasm-opt
       - name: Install wasm-pack
         uses: jetli/wasm-pack-action@v0.4.0
       - name: Build website
