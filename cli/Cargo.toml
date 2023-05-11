@@ -26,4 +26,4 @@ notify =  { version = "5.1.0", default-features = false, features = ["macos_kque
 walkdir = "2"
 
 [features]
-default = ["modmark_core/bundle_std_packages"]
+default = ["modmark_core/bundle_std_packages", "modmark_core/optimize_bundled_packages", "modmark_core/precompile_wasm"]

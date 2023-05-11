@@ -16,6 +16,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Install wasm-opt
+        run: |
+          npm i wasm-opt -g
+          mkdir $(dirname $(which wasm-opt))/bin
+          ln -s $(which wasm-opt) $(dirname $(which wasm-opt))/bin/wasm-opt
       - name: Install toolchain (minimal, stable, wasm32-wasi)
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -29,6 +34,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Install wasm-opt
+        run: |
+          npm i wasm-opt -g
+          mkdir $(dirname $(which wasm-opt))/bin
+          ln -s $(which wasm-opt) $(dirname $(which wasm-opt))/bin/wasm-opt
       - name: Install toolchain (minimal, stable, wasm32-wasi)
         uses: dtolnay/rust-toolchain@stable
         with:

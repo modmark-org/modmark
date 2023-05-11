@@ -2,6 +2,7 @@
 // build warnings for functions not used
 #![allow(dead_code)]
 
+use std::fs::rename;
 use std::process::Child;
 use std::{
     env, fs,
@@ -73,12 +74,69 @@ fn build_packages() {
             } else {
                 #[cfg(all(
                     feature = "bundle_std_packages",
+                    feature = "optimize_bundled_packages"
+                ))]
+                opt_wasm(&name, &out_path);
+                #[cfg(all(
+                    feature = "bundle_std_packages",
                     feature = "native",
                     feature = "precompile_wasm"
                 ))]
                 precompile_wasm(&name, &out_path, &engine);
             }
         });
+}
+
+fn opt_wasm(name: &str, out_dir: &Path) {
+    let path = out_dir
+        .join(name)
+        .join("wasm32-wasi")
+        .join("release")
+        .join(format!("{name}.wasm"));
+    let tmp_path = path.with_file_name(format!("{name}-unoptimized.wasm"));
+
+    rename(&path, &tmp_path).expect("Move file");
+
+    // pwd when executing the script is in core. We go to the parent, then search for wasm-opt
+    // locally (in modmark root). If not found, we go to /website and search there. If still not
+    // found, search globally.
+    let local_suffix = PathBuf::from("node_modules/wasm-opt/bin/wasm-opt");
+    let current_dir = env::current_dir().unwrap();
+    let modmark_location = current_dir.parent().unwrap();
+    let modmark_install_location = modmark_location.join(&local_suffix);
+    let website_install_location = modmark_location.join("website").join(&local_suffix);
+    let which_wasm_opt = which::which("wasm-opt").map_err(|_| ());
+
+    let wasm_opt = fs::metadata(&modmark_install_location)
+        .map(|_| &modmark_install_location)
+        .or_else(|_| fs::metadata(&website_install_location).map(|_| &website_install_location))
+        .map_err(|_| ())
+        .or_else(|_| which_wasm_opt.as_ref())
+        .expect(&format!(
+            "Could not find wasm-opt, searched '{}', '{}' and globally",
+            modmark_install_location.display(),
+            website_install_location.display()
+        ));
+
+    let output = Command::new(&wasm_opt)
+        .arg(tmp_path)
+        .arg("--output")
+        .arg(path)
+        .arg("-Oz")
+        .output()
+        .unwrap();
+
+    if !output.stdout.is_empty() {
+        println!(
+            "{}",
+            String::from_utf8(output.stdout).expect("wasm-opt stdout being UTF-8")
+        );
+    }
+
+    if !output.stderr.is_empty() {
+        let message = String::from_utf8(output.stderr).expect("wasm-opt stderr being UTF-8");
+        println!("cargo:warning=wasm-opt on {name:12} stderr: {message}");
+    }
 }
 
 #[cfg(all(

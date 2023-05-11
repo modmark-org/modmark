@@ -30,6 +30,7 @@ topological-sort = "0.2.2"
 [build-dependencies]
 wasmer-compiler-cranelift = "3.1.1"
 wasmer-compiler = "3.1.1"
+which = "4.4.0"
 
 # native feature configures wasmer to target desktop platform
 # web feature configures wasmer to target web/js
@@ -38,9 +39,12 @@ wasmer-compiler = "3.1.1"
 # precompile_wasm is an addition to bundle_std_packages, which also pre-compiles the wasm files using wasmer/cranelift,
 # so startup times are reduced by ≈98%
 # default is native, bundle_std_packages and precompile_wasm
+# optimize_bundled_packages is a feature which runs wasm-opt on the bundled packages before including them in the
+# binary. It is compatible both on native and web targets, but does require wasm-opt to be installed
 [features]
-default = ["native", "bundle_std_packages", "precompile_wasm"]
+default = ["native", "bundle_std_packages", "precompile_wasm", "optimize_bundled_packages"]
 native = ["wasmer/sys-default", "wasmer-wasi/sys-default", "wasmer-vfs/host-fs"]
 web = ["wasmer/js-default", "wasmer-wasi/js", "wasmer-vfs/mem-fs"]
 bundle_std_packages = []
+optimize_bundled_packages = []
 precompile_wasm = []

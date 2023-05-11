@@ -8,7 +8,7 @@ To invoke the ModMark compiler, you can run
 
 > cargo run -- compile in.mdm out.html
 
-This will compile the input document `in.mdm` transforming it to HTML, and saving the output as `out.html`. In addition to the host platform target, the `wasm32-wasi` target is needed; `rustup target add wasm32-wasi`. See more information about the CLI tool at [cli/readme](cli/README.md).
+This will compile the input document `in.mdm` transforming it to HTML, and saving the output as `out.html`. In addition to the host platform target, the `wasm32-wasi` target is needed; `rustup target add wasm32-wasi`. See more information about the CLI tool at [cli/readme](cli/README.md). Compiling this project requires that `cargo` is installed, and to optimize the bundled wasm files, `wasm-opt` needs to be installed (`npm i wasm-opt -g`). To not use `wasm-opt`, the `optimize_bundled_packages` feature must be disabled.
 
 ## Overview
 
