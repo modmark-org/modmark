@@ -1,0 +1,92 @@
+{
+    "name": "big-table",
+    "arguments": {
+        "caption": "Comparison between programming^TM languages - which is best?",
+        "label": "",
+        "row-delimiter": "[next-row]",
+        "column-delimiter": "[next-column]",
+        "alignment": "left",
+        "borders": "none"
+    },
+    "data": "[big-table]\n## Python\n[code py]\ndef foo():\n    print(\"bar\");\n[next-column]\n## Rust\n[code rs]\nfn foo() {\n    println!(\"bar\");\n}\n[next-row]\n## Java\n[code java]\npublic static void foo() {\n    System.out.println(\"bar\");\n}\n[next-column]\n## ModMark\n[code txt]\nbar\n",
+    "inline": false,
+    "__test_transform_to": "html",
+    "__test_expected_result": [
+        {
+            "data": "<table>",
+            "name": "raw"
+        },
+        {
+            "data": "<caption>Comparison between programming^TM languages - which is best?</caption>",
+            "name": "raw"
+        },
+        {
+            "data": "<tr>",
+            "name": "raw"
+        },
+        {
+            "data": "<td style=\"text-align: left;\">",
+            "name": "raw"
+        },
+        {
+            "data": "[big-table]\n## Python\n[code py]\ndef foo():\n    print(\"bar\");\n",
+            "name": "block_content"
+        },
+        {
+            "data": "</td>",
+            "name": "raw"
+        },
+        {
+            "data": "<td style=\"text-align: left;\">",
+            "name": "raw"
+        },
+        {
+            "data": "\n## Rust\n[code rs]\nfn foo() {\n    println!(\"bar\");\n}\n",
+            "name": "block_content"
+        },
+        {
+            "data": "</td>",
+            "name": "raw"
+        },
+        {
+            "data": "</tr>",
+            "name": "raw"
+        },
+        {
+            "data": "<tr>",
+            "name": "raw"
+        },
+        {
+            "data": "<td style=\"text-align: left;\">",
+            "name": "raw"
+        },
+        {
+            "data": "\n## Java\n[code java]\npublic static void foo() {\n    System.out.println(\"bar\");\n}\n",
+            "name": "block_content"
+        },
+        {
+            "data": "</td>",
+            "name": "raw"
+        },
+        {
+            "data": "<td style=\"text-align: left;\">",
+            "name": "raw"
+        },
+        {
+            "data": "\n## ModMark\n[code txt]\nbar\n",
+            "name": "block_content"
+        },
+        {
+            "data": "</td>",
+            "name": "raw"
+        },
+        {
+            "data": "</tr>",
+            "name": "raw"
+        },
+        {
+            "data": "</table>",
+            "name": "raw"
+        }
+    ]
+}
