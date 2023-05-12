@@ -308,7 +308,7 @@ fn escape_text(module: Value) -> String {
             .split('\\')
             .map(|t| t.replace('{', r"\{").replace('}', r"\}"))
             .collect::<Vec<String>>()
-            .join(r"\textbacklash{}")
+            .join(r"\textbackslash{}")
             .replace('#', r"\#")
             .replace('$', r"\$")
             .replace('%', r"\%")
