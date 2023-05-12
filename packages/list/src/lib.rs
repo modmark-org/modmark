@@ -118,7 +118,7 @@ impl ListItem {
         match self {
             Content(content) => {
                 let mut json_vec = vec![];
-                json_vec.push(Value::from(r"\item"));
+                json_vec.push(Value::from(r"\item "));
                 json_vec.push(inline_content!(content));
                 json_vec.push(Value::from("\n"));
                 json_vec
