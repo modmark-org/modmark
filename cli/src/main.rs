@@ -412,13 +412,7 @@ async fn run_compile(args: &CompileArgs) -> Result<(), CliError> {
             });
         }
 
-        watch_files(
-            Some(document.clone()),
-            Some(connections.clone()),
-            &args,
-            &current_path,
-        )
-        .await?;
+        watch_files(Some(document.clone()), Some(connections.clone()), &args).await?;
 
         return Ok(());
     }
@@ -427,7 +421,7 @@ async fn run_compile(args: &CompileArgs) -> Result<(), CliError> {
     if args.watch && args.output.is_some() {
         // Just start the file watcher, but without html live preview
         // which means that we wil provide None instead of the document and connections
-        return watch_files(None, None, &args, &current_path).await;
+        return watch_files(None, None, &args).await;
     }
 
     // Otherwise, if they are not using the watcher or live preview
@@ -608,11 +602,10 @@ async fn handle_connection(socket: WebSocket, connections: PreviewConnections) {
 }
 
 /// Watch a path for file changes and send a reload message to all connected clients
-async fn watch_files<P: AsRef<Path>>(
+async fn watch_files(
     document: Option<PreviewDoc>,
     connections: Option<PreviewConnections>,
     args: &CompileArgs,
-    watch_dir: P,
 ) -> Result<(), CliError> {
     // Function to recompile the document:
     async fn compile(
@@ -658,9 +651,11 @@ async fn watch_files<P: AsRef<Path>>(
 
     let (mut watcher, mut rx) = get_watcher()?;
 
-    // Add a path to be watched. All files and directories at that path and
-    // below will be monitored for changes.
-    watcher.watch(watch_dir.as_ref(), RecursiveMode::Recursive)?;
+    // Watch the assets directory and the input file for changes
+    if let Some(assets) = &args.assets {
+        watcher.watch(Path::new(assets), RecursiveMode::Recursive)?;
+    }
+    watcher.watch(&args.input, RecursiveMode::Recursive)?;
 
     while let Some(res) = rx.next().await {
         match res {
