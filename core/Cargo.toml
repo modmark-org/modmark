@@ -42,7 +42,7 @@ which = "4.4.0"
 # optimize_bundled_packages is a feature which runs wasm-opt on the bundled packages before including them in the
 # binary. It is compatible both on native and web targets, but does require wasm-opt to be installed
 [features]
-default = ["native", "bundle_std_packages", "precompile_wasm", "optimize_bundled_packages"]
+default = ["native", "bundle_std_packages", "precompile_wasm"]
 native = ["wasmer/sys-default", "wasmer-wasi/sys-default", "wasmer-vfs/host-fs"]
 web = ["wasmer/js-default", "wasmer-wasi/js", "wasmer-vfs/mem-fs"]
 bundle_std_packages = []
