@@ -1,8 +1,8 @@
 use std::{
+    collections::HashMap,
     env,
     fmt::Write,
     io::{self, Read},
-    collections::HashMap
 };
 
 use serde::{Deserialize, Serialize};
@@ -122,29 +122,46 @@ fn transform(from: &str) -> String {
     }
 }
 
-fn transform_document(doc: Value) -> String {
-    let mut result = String::new();
-    result.push('[');
+fn transform_document(mut doc: Value) -> String {
+    let mut result = vec![raw!(
+        r#"
+<!DOCTYPE html>
+<html>
+<head>
+<title>Document</title>
+<meta charset="UTF-8">
+"#
+    )];
 
-    write!(result, "{},", raw!("<!DOCTYPE html>")).unwrap();
-    write!(result, "{},", raw!("<html><head><title>Document</title>")).unwrap();
-    write!(result, "{},", raw!("<meta charset=\"UTF-8\">")).unwrap();
+    // Add imports
+    let mut imports = {
+        let var = env::var("imports").unwrap_or("[]".to_string());
+        serde_json::from_str(&var).unwrap()
+    };
+    result.append(&mut imports);
 
-    write!(result, "{},", raw!("<style>")).unwrap();
-    write!(result, "{},", raw!(include_str!("templates/html.css"))).unwrap();
-    write!(result, "{},", raw!("</style></head><body><article>")).unwrap();
+    result.push(raw!("<style>"));
+    result.push(raw!(include_str!("templates/html.css")));
+    result.push(raw!(
+        r#"
+</style>
+</head>
+<body>
+<article>
+"#
+    ));
 
-    if let Value::Array(children) = &doc["children"] {
-        for child in children {
-            result.push_str(&serde_json::to_string(child).unwrap());
-            result.push(',');
+    if let Some(children) = doc.get_mut("children") {
+        if let Value::Array(ref mut children) = children {
+            result.append(children);
+        } else {
+            unreachable!("Children is not a list");
         }
     }
 
-    write!(result, "{}", raw!("</article></body></html>")).unwrap();
-    result.push(']');
+    result.push(raw!("</article></body></html>"));
 
-    result
+    serde_json::to_string(&result).unwrap()
 }
 
 fn transform_heading(heading: Value) -> String {
@@ -255,7 +272,7 @@ fn transform_tag<T: HtmlTag>(node: JsonEntry, html_tag: T, reparse: bool) -> Str
     let mut result: Vec<Value> = vec![];
 
     match node {
-        JsonEntry::ParentNode {children, ..} => {
+        JsonEntry::ParentNode { children, .. } => {
             result.push(Value::from(format!("<{}>", html_tag.inline())));
             result.extend(children.into_iter().map(|x| to_value(x).unwrap()));
             result.push(Value::from(format!("</{}>", html_tag.inline())));
@@ -361,7 +378,10 @@ fn manifest() -> String {
                     "from": "__document",
                     "to": ["html"],
                     "arguments": [],
-                    "type": "parent"
+                    "type": "parent",
+                    "variables": {
+                        "imports": {"type": "set", "access": "read"}
+                    },
                 },
                 {
                     "from": "__text",
