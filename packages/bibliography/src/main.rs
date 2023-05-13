@@ -1,13 +1,13 @@
-use std::{env, fs};
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::io::{self, Read};
+use std::{env, fs};
 
-use hayagriva::Entry;
 use hayagriva::style::{
     Apa, BibliographyStyle, ChicagoAuthorDate, Citation, CitationStyle, Database, DisplayString,
     Formatting, Ieee, Mla, Numerical,
 };
+use hayagriva::Entry;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
@@ -245,7 +245,7 @@ fn transform_bibliography(to: &str, input: &Value) {
 
         // From this, we construct our citation string (what the [cite] should be turned into).
         // We pass this as JSON format to let Hayagravia apply formatting if needed (which it
-        // doesn't, in this version at least). We encase it in [] for IEE and () for others
+        // doesn't, in this version at least). We encase it in [] for IEEE and () for others
         let mut json_citation_content = if style_arg == "IEEE" {
             let mut vec = vec![text!("[")];
             vec.append(&mut display(&database_citation.display));
@@ -258,18 +258,22 @@ fn transform_bibliography(to: &str, input: &Value) {
             vec
         };
 
-        let json_citation = if to == "latex" {
-            let mut vec = vec![raw!(format!(r"\hyperlink{{bibentry:{}}}{{", entry.key()))];
-            vec.append(&mut json_citation_content);
-            vec.push(raw!("}"));
-            Value::Array(vec)
-        } else if to == "html" {
-            let mut vec = vec![raw!(format!(r##"<a href="#bibentry:{}">"##, entry.key()))];
-            vec.append(&mut json_citation_content);
-            vec.push(raw!("</a>"));
-            Value::Array(vec)
-        } else {
-            Value::Array(json_citation_content)
+        // Apply nicer formatting for the note depending on the
+        // output format
+        let json_citation = match to {
+            "latex" => {
+                let mut vec = vec![raw!(format!(r"\hyperlink{{bibentry:{}}}{{", entry.key()))];
+                vec.append(&mut json_citation_content);
+                vec.push(raw!("}"));
+                Value::Array(vec)
+            }
+            "html" => {
+                let mut vec = vec![raw!(format!(r##"<a href="#bibentry:{}">"##, entry.key()))];
+                vec.append(&mut json_citation_content);
+                vec.push(raw!("</a>"));
+                Value::Array(vec)
+            }
+            _ => Value::Array(json_citation_content),
         };
 
         // Then, we are adding that citation as the label (that the [cite], now [cite-internal],
@@ -285,39 +289,133 @@ fn transform_bibliography(to: &str, input: &Value) {
     let is_visible = input["arguments"]["visibility"].as_str().unwrap() == "visible";
 
     // If the bibliography should be shown, show it!
-    if is_visible {
-        for entry in database.bibliography(bibliography_style.as_ref(), None) {
-            if !unused_keys_is_visible && !used_keys.contains(&entry.entry.key()) {
-                continue;
-            }
-            if let Some(prefix) = &entry.prefix {
-                // If we have a prefix (which is the number in [] for IEEE), encase it in brackets
-                output.push(text!("["));
-                output.append(&mut display(prefix));
-                output.push(text!("] "));
-            }
-            if to == "latex" {
-                output.push(raw!(format!(
-                    r"\hypertarget{{bibentry:{}}}{{",
-                    entry.entry.key()
-                )));
-            } else if to == "html" {
-                output.push(raw!(format!(
-                    r#"<span id="bibentry:{}">"#,
-                    entry.entry.key()
-                )));
-            }
-            output.append(&mut display(&entry.display));
-            if to == "latex" {
-                output.push(raw!("}".to_string()));
-            } else if to == "html" {
-                output.push(raw!("</span>"));
-            }
-            output.push(module!("newline", ""));
-        }
+    if is_visible && (unused_keys_is_visible || !used_keys.is_empty()) {
+        output.append(&mut generate_bibliography(
+            &database,
+            bibliography_style.as_ref(),
+            unused_keys_is_visible,
+            &used_keys,
+            to,
+        ))
     }
 
     println!("{}", Value::Array(output));
+}
+
+/// Generate the bibliography that should be displayed
+fn generate_bibliography<'a>(
+    database: &Database<'a>,
+    bibliography_style: &dyn BibliographyStyle<'a>,
+    unused_keys_is_visible: bool,
+    used_keys: &HashSet<&str>,
+    to: &str,
+) -> Vec<Value> {
+    let entries = database
+        .bibliography(bibliography_style, None)
+        .into_iter()
+        // Remove any unused keys if they shouldn't be visible
+        .filter(|entry| unused_keys_is_visible || used_keys.contains(&entry.entry.key()))
+        // If we have a prefix (which is the number in [] for IEEE), encase it in brackets
+        .map(|entry| {
+            let prefix = entry.prefix.as_ref().map(|p| {
+                let mut vec = vec![text!("[")];
+                vec.append(&mut display(p));
+                vec.push(text!("]"));
+                vec
+            });
+            (prefix, entry)
+        });
+
+    let mut output = vec![];
+
+    match to {
+        // We want to use a tabularx environment when outputing latex where the prefix
+        // is in the first column and the rest in the second
+        "latex" => {
+            output.push(raw!("\n"));
+            output.push(import!("\\usepackage{tabularx}"));
+
+            output.push(raw!(
+                r"\renewcommand{\arraystretch}{1.5}
+\begin{tabularx}{\textwidth}{p{0.3cm} X}
+"
+            ));
+
+            entries.for_each(|(prefix, entry)| {
+                if let Some(mut prefix) = prefix {
+                    output.append(&mut prefix);
+                }
+
+                output.push(raw!(format!(
+                    r"& \leavevmode \hypertarget{{bibentry:{}}}{{",
+                    entry.entry.key()
+                )));
+                output.append(&mut display(&entry.display));
+                output.push(raw!("}".to_string()));
+                output.push(module!("newline", ""));
+                output.push(raw!("\n"));
+            });
+
+            output.push(raw!(
+                r"\end{tabularx}
+\renewcommand{\arraystretch}{1}
+"
+            ));
+        }
+        // For html output we use a simple css grid layout
+        "html" => {
+            output.push(raw!(
+                r#"
+<style>
+    .modmark-bibliography {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.5rem;
+    }
+        
+    .modmark-bibliography>.modmark-bibliography-prefix {
+        grid-column: 1;
+    }
+        
+    .modmark-bibliography>.modmark-bibliography-bibitem {
+        grid-column: 2;
+    }
+</style>
+<div class="modmark-bibliography">"#
+            ));
+
+            entries.for_each(|(prefix, entry)| {
+                if let Some(mut prefix) = prefix {
+                    output.push(raw!(r#"<span class="modmark-bibliography-prefix">"#));
+                    output.append(&mut prefix);
+                    output.push(raw!("</span>"));
+                }
+
+                output.push(raw!(format!(
+                    r#" <span id="bibentry:{}">"#,
+                    entry.entry.key()
+                )));
+                output.append(&mut display(&entry.display));
+                output.push(raw!("</span>"));
+                output.push(module!("newline", ""));
+            });
+
+            output.push(raw!("</div>"));
+        }
+        // if we don't have any special formatting, just fallback to some basic styling
+        _ => {
+            entries.for_each(|(prefix, entry)| {
+                if let Some(mut prefix) = prefix {
+                    output.append(&mut prefix);
+                    output.push(text!(" "));
+                }
+                output.append(&mut display(&entry.display));
+                output.push(module!("newline", ""));
+            });
+        }
+    }
+
+    output
 }
 
 /// Gets the styles for the given key, as a pair of the bibliography style and citation style. If
