@@ -400,7 +400,7 @@ fn generate_bibliography<'a>(
             ));
             output
         }
-        // For html output we use a simple css grid layout
+        // For html output we use a simple css flex or grid layout
         "html" => {
             let mut using_prefix = false;
             let bibitems: Vec<Vec<Value>> = entries
