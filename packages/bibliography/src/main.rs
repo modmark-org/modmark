@@ -337,7 +337,7 @@ fn generate_bibliography<'a>(
 
             output.push(raw!(
                 r"\renewcommand{\arraystretch}{1.5}
-\begin{tabularx}{\textwidth}{p{0.3cm} X}
+\begin{tabularx}{\textwidth}{p{0.3cm} >{\raggedright\arraybackslash} X}
 "
             ));
 
