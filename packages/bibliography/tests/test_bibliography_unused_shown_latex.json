@@ -29,11 +29,11 @@
             "name": "set-add"
         },
         {
-            "data": "\\renewcommand{\\arraystretch}{1.5}\n\\begin{tabularx}{\\textwidth}{p{0.3cm} X}\n",
+            "data": "\\renewcommand{\\arraystretch}{1.5}\n\\begin{tabularx}{\\textwidth}{>{\\raggedright\\arraybackslash} X}\n",
             "name": "raw"
         },
         {
-            "data": "& \\leavevmode \\hypertarget{bibentry:djot}{",
+            "data": "\\leavevmode \\hypertarget{bibentry:djot}{",
             "name": "raw"
         },
         {
@@ -64,7 +64,7 @@
             "name": "raw"
         },
         {
-            "data": "& \\leavevmode \\hypertarget{bibentry:AsciiDoc}{",
+            "data": "\\leavevmode \\hypertarget{bibentry:AsciiDoc}{",
             "name": "raw"
         },
         {
@@ -95,7 +95,7 @@
             "name": "raw"
         },
         {
-            "data": "& \\leavevmode \\hypertarget{bibentry:Commonmark}{",
+            "data": "\\leavevmode \\hypertarget{bibentry:Commonmark}{",
             "name": "raw"
         },
         {

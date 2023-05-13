@@ -11,11 +11,15 @@
     "__test_transform_to": "html",
     "__test_expected_result": [
         {
-            "data": "\n<style>\n    .modmark-bibliography {\n        display: grid;\n        grid-template-columns: auto 1fr;\n        gap: 0.5rem;\n    }\n        \n    .modmark-bibliography>.modmark-bibliography-prefix {\n        grid-column: 1;\n    }\n        \n    .modmark-bibliography>.modmark-bibliography-bibitem {\n        grid-column: 2;\n    }\n</style>\n<div class=\"modmark-bibliography\">",
+            "data": "\n<style>\n    .modmark-bibliography {\n        display: flex;\n        flex-direction: column;\n        gap: 0.5rem;\n    }\n</style>",
             "name": "raw"
         },
         {
-            "data": " <span id=\"bibentry:djot\">",
+            "data": "<div class=\"modmark-bibliography\">",
+            "name": "raw"
+        },
+        {
+            "data": " <span class=\"modmark-bibliography-bibitem\" id=\"bibentry:djot\">",
             "name": "raw"
         },
         {
@@ -42,7 +46,7 @@
             "name": "newline"
         },
         {
-            "data": " <span id=\"bibentry:AsciiDoc\">",
+            "data": " <span class=\"modmark-bibliography-bibitem\" id=\"bibentry:AsciiDoc\">",
             "name": "raw"
         },
         {
@@ -69,7 +73,7 @@
             "name": "newline"
         },
         {
-            "data": " <span id=\"bibentry:Commonmark\">",
+            "data": " <span class=\"modmark-bibliography-bibitem\" id=\"bibentry:Commonmark\">",
             "name": "raw"
         },
         {

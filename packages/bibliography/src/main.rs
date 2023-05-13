@@ -289,7 +289,7 @@ fn transform_bibliography(to: &str, input: &Value) {
     let is_visible = input["arguments"]["visibility"].as_str().unwrap() == "visible";
 
     // If the bibliography should be shown, show it!
-    if is_visible && (unused_keys_is_visible || !used_keys.is_empty()) {
+    if is_visible {
         output.append(&mut generate_bibliography(
             &database,
             bibliography_style.as_ref(),
@@ -326,84 +326,157 @@ fn generate_bibliography<'a>(
             (prefix, entry)
         });
 
-    let mut output = vec![];
-
     match to {
-        // We want to use a tabularx environment when outputing latex where the prefix
-        // is in the first column and the rest in the second
+        // The bibliography is diplayed inside a tabularx table
+        // when using latex
         "latex" => {
+            let mut using_prefix = false;
+            let bibitems: Vec<(Vec<Value>, Vec<Value>)> = entries
+                .map(|(prefix, entry)| {
+                    let mut item = vec![];
+                    let mut styled_prefix = vec![];
+
+                    if let Some(mut prefix) = prefix {
+                        using_prefix = true;
+                        styled_prefix.append(&mut prefix);
+                    }
+
+                    item.push(raw!(format!(
+                        r"\leavevmode \hypertarget{{bibentry:{}}}{{",
+                        entry.entry.key()
+                    )));
+                    item.append(&mut display(&entry.display));
+                    item.push(raw!("}".to_string()));
+                    item.push(module!("newline", ""));
+                    item.push(raw!("\n"));
+
+                    (styled_prefix, item)
+                })
+                .collect();
+
+            // If the we have nothing to show, return early with an empty vec
+            if bibitems.is_empty() {
+                return vec![];
+            }
+
+            let mut output = Vec::new();
             output.push(raw!("\n"));
             output.push(import!("\\usepackage{tabularx}"));
 
-            output.push(raw!(
-                r"\renewcommand{\arraystretch}{1.5}
+            // If we have a prefix, use two columns otherwise one
+            if using_prefix {
+                output.push(raw!(
+                    r"\renewcommand{\arraystretch}{1.5}
 \begin{tabularx}{\textwidth}{p{0.3cm} >{\raggedright\arraybackslash} X}
 "
-            ));
+                ));
+            } else {
+                output.push(raw!(
+                    r"\renewcommand{\arraystretch}{1.5}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash} X}
+"
+                ));
+            }
 
-            entries.for_each(|(prefix, entry)| {
-                if let Some(mut prefix) = prefix {
-                    output.append(&mut prefix);
-                }
-
-                output.push(raw!(format!(
-                    r"& \leavevmode \hypertarget{{bibentry:{}}}{{",
-                    entry.entry.key()
-                )));
-                output.append(&mut display(&entry.display));
-                output.push(raw!("}".to_string()));
-                output.push(module!("newline", ""));
-                output.push(raw!("\n"));
-            });
+            output.extend(
+                bibitems
+                    .into_iter()
+                    .map(|(mut prefix, mut item)| {
+                        let mut result = vec![];
+                        if using_prefix {
+                            result.append(&mut prefix);
+                            result.push(raw!("&"));
+                        }
+                        result.append(&mut item);
+                        result
+                    })
+                    .flatten(),
+            );
 
             output.push(raw!(
                 r"\end{tabularx}
 \renewcommand{\arraystretch}{1}
 "
             ));
+            output
         }
         // For html output we use a simple css grid layout
         "html" => {
-            output.push(raw!(
-                r#"
+            let mut using_prefix = false;
+            let bibitems: Vec<Vec<Value>> = entries
+                .map(|(prefix, entry)| {
+                    let mut item = Vec::new();
+                    if let Some(mut prefix) = prefix {
+                        using_prefix = true;
+                        item.push(raw!(r#"<span class="modmark-bibliography-prefix">"#));
+                        item.append(&mut prefix);
+                        item.push(raw!("</span>"));
+                    }
+
+                    item.push(raw!(format!(
+                        r#" <span class="modmark-bibliography-bibitem" id="bibentry:{}">"#,
+                        entry.entry.key()
+                    )));
+                    item.append(&mut display(&entry.display));
+                    item.push(raw!("</span>"));
+                    item.push(module!("newline", ""));
+                    item
+                })
+                .collect();
+
+            // If the we have nothing to show, return early with an empty vec
+            if bibitems.is_empty() {
+                return vec![];
+            }
+
+            let mut output = Vec::new();
+
+            // Use css grid to get a two coloumn layout if we have a prefix (like [3]).
+            if using_prefix {
+                output.push(raw!(
+                    r#"
 <style>
     .modmark-bibliography {
         display: grid;
-        grid-template-columns: auto 1fr;
+        grid-template-columns: [start] auto [center] 1fr [end];
         gap: 0.5rem;
     }
         
     .modmark-bibliography>.modmark-bibliography-prefix {
-        grid-column: 1;
+        grid-column-start: start;
+        grid-column-end: center;
     }
         
     .modmark-bibliography>.modmark-bibliography-bibitem {
-        grid-column: 2;
+        grid-column-start: center;
+        grid-column-end: end;
     }
-</style>
-<div class="modmark-bibliography">"#
-            ));
+</style>"#
+                ));
+            } else {
+                output.push(raw!(
+                    r#"
+<style>
+    .modmark-bibliography {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+</style>"#
+                ));
+            }
 
-            entries.for_each(|(prefix, entry)| {
-                if let Some(mut prefix) = prefix {
-                    output.push(raw!(r#"<span class="modmark-bibliography-prefix">"#));
-                    output.append(&mut prefix);
-                    output.push(raw!("</span>"));
-                }
+            output.push(raw!(r#"<div class="modmark-bibliography">"#));
 
-                output.push(raw!(format!(
-                    r#" <span id="bibentry:{}">"#,
-                    entry.entry.key()
-                )));
-                output.append(&mut display(&entry.display));
-                output.push(raw!("</span>"));
-                output.push(module!("newline", ""));
-            });
+            output.extend(bibitems.into_iter().flatten());
 
             output.push(raw!("</div>"));
+
+            output
         }
         // if we don't have any special formatting, just fallback to some basic styling
         _ => {
+            let mut output = Vec::new();
             entries.for_each(|(prefix, entry)| {
                 if let Some(mut prefix) = prefix {
                     output.append(&mut prefix);
@@ -412,10 +485,9 @@ fn generate_bibliography<'a>(
                 output.append(&mut display(&entry.display));
                 output.push(module!("newline", ""));
             });
+            output
         }
     }
-
-    output
 }
 
 /// Gets the styles for the given key, as a pair of the bibliography style and citation style. If
