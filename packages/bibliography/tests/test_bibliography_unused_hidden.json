@@ -9,6 +9,5 @@
     },
     "inline": false,
     "__test_transform_to": "html",
-    "__test_expected_result": [
-    ]
+    "__test_expected_result": []
 }

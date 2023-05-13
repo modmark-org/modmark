@@ -18,7 +18,22 @@
             "name": "set-add"
         },
         {
-            "data": "\\hypertarget{bibentry:djot}{",
+            "data": "\n",
+            "name": "raw"
+        },
+        {
+            "arguments": {
+                "name": "imports"
+            },
+            "data": "\\usepackage{tabularx}",
+            "name": "set-add"
+        },
+        {
+            "data": "\\renewcommand{\\arraystretch}{1.5}\n\\begin{tabularx}{\\textwidth}{p{0.3cm} X}\n",
+            "name": "raw"
+        },
+        {
+            "data": "& \\leavevmode \\hypertarget{bibentry:djot}{",
             "name": "raw"
         },
         {
@@ -45,7 +60,11 @@
             "name": "newline"
         },
         {
-            "data": "\\hypertarget{bibentry:AsciiDoc}{",
+            "data": "\n",
+            "name": "raw"
+        },
+        {
+            "data": "& \\leavevmode \\hypertarget{bibentry:AsciiDoc}{",
             "name": "raw"
         },
         {
@@ -72,7 +91,11 @@
             "name": "newline"
         },
         {
-            "data": "\\hypertarget{bibentry:Commonmark}{",
+            "data": "\n",
+            "name": "raw"
+        },
+        {
+            "data": "& \\leavevmode \\hypertarget{bibentry:Commonmark}{",
             "name": "raw"
         },
         {
@@ -97,6 +120,14 @@
         {
             "data": "",
             "name": "newline"
+        },
+        {
+            "data": "\n",
+            "name": "raw"
+        },
+        {
+            "data": "\\end{tabularx}\n\\renewcommand{\\arraystretch}{1}\n",
+            "name": "raw"
         }
     ]
 }
