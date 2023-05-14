@@ -13,81 +13,41 @@
     "inline": false,
     "__test_transform_to": "html",
     "__test_expected_result": [
+        "<table id=\"table:label\" style=\"border: 1px solid black; border-collapse: collapse;\">",
+        "<caption>",
         {
-            "data": "<table id=\"table:label\" style=\"border: 1px solid black; border-collapse: collapse;\">",
-            "name": "raw"
+            "data": "Test caption",
+            "name": "inline_content"
         },
-        {
-            "data": "<caption>Test caption</caption>",
-            "name": "raw"
-        },
-        {
-            "data": "<tr>",
-            "name": "raw"
-        },
-        {
-            "data": "<td style=\"text-align: left; border: 1px solid black; border-collapse: collapse;\">",
-            "name": "raw"
-        },
+        "<caption>",
+        "<tr>",
+        "<td style=\"text-align: left; border: 1px solid black; border-collapse: collapse;\">",
         {
             "data": "a",
             "name": "inline_content"
         },
-        {
-            "data": "</td>",
-            "name": "raw"
-        },
-        {
-            "data": "<td style=\"text-align: left; border: 1px solid black; border-collapse: collapse;\">",
-            "name": "raw"
-        },
+        "</td>",
+        "<td style=\"text-align: left; border: 1px solid black; border-collapse: collapse;\">",
         {
             "data": "b",
             "name": "inline_content"
         },
-        {
-            "data": "</td>",
-            "name": "raw"
-        },
-        {
-            "data": "</tr>",
-            "name": "raw"
-        },
-        {
-            "data": "<tr>",
-            "name": "raw"
-        },
-        {
-            "data": "<td style=\"text-align: left; border: 1px solid black; border-collapse: collapse;\">",
-            "name": "raw"
-        },
+        "</td>",
+        "</tr>",
+        "<tr>",
+        "<td style=\"text-align: left; border: 1px solid black; border-collapse: collapse;\">",
         {
             "data": "c",
             "name": "inline_content"
         },
-        {
-            "data": "</td>",
-            "name": "raw"
-        },
-        {
-            "data": "<td style=\"text-align: left; border: 1px solid black; border-collapse: collapse;\">",
-            "name": "raw"
-        },
+        "</td>",
+        "<td style=\"text-align: left; border: 1px solid black; border-collapse: collapse;\">",
         {
             "data": "d",
             "name": "inline_content"
         },
-        {
-            "data": "</td>",
-            "name": "raw"
-        },
-        {
-            "data": "</tr>",
-            "name": "raw"
-        },
-        {
-            "data": "</table>",
-            "name": "raw"
-        }
+        "</td>",
+        "</tr>",
+        "</table>"
     ]
 }

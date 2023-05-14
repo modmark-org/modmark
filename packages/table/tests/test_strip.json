@@ -13,77 +13,35 @@
     "inline": false,
     "__test_transform_to": "html",
     "__test_expected_result": [
-        {
-            "data": "<table>",
-            "name": "raw"
-        },
-        {
-            "data": "<tr>",
-            "name": "raw"
-        },
-        {
-            "data": "<td style=\"text-align: left;\">",
-            "name": "raw"
-        },
+        "<table>",
+        "<tr>",
+        "<td style=\"text-align: left;\">",
         {
             "data": "a",
             "name": "inline_content"
         },
-        {
-            "data": "</td>",
-            "name": "raw"
-        },
-        {
-            "data": "<td style=\"text-align: left;\">",
-            "name": "raw"
-        },
+        "</td>",
+        "<td style=\"text-align: left;\">",
         {
             "data": "b",
             "name": "inline_content"
         },
-        {
-            "data": "</td>",
-            "name": "raw"
-        },
-        {
-            "data": "</tr>",
-            "name": "raw"
-        },
-        {
-            "data": "<tr>",
-            "name": "raw"
-        },
-        {
-            "data": "<td style=\"text-align: left;\">",
-            "name": "raw"
-        },
+        "</td>",
+        "</tr>",
+        "<tr>",
+        "<td style=\"text-align: left;\">",
         {
             "data": "c",
             "name": "inline_content"
         },
-        {
-            "data": "</td>",
-            "name": "raw"
-        },
-        {
-            "data": "<td style=\"text-align: left;\">",
-            "name": "raw"
-        },
+        "</td>",
+        "<td style=\"text-align: left;\">",
         {
             "data": "d",
             "name": "inline_content"
         },
-        {
-            "data": "</td>",
-            "name": "raw"
-        },
-        {
-            "data": "</tr>",
-            "name": "raw"
-        },
-        {
-            "data": "</table>",
-            "name": "raw"
-        }
+        "</td>",
+        "</tr>",
+        "</table>"
     ]
 }

@@ -12,81 +12,41 @@
     "inline": false,
     "__test_transform_to": "html",
     "__test_expected_result": [
+        "<table>",
+        "<caption>",
         {
-            "data": "<table>",
-            "name": "raw"
+            "data": "Comparison between programming^TM languages - which is best?",
+            "name": "inline_content"
         },
-        {
-            "data": "<caption>Comparison between programming^TM languages - which is best?</caption>",
-            "name": "raw"
-        },
-        {
-            "data": "<tr>",
-            "name": "raw"
-        },
-        {
-            "data": "<td style=\"text-align: left;\">",
-            "name": "raw"
-        },
+        "<caption>",
+        "<tr>",
+        "<td style=\"text-align: left;\">",
         {
             "data": "[big-table]\n## Python\n[code py]\ndef foo():\n    print(\"bar\");\n",
             "name": "block_content"
         },
-        {
-            "data": "</td>",
-            "name": "raw"
-        },
-        {
-            "data": "<td style=\"text-align: left;\">",
-            "name": "raw"
-        },
+        "</td>",
+        "<td style=\"text-align: left;\">",
         {
             "data": "\n## Rust\n[code rs]\nfn foo() {\n    println!(\"bar\");\n}\n",
             "name": "block_content"
         },
-        {
-            "data": "</td>",
-            "name": "raw"
-        },
-        {
-            "data": "</tr>",
-            "name": "raw"
-        },
-        {
-            "data": "<tr>",
-            "name": "raw"
-        },
-        {
-            "data": "<td style=\"text-align: left;\">",
-            "name": "raw"
-        },
+        "</td>",
+        "</tr>",
+        "<tr>",
+        "<td style=\"text-align: left;\">",
         {
             "data": "\n## Java\n[code java]\npublic static void foo() {\n    System.out.println(\"bar\");\n}\n",
             "name": "block_content"
         },
-        {
-            "data": "</td>",
-            "name": "raw"
-        },
-        {
-            "data": "<td style=\"text-align: left;\">",
-            "name": "raw"
-        },
+        "</td>",
+        "<td style=\"text-align: left;\">",
         {
             "data": "\n## ModMark\n[code txt]\nbar\n",
             "name": "block_content"
         },
-        {
-            "data": "</td>",
-            "name": "raw"
-        },
-        {
-            "data": "</tr>",
-            "name": "raw"
-        },
-        {
-            "data": "</table>",
-            "name": "raw"
-        }
+        "</td>",
+        "</tr>",
+        "</table>"
     ]
 }

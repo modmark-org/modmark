@@ -350,7 +350,9 @@ impl Table<'_> {
         }
         vec.push(json!("\\end{tabular}\n"));
         if let Some(caption) = self.caption {
-            vec.push(json!(format!("\\caption{{{caption}}}\n")));
+            vec.push(json!("\\caption{"));
+            vec.push(inline_content!(caption));
+            vec.push(json!("}\n"));
         }
         if let Some(label) = self.label {
             vec.push(json!(format!("\\label{{{label}}}\n")));
