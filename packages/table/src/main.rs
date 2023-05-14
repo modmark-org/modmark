@@ -4,15 +4,6 @@ use std::io::{self, Read};
 
 use serde_json::{json, Value};
 
-macro_rules! raw {
-    ($expr:expr) => {
-        json!({
-            "name": "raw",
-            "data": $expr
-        })
-    }
-}
-
 macro_rules! inline_content {
     ($expr:expr) => {
         json!({
@@ -314,13 +305,13 @@ impl Table<'_> {
         };
 
         vec.push(import!(r"\usepackage{float}"));
-        vec.push(raw!("\\begin{table}[H]\n"));
-        vec.push(raw!("\\centering\n"));
-        vec.push(raw!(format!("\\begin{{tabular}} {{ {} }}\n", col_key)));
+        vec.push(json!("\\begin{table}[H]\n"));
+        vec.push(json!("\\centering\n"));
+        vec.push(json!(format!("\\begin{{tabular}} {{ {} }}\n", col_key)));
 
         // Only "None" borders should not have top row
         if self.borders != Borders::None {
-            vec.push(raw!("\\hline\n"));
+            vec.push(json!("\\hline\n"));
         }
 
         // Loop though all rows
@@ -340,31 +331,31 @@ impl Table<'_> {
             // For each cell in the row, push it and add & between, and \\\n to the end
             for (idx, val) in values.into_iter().enumerate() {
                 if idx != 0 {
-                    vec.push(raw!(" & "));
+                    vec.push(json!(" & "));
                 }
                 vec.push(val);
             }
-            vec.push(raw!(" \\\\\n"));
+            vec.push(json!(" \\\\\n"));
 
             // If we should have a border in-between all rows, add it
             if self.borders == Borders::All || self.borders == Borders::Horizontal {
-                vec.push(raw!("\\hline\n"));
+                vec.push(json!("\\hline\n"));
             }
         }
 
         // Both horizontal and all already added this line, so it only needs to be
         // added on outer and vertical
         if self.borders == Borders::Outer || self.borders == Borders::Vertical {
-            vec.push(raw!("\\hline\n"))
+            vec.push(json!("\\hline\n"))
         }
-        vec.push(raw!("\\end{tabular}\n"));
+        vec.push(json!("\\end{tabular}\n"));
         if let Some(caption) = self.caption {
-            vec.push(raw!(format!("\\caption{{{caption}}}\n")));
+            vec.push(json!(format!("\\caption{{{caption}}}\n")));
         }
         if let Some(label) = self.label {
-            vec.push(raw!(format!("\\label{{{label}}}\n")));
+            vec.push(json!(format!("\\label{{{label}}}\n")));
         }
-        vec.push(raw!(r"\end{table}"));
+        vec.push(json!(r"\end{table}"));
         json!(vec)
     }
 
@@ -383,10 +374,12 @@ impl Table<'_> {
             str + ">"
         };
 
-        vec.push(raw!(tag));
+        vec.push(json!(tag));
 
         if let Some(caption) = self.caption {
-            vec.push(raw!(format!("<caption>{caption}</caption>")));
+            vec.push(json!("<caption>"));
+            vec.push(inline_content!(caption));
+            vec.push(json!("<caption>"));
         }
 
         // Here is the style for all th/td elements
@@ -402,33 +395,33 @@ impl Table<'_> {
 
         // Loop though each row
         for (idx, row) in self.content.iter().enumerate() {
-            vec.push(raw!("<tr>"));
+            vec.push(json!("<tr>"));
 
             // If it is the header, use th, else use td
             if idx == 0 && self.header {
                 for (idx, elem) in row.iter().enumerate() {
                     let alignment = self.alignment.for_column(idx).html_style();
-                    vec.push(raw!(format!(
+                    vec.push(json!(format!(
                         r#"<th style="{alignment}{inside_border_style}">"#
                     )));
                     vec.push(dynamic_content!(self.big, elem));
-                    vec.push(raw!("</th>"));
+                    vec.push(json!("</th>"));
                 }
             } else {
                 for (idx, elem) in row.iter().enumerate() {
                     let alignment = self.alignment.for_column(idx).html_style();
-                    vec.push(raw!(format!(
+                    vec.push(json!(format!(
                         r#"<td style="{alignment}{inside_border_style}">"#
                     )));
                     vec.push(dynamic_content!(self.big, elem));
-                    vec.push(raw!("</td>"));
+                    vec.push(json!("</td>"));
                 }
             }
 
-            vec.push(raw!("</tr>"));
+            vec.push(json!("</tr>"));
         }
 
-        vec.push(raw!("</table>"));
+        vec.push(json!("</table>"));
         json!(vec)
     }
 }
