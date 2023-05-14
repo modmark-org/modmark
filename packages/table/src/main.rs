@@ -381,7 +381,7 @@ impl Table<'_> {
         if let Some(caption) = self.caption {
             vec.push(json!("<caption>"));
             vec.push(inline_content!(caption));
-            vec.push(json!("<caption>"));
+            vec.push(json!("</caption>"));
         }
 
         // Here is the style for all th/td elements

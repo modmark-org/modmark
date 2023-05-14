@@ -19,7 +19,7 @@
             "data": "Test caption",
             "name": "inline_content"
         },
-        "<caption>",
+        "</caption>",
         "<tr>",
         "<td style=\"text-align: left; border: 1px solid black; border-collapse: collapse;\">",
         {
