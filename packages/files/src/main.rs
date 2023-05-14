@@ -244,7 +244,7 @@ fn transform_image(input: Value, to: &str) {
             }
             if !label.is_empty() {
                 v.push(json!("\\label{"));
-                v.push(json!({"name": "inline_content", "data": label}));
+                v.push(json!({"name": "raw", "data": label}));
                 v.push(json!("}\n"))
             }
             v.push(json!("\\end{figure}\n"));
