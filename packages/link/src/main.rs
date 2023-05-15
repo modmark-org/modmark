@@ -7,6 +7,14 @@ macro_rules! import {
     ($e:expr) => {json!({"name": "set-add", "arguments": {"name": "imports"}, "data": $e})}
 }
 
+macro_rules! inline_target {
+    ($e:expr) => {json!({"name": "set-add", "arguments": {"name": "inline_targets"}, "data": $e})}
+}
+
+macro_rules! module {
+    ($name:expr, $data:expr $(,$($args:tt)*)?) => {json!({"name": $name $(,"arguments":$($args)*)*, "data": $data})}
+}
+
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
     let action = &args[0];
@@ -35,8 +43,10 @@ fn manifest() {
                         {"name": "label", "default": "", "description": "Label for link"}
                     ],
                     "variables": {
-                        "imports": {"type": "set", "access": "add"}
-                    }
+                        "imports": {"type": "set", "access": "add"},
+                        "inline_targets": {"type": "set", "access": "read"}
+                    },
+                    "description": "Inserts a link to an URL or to a target in the document"
                 },
                 {
                     "from": "label",
@@ -49,6 +59,18 @@ fn manifest() {
                     "arguments": [
                         {"name": "display", "default": "", "description": "Displayed label for reference (Only HTML)"}
                     ],
+                },
+                {
+                    "from": "target",
+                    "to": ["html", "latex"],
+                    "arguments": [
+                        {"name": "name", "type": "string", "description": "The name used to refer to a target later on"}
+                    ],
+                    "description": "Marks the body as a 'target', which later can be linked to using [link]",
+                    "variables": {
+                        "inline_targets": {"type": "set", "access": "add"}
+                    },
+                    "type": "inline-module"
                 }
             ]
             }
@@ -62,10 +84,41 @@ fn transform(from: &str, to: &str) {
         "link" => transform_link(to),
         "label" => transform_label(to),
         "reference" => transform_reference(to),
+        "target" => transform_target(to),
         other => {
             eprintln!("Package does not support {other}");
         }
     }
+}
+
+fn transform_target(to: &str) {
+    let input: Value = {
+        let mut buffer = String::new();
+        io::stdin().read_to_string(&mut buffer).unwrap();
+        serde_json::from_str(&buffer).unwrap()
+    };
+    let name = input["arguments"]["name"].as_str().unwrap();
+    let body = input["data"].as_str().unwrap();
+
+    let result = if to == "latex" {
+        let mut res = vec![];
+        res.push(import!(r"\usepackage[hidelinks]{hyperref}"));
+        res.push(inline_target!(name));
+        res.push(Value::String(format!("\\hypertarget{{inlinetarget{}}}{{", name)));
+        res.push(module!("inline_content", body));
+        res.push(Value::from("}"));
+        res
+    } else if to == "html" {
+        let mut res = vec![];
+        res.push(inline_target!(name));
+        res.push(Value::String(format!("<span id=\"inlinetarget{}\">", name)));
+        res.push(module!("inline_content", body));
+        res.push(Value::from("</span>"));
+        res
+    } else {
+        panic!("[target] only supports HTML and LaTeX");
+    };
+    println!("{}", Value::Array(result));
 }
 
 fn transform_link(to: &str) {
@@ -74,6 +127,10 @@ fn transform_link(to: &str) {
         io::stdin().read_to_string(&mut buffer).unwrap();
         serde_json::from_str(&buffer).unwrap()
     };
+    let targets: Vec<String> =
+        serde_json::from_str(&env::var("inline_targets").unwrap_or("[]".to_string())).unwrap();
+    let data = input["data"].as_str().unwrap();
+    let is_target = targets.iter().any(|t| t == data);
 
     match to {
         "html" => {
@@ -83,9 +140,13 @@ fn transform_link(to: &str) {
                 .unwrap_or_else(|| "");
 
             let link = input["data"].as_str().unwrap();
-            let escaped_link = link.replace('"', "%22");
+            let actual_link = if is_target {
+                format!("#inlinetarget{}", link)
+            } else {
+                link.replace('"', "%22")
+            };
 
-            let link_tag = format!(r#"<a href="{escaped_link}">"#);
+            let link_tag = format!(r#"<a href="{actual_link}">"#);
             let text = if label.is_empty() { link } else { label };
 
             let output = json!([
@@ -103,7 +164,11 @@ fn transform_link(to: &str) {
             let link = input["data"].as_str().unwrap();
 
             let text = if label.is_empty() { link } else { label };
-            let prefix = format!(r#"\href{{{}}}{{"#, link);
+            let prefix = if is_target {
+                format!(r#"\hyperlink{{inlinetarget{}}}{{"#, link)
+            } else {
+                format!(r#"\href{{{}}}{{"#, link)
+            };
 
             let output = json!([
                 {"name": "raw", "data": prefix},
