@@ -202,6 +202,7 @@ function Playground() {
                 }
 
                 let {content, warnings, errors} = result as CompilationResult;
+                console.log(content);
                 setContent(content);
                 setWarnings(warnings);
                 setErrors(errors);
@@ -311,11 +312,11 @@ function Playground() {
                     }
                     {
                         selectedMode === "latex" &&
-                        <form method="POST" action="https://www.overleaf.com/docs" target="_blank">
-                            <input readOnly value={content} name="snip" style={{display: "none"}}/>
-                            <Input type="submit" value="Open in Overleaf"/>
-                        </form>
-
+                        <Button
+                        onClick={() => openInOverleaf(content)}
+                    >
+                         Open in Overleaf
+                    </Button>
                     }
                 </div>
                 <div>
@@ -473,3 +474,21 @@ function IssuesReport({warnings, errors}: { warnings: string[], errors: string[]
 
     </IssuesContainer>
 }
+
+function openInOverleaf(content: string) : string{
+    let url = "https://www.overleaf.com/docs"
+    // post the code to overleaf
+    let form = document.createElement("form");
+    form.setAttribute("method", "post");
+    form.setAttribute("action", url);
+    form.setAttribute("target", "_blank");
+    let hiddenField = document.createElement("input");
+    hiddenField.setAttribute("type", "hidden");
+    hiddenField.setAttribute("name", "snip");
+    hiddenField.setAttribute("value", content);
+    form.appendChild(hiddenField);
+    document.body.appendChild(form);
+    form.submit();
+    return content
+}
+
