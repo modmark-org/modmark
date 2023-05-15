@@ -474,7 +474,7 @@ function IssuesReport({warnings, errors}: { warnings: string[], errors: string[]
     </IssuesContainer>
 }
 
-function openInOverleaf(content: string) : string{
+function openInOverleaf(content: string){
     let url = "https://www.overleaf.com/docs"
     // post the code to overleaf
     let form = document.createElement("form");
@@ -488,6 +488,6 @@ function openInOverleaf(content: string) : string{
     form.appendChild(hiddenField);
     document.body.appendChild(form);
     form.submit();
-    return content
+    document.body.removeChild(form);
 }
 
