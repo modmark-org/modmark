@@ -22,6 +22,13 @@
         },
         "\\begin{table}[H]\n",
         "\\centering\n",
+        "\\caption{",
+        {
+            "data": "Test caption",
+            "name": "inline_content"
+        },
+        "}\n",
+        "\\label{table:label}\n",
         "\\begin{tabular} { |l|l| }\n",
         "\\hline\n",
         {
@@ -47,13 +54,6 @@
         " \\\\\n",
         "\\hline\n",
         "\\end{tabular}\n",
-        "\\caption{",
-        {
-            "data": "Test caption",
-            "name": "inline_content"
-        },
-        "}\n",
-        "\\label{table:label}\n",
         "\\end{table}"
     ]
 }

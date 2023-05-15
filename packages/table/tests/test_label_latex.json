@@ -22,6 +22,7 @@
         },
         "\\begin{table}[H]\n",
         "\\centering\n",
+        "\\label{table:label}\n",
         "\\begin{tabular} { |l|l| }\n",
         "\\hline\n",
         {
@@ -47,7 +48,6 @@
         " \\\\\n",
         "\\hline\n",
         "\\end{tabular}\n",
-        "\\label{table:label}\n",
         "\\end{table}"
     ]
 }
