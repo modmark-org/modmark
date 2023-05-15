@@ -127,8 +127,8 @@ function Playground() {
     const [activeView, setActiveView] = useState<"preview" | "docs" | "guide">("preview");
     const [packages, setPackages] = useState<PackageInfo[]>([]);
     const [loadingPackage, setLoadingPackage] = useState(false);
-    const [selectedMode, setSelectedMode] = useState<Mode>("render-html");
-    const [activeMode, setActiveMode] = useState<Mode>("render-html");
+    const [selectedMode, setSelectedMode] = useState<Mode>("render-html-iframe");
+    const [activeMode, setActiveMode] = useState<Mode>("render-html-iframe");
     const [otherOutputFormat, setOtherOutputFormat] = useState("");
     const [compilerLoaded, setCompilerLoaded] = useState(false);
     const [_compileTimeoutId, setCompileTimoutId] = useState<number | null>(null);
