@@ -160,7 +160,7 @@ fn highlight_latex(
     result.push("\\begin{tcolorbox}[colback=background, frame empty]\n".to_string());
     result.push("\\begin{Verbatim}[commandchars=\\\\\\{\\}]\n".to_string());
 
-    for line in code.split('\n').map(|s| s.trim_end_matches('\r')) {
+    for line in code.lines() {
         let regions = h.highlight_line(line, ss).unwrap();
         let (colors, words): (Vec<_>, Vec<_>) =
             regions.into_iter().map(|(a, b)| (a.foreground, b)).unzip();
