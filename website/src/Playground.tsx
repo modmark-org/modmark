@@ -1,9 +1,9 @@
 import * as Comlink from "comlink";
 import styled from 'styled-components'
-import {useEffect, useMemo, useRef, useState} from "react";
-import {Button, Input, Select} from "./Buttons";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Button, Input, Select } from "./Buttons";
 import Editor from '@monaco-editor/react';
-import {editor} from 'monaco-editor';
+import { editor } from 'monaco-editor';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import {Link, useSearchParams} from "react-router-dom";
 import getGistById from "./gist.ts";
@@ -12,7 +12,7 @@ import {FiBook, FiClock, FiFolder, FiPackage} from "react-icons/fi";
 import {MdOutlineAutoAwesome, MdOutlineDownloading, MdOutlineKeyboardAlt} from "react-icons/md";
 import FsTree from "./FsTree";
 import PackageDocs from "./PackageDocs";
-import {CompilationResult, Compiler, handleException, PackageInfo} from "./compilerTypes";
+import { CompilationResult, Compiler, handleException, PackageInfo } from "./compilerTypes";
 import Guide from "./Guide";
 
 
@@ -132,7 +132,7 @@ function Playground() {
     const [otherOutputFormat, setOtherOutputFormat] = useState("");
     const [compilerLoaded, setCompilerLoaded] = useState(false);
     const [_compileTimeoutId, setCompileTimoutId] = useState<number | null>(null);
-    const [status, setStatus] = useState<Status | null>({type: "loading"});
+    const [status, setStatus] = useState<Status | null>({ type: "loading" });
     // for the file system to avoid name collisions when creating new folders
     const [folderCount, setFolderCount] = useState(0);
 
@@ -189,7 +189,7 @@ function Playground() {
         }
 
         const compile_helper = () => {
-            setStatus({type: "compiling"});
+            setStatus({ type: "compiling" });
             let start = new Date();
             let output;
             if (mode === "ast") {
@@ -213,7 +213,7 @@ function Playground() {
             output?.then((result => {
                 setLoadingPackage(false);
                 let end = new Date();
-                setStatus({type: "time", timeStart: start, timeEnd: end});
+                setStatus({ type: "time", timeStart: start, timeEnd: end });
                 if (result === null) {
                     setActiveMode(mode);
                     setValidPreview(false);
@@ -233,7 +233,7 @@ function Playground() {
                     return;
                 }
 
-                let {content, warnings, errors} = result as CompilationResult;
+                let { content, warnings, errors } = result as CompilationResult;
                 setContent(content);
                 setWarnings(warnings);
                 setErrors(errors);
@@ -265,7 +265,7 @@ function Playground() {
                     setValidPreview(false); // invalidate the current preview
                 })
         }
-        setStatus({type: "typing"});
+        setStatus({ type: "typing" });
         setCompileTimoutId(oldId => {
             oldId && clearTimeout(oldId);
             return setTimeout(compile_helper, instant ? 0 : COMPILE_INTERVAL) as unknown as number;
@@ -328,10 +328,10 @@ function Playground() {
     const statusElem = <Status>
         <strong>Preview</strong>
         {status?.type === "time" &&
-            <span><MdOutlineAutoAwesome/> Compiled in {status.timeEnd.getTime() - status.timeStart.getTime()}ms</span>}
-        {status?.type === "typing" && <span><MdOutlineKeyboardAlt/> Typing...</span>}
-        {status?.type === "compiling" && <span><FiClock/> Compiling...</span>}
-        {status?.type === "loading" && <span><MdOutlineDownloading/>Loading compiler...</span>}
+            <span><MdOutlineAutoAwesome /> Compiled in {status.timeEnd.getTime() - status.timeStart.getTime()}ms</span>}
+        {status?.type === "typing" && <span><MdOutlineKeyboardAlt /> Typing...</span>}
+        {status?.type === "compiling" && <span><FiClock /> Compiling...</span>}
+        {status?.type === "loading" && <span><MdOutlineDownloading />Loading compiler...</span>}
     </Status>;
 
     return (
@@ -340,11 +340,11 @@ function Playground() {
                 <div>
                     <Logo>
                         <Link to="../">
-                            <img src="./logo.svg" alt="logo"/>
+                            <img src="./logo.svg" alt="logo" />
                         </Link>
-                        <span>ModMark<br/>Playground</span>
+                        <span>ModMark<br />Playground</span>
                     </Logo>
-                    <Button active={showFiles} onClick={() => setShowFiles((showFiles) => !showFiles)}><FiFolder/> Files
+                    <Button active={showFiles} onClick={() => setShowFiles((showFiles) => !showFiles)}><FiFolder /> Files
                     </Button>
                     <Select value={selectedMode} onChange={(e) => handleModeChange(e.target.value as Mode)}>
                         <option value="ast">Abstract syntax tree</option>
@@ -359,7 +359,7 @@ function Playground() {
                     {
                         selectedMode === "transpile-other" &&
                         <Input type="text" placeholder="Output format" value={otherOutputFormat}
-                               onChange={(e) => setOtherOutputFormat(e.target.value)}
+                            onChange={(e) => setOtherOutputFormat(e.target.value)}
                         />
                     }
                     {
@@ -376,14 +376,14 @@ function Playground() {
                         active={activeView === "guide"}
                         onClick={() => setActiveView(activeView === "guide" ? "preview" : "guide")}
                     >
-                        <FiBook/> Guide
+                        <FiBook /> Guide
                     </Button>
 
                     <Button
                         active={activeView === "docs"}
                         onClick={() => setActiveView(activeView === "docs" ? "preview" : "docs")}
                     >
-                        <FiPackage/> Package docs
+                        <FiPackage /> Package docs
                     </Button>
                 </div>
             </Menu>
@@ -405,7 +405,7 @@ function Playground() {
                 <EditorContainer>
                     <Editor
                         height="100%"
-                        options={{minimap: {enabled: false}, quickSuggestions: false, wordWrap: "on"}}
+                        options={{ minimap: { enabled: false }, quickSuggestions: false, wordWrap: "on" }}
                         defaultValue="Loading content..."
                         onMount={handleEditorDidMount}
                         onChange={handleEditorChange}
@@ -422,20 +422,29 @@ function Playground() {
                             marginLeft: "auto",
                             marginRight: "auto"
                         }}>
-                            <PackageDocs packages={packages}/>
+                            <PackageDocs packages={packages} />
+                        </div>
+                    }
+                    {activeView === "guide" &&
+                        <div style={{
+                            maxWidth: 800,
+                            paddingBottom: "3rem",
+                            height: "100%",
+                            overflow: "auto",
+                            width: "100%",
+                            marginLeft: "auto",
+                            marginRight: "auto"
+                        }}>
+                            <Guide />
                         </div>
                     }
                     {
-                        activeView === "guide" &&
-                        <Guide/>
-                    }
-                    {
                         activeView === "preview" && <>
-                            <IssuesReport warnings={warnings} errors={errors}/>
+                            <IssuesReport warnings={warnings} errors={errors} />
                             {loadingPackage &&
-                                <LoadingPackage><FiPackage size="20"/> Attempting to load package ...</LoadingPackage>}
+                                <LoadingPackage><FiPackage size="20" /> Attempting to load package ...</LoadingPackage>}
                             {statusElem}
-                            <Preview content={content} mode={activeMode} valid={validPreview}/>
+                            <Preview content={content} mode={activeMode} valid={validPreview} />
                         </>
                     }
                 </View>
@@ -503,10 +512,10 @@ const Warning = styled.div`
 `
 
 // display warnings and errors
-function IssuesReport({warnings, errors}: { warnings: string[], errors: string[] }) {
-    const errorsElem = errors.map((error, i) => <Error key={i} dangerouslySetInnerHTML={{__html: error}}/>);
+function IssuesReport({ warnings, errors }: { warnings: string[], errors: string[] }) {
+    const errorsElem = errors.map((error, i) => <Error key={i} dangerouslySetInnerHTML={{ __html: error }} />);
 
-    const warningsElem = warnings.map((warning, i) => <Warning key={i} dangerouslySetInnerHTML={{__html: warning}}/>);
+    const warningsElem = warnings.map((warning, i) => <Warning key={i} dangerouslySetInnerHTML={{ __html: warning }} />);
 
     return <IssuesContainer>
         {
