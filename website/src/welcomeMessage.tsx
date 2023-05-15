@@ -21,10 +21,10 @@ What is this //table// thing? It is a module. Modules live
 within packages, which are programs who reside outside language.
 They are simply .wasm-programs which gets the input of the
 module, in this case all the text in the paragraph starting
-with \[table], and can do anything it want with it. In
+with \\[table], and can do anything it want with it. In
 this case, ModMark sends the text together with information such
 as that the target output format is HTML, to the package which
-houses the \[table] module. The module then generates
+houses the \\[table] module. The module then generates
 the corresponding <table> and </table> tags, and the result
 appears here.
 
