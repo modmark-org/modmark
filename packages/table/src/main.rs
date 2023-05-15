@@ -307,6 +307,16 @@ impl Table<'_> {
         vec.push(import!(r"\usepackage{float}"));
         vec.push(json!("\\begin{table}[H]\n"));
         vec.push(json!("\\centering\n"));
+        
+        if let Some(caption) = self.caption {
+            vec.push(json!("\\caption{"));
+            vec.push(inline_content!(caption));
+            vec.push(json!("}\n"));
+        }
+        if let Some(label) = self.label {
+            vec.push(json!(format!("\\label{{{label}}}\n")));
+        }
+
         vec.push(json!(format!("\\begin{{tabular}} {{ {} }}\n", col_key)));
 
         // Only "None" borders should not have top row
@@ -349,14 +359,6 @@ impl Table<'_> {
             vec.push(json!("\\hline\n"))
         }
         vec.push(json!("\\end{tabular}\n"));
-        if let Some(caption) = self.caption {
-            vec.push(json!("\\caption{"));
-            vec.push(inline_content!(caption));
-            vec.push(json!("}\n"));
-        }
-        if let Some(label) = self.label {
-            vec.push(json!(format!("\\label{{{label}}}\n")));
-        }
         vec.push(json!(r"\end{table}"));
         json!(vec)
     }
