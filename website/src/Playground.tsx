@@ -249,6 +249,9 @@ function Playground() {
         // If we query a gist => load it
         // If not => check local storage
         // If local storage is empty => load the welcome document (welcomeGist)
+        // Note that getGistById returns appropriate errors as strings, and only throws
+        // on HTTP errors. Also note that getGistById may load other files as well, if
+        // the gist contains other files.
 
         let welcomeGist = "dd61a53d832c8e6674190252d49606e7";
         let gist = searchParams.get("gist");
@@ -262,12 +265,8 @@ function Playground() {
         }
 
         let gistToLoad = gist ?? welcomeGist;
-        let gistContent = await getGistById(gistToLoad);
-        if (gistContent !== null) {
-            editor.setValue(gistContent);
-        } else {
-            editor.setValue("Could not load gist with ID " + gist);
-        }
+        let gistContent = await getGistById(gistToLoad, compiler.add_file);
+        editor.setValue(gistContent);
     }
 
     const handleEditorChange = (value: string | undefined) => {
@@ -513,4 +512,3 @@ function openInOverleaf(content: string){
     form.submit();
     document.body.removeChild(form);
 }
-
