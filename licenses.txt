@@ -1,271 +1,654 @@
 This project uses the following third-party packages which are licensed under the following licenses:
 
-addr2line:0.19.0 using Apache-2.0 OR MIT
-adler:1.0.2 using 0BSD OR Apache-2.0 OR MIT
-ahash:0.7.6 using Apache-2.0 OR MIT
-aho-corasick:0.7.20 using MIT OR Unlicense
-android_system_properties:0.1.5 using Apache-2.0 OR MIT
-anyhow:1.0.69 using Apache-2.0 OR MIT
-async-trait:0.1.64 using Apache-2.0 OR MIT
-atty:0.2.14 using MIT
-autocfg:1.1.0 using Apache-2.0 OR MIT
-backtrace:0.3.67 using Apache-2.0 OR MIT
-base-x:0.2.11 using MIT
-base64:0.21.0 using Apache-2.0 OR MIT
-bincode:1.3.3 using MIT
-bit-set:0.5.3 using Apache-2.0 OR MIT
-bit-vec:0.6.3 using Apache-2.0 OR MIT
-bitflags:1.3.2 using Apache-2.0 OR MIT
-bumpalo:3.12.0 using Apache-2.0 OR MIT
-bytecheck:0.6.9 using MIT
-bytecheck_derive:0.6.9 using MIT
-byteorder:1.4.3 using MIT OR Unlicense
-bytes:1.4.0 using MIT
-cc:1.0.79 using Apache-2.0 OR MIT
-cfg-if:0.1.10 using Apache-2.0 OR MIT
-cfg-if:1.0.0 using Apache-2.0 OR MIT
-chrono:0.4.23 using Apache-2.0 OR MIT
-clap:3.2.23 using Apache-2.0 OR MIT
-clap:4.1.4 using Apache-2.0 OR MIT
-clap_derive:3.2.18 using Apache-2.0 OR MIT
-clap_derive:4.1.0 using Apache-2.0 OR MIT
-clap_lex:0.2.4 using Apache-2.0 OR MIT
-clap_lex:0.3.1 using Apache-2.0 OR MIT
-codespan-reporting:0.11.1 using Apache-2.0
-console_error_panic_hook:0.1.7 using Apache-2.0 OR MIT
-const_fn:0.4.9 using Apache-2.0 OR MIT
-core-foundation-sys:0.8.3 using Apache-2.0 OR MIT
-corosensei:0.1.3 using Apache-2.0 OR MIT
-cranelift-bforest:0.86.1 using Apache-2.0 WITH LLVM-exception
-cranelift-codegen:0.86.1 using Apache-2.0 WITH LLVM-exception
-cranelift-codegen-meta:0.86.1 using Apache-2.0 WITH LLVM-exception
-cranelift-codegen-shared:0.86.1 using Apache-2.0 WITH LLVM-exception
-cranelift-entity:0.86.1 using Apache-2.0 WITH LLVM-exception
-cranelift-frontend:0.86.1 using Apache-2.0 WITH LLVM-exception
-cranelift-isle:0.86.1 using Apache-2.0 WITH LLVM-exception
-crc32fast:1.3.2 using Apache-2.0 OR MIT
-crossbeam-channel:0.5.6 using Apache-2.0 OR MIT
-crossbeam-deque:0.8.2 using Apache-2.0 OR MIT
-crossbeam-epoch:0.9.13 using Apache-2.0 OR MIT
-crossbeam-utils:0.8.14 using Apache-2.0 OR MIT
-crossterm:0.26.0 using MIT
-crossterm_winapi:0.9.0 using MIT
-cxx:1.0.89 using Apache-2.0 OR MIT
-cxx-build:1.0.89 using Apache-2.0 OR MIT
-cxxbridge-flags:1.0.89 using Apache-2.0 OR MIT
-cxxbridge-macro:1.0.89 using Apache-2.0 OR MIT
-darling:0.14.3 using MIT
-darling_core:0.14.3 using MIT
-darling_macro:0.14.3 using MIT
-datatest-stable:0.1.3 using Apache-2.0 OR MIT
-derivative:2.2.0 using Apache-2.0 OR MIT
-diffy:0.3.0 using Apache-2.0 OR MIT
-directories:4.0.1 using Apache-2.0 OR MIT
-dirs-sys:0.3.7 using Apache-2.0 OR MIT
-discard:1.0.4 using MIT
-either:1.8.1 using Apache-2.0 OR MIT
-enum-iterator:0.7.0 using 0BSD
-enum-iterator-derive:0.7.0 using 0BSD
-enumset:1.0.12 using Apache-2.0 OR MIT
-enumset_derive:0.6.1 using Apache-2.0 OR MIT
-errno:0.2.8 using Apache-2.0 OR MIT
-errno-dragonfly:0.1.2 using MIT
-fallible-iterator:0.2.0 using Apache-2.0 OR MIT
-fancy-regex:0.7.1 using MIT
-filetime:0.2.19 using Apache-2.0 OR MIT
-flate2:1.0.25 using Apache-2.0 OR MIT
-fnv:1.0.7 using Apache-2.0 OR MIT
-fsevent-sys:4.1.0 using MIT
-fxhash:0.2.1 using Apache-2.0 OR MIT
-generational-arena:0.2.8 using MPL-2.0
-getrandom:0.2.8 using Apache-2.0 OR MIT
-gimli:0.26.2 using Apache-2.0 OR MIT
-gimli:0.27.1 using Apache-2.0 OR MIT
-hashbrown:0.12.3 using Apache-2.0 OR MIT
-heck:0.3.3 using Apache-2.0 OR MIT
-heck:0.4.1 using Apache-2.0 OR MIT
-hermit-abi:0.1.19 using Apache-2.0 OR MIT
-hermit-abi:0.2.6 using Apache-2.0 OR MIT
-iana-time-zone:0.1.53 using Apache-2.0 OR MIT
-iana-time-zone-haiku:0.1.1 using Apache-2.0 OR MIT
-id-arena:2.2.1 using Apache-2.0 OR MIT
-ident_case:1.0.1 using Apache-2.0 OR MIT
-indexmap:1.9.2 using Apache-2.0 OR MIT
-inotify:0.9.6 using ISC
-inotify-sys:0.1.5 using ISC
-io-lifetimes:1.0.5 using Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT
-is-terminal:0.4.2 using MIT
-itoa:1.0.5 using Apache-2.0 OR MIT
-js-sys:0.3.60 using Apache-2.0 OR MIT
-json:0.12.4 using Apache-2.0 OR MIT
-kqueue:1.0.7 using MIT
-kqueue-sys:1.0.3 using MIT
-latex2mathml:0.2.3 using MIT
-lazy_static:1.4.0 using Apache-2.0 OR MIT
-leb128:0.2.5 using Apache-2.0 OR MIT
-libc:0.2.139 using Apache-2.0 OR MIT
-libtest-mimic:0.5.2 using Apache-2.0 OR MIT
-line-wrap:0.1.1 using Apache-2.0
-link-cplusplus:1.0.8 using Apache-2.0 OR MIT
-linked-hash-map:0.5.6 using Apache-2.0 OR MIT
-linux-raw-sys:0.1.4 using Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT
-lock_api:0.4.9 using Apache-2.0 OR MIT
-log:0.4.17 using Apache-2.0 OR MIT
-mach:0.3.2 using BSD-2-Clause
-memchr:2.5.0 using MIT OR Unlicense
-memmap2:0.5.8 using Apache-2.0 OR MIT
-memoffset:0.6.5 using MIT
-memoffset:0.7.1 using MIT
-minimal-lexical:0.2.1 using Apache-2.0 OR MIT
-miniz_oxide:0.6.2 using Apache-2.0 OR MIT OR Zlib
-mio:0.8.5 using MIT
-more-asserts:0.2.2 using CC0-1.0
-nom:7.1.3 using MIT
-notify:5.1.0 using Artistic-2.0 OR CC0-1.0
-nu-ansi-term:0.46.0 using MIT
-num-integer:0.1.45 using Apache-2.0 OR MIT
-num-traits:0.2.15 using Apache-2.0 OR MIT
-num_cpus:1.15.0 using Apache-2.0 OR MIT
-object:0.30.3 using Apache-2.0 OR MIT
-once_cell:1.17.0 using Apache-2.0 OR MIT
-once_cell:1.17.1 using Apache-2.0 OR MIT
-os_str_bytes:6.4.1 using Apache-2.0 OR MIT
-overload:0.1.1 using MIT
-parking_lot:0.12.1 using Apache-2.0 OR MIT
-parking_lot_core:0.9.7 using Apache-2.0 OR MIT
-paste:1.0.11 using Apache-2.0 OR MIT
-pin-project-lite:0.2.9 using Apache-2.0 OR MIT
-plist:1.4.1 using MIT
-proc-macro-error:1.0.4 using Apache-2.0 OR MIT
-proc-macro-error-attr:1.0.4 using Apache-2.0 OR MIT
-proc-macro-hack:0.5.20+deprecated using Apache-2.0 OR MIT
-proc-macro2:1.0.50 using Apache-2.0 OR MIT
-proc-macro2:1.0.51 using Apache-2.0 OR MIT
-ptr_meta:0.1.4 using MIT
-ptr_meta_derive:0.1.4 using MIT
-pulldown-cmark:0.8.0 using MIT
-quick-xml:0.26.0 using MIT
-quote:1.0.23 using Apache-2.0 OR MIT
-rayon:1.6.1 using Apache-2.0 OR MIT
-rayon-core:1.10.2 using Apache-2.0 OR MIT
-redox_syscall:0.2.16 using MIT
-redox_users:0.4.3 using MIT
-regalloc2:0.3.2 using Apache-2.0 WITH LLVM-exception
-regex:1.7.1 using Apache-2.0 OR MIT
-regex-syntax:0.6.28 using Apache-2.0 OR MIT
-region:3.0.0 using MIT
-rend:0.3.6 using MIT
-rkyv:0.7.39 using MIT
-rkyv_derive:0.7.39 using MIT
-rustc-demangle:0.1.21 using Apache-2.0 OR MIT
-rustc_version:0.2.3 using Apache-2.0 OR MIT
-rustix:0.36.7 using Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT
-ryu:1.0.12 using Apache-2.0 OR BSL-1.0
-safemem:0.3.3 using Apache-2.0 OR MIT
-same-file:1.0.6 using MIT OR Unlicense
-scopeguard:1.1.0 using Apache-2.0 OR MIT
-scratch:1.0.3 using Apache-2.0 OR MIT
-seahash:4.1.0 using MIT
-semver:0.9.0 using Apache-2.0 OR MIT
-semver-parser:0.7.0 using Apache-2.0 OR MIT
-serde:1.0.152 using Apache-2.0 OR MIT
-serde-wasm-bindgen:0.4.5 using MIT
-serde_derive:1.0.152 using Apache-2.0 OR MIT
-serde_json:1.0.93 using Apache-2.0 OR MIT
-sha1:0.6.1 using BSD-3-Clause
-sha1_smol:1.0.0 using BSD-3-Clause
-signal-hook:0.3.14 using Apache-2.0 OR MIT
-signal-hook-mio:0.2.3 using Apache-2.0 OR MIT
-signal-hook-registry:1.4.0 using Apache-2.0 OR MIT
-slab:0.4.7 using MIT
-slice-group-by:0.3.0 using MIT
-smallvec:1.10.0 using Apache-2.0 OR MIT
-stable_deref_trait:1.2.0 using Apache-2.0 OR MIT
-standback:0.2.17 using Apache-2.0 OR MIT
-stdweb:0.4.20 using Apache-2.0 OR MIT
-stdweb-derive:0.5.3 using Apache-2.0 OR MIT
-stdweb-internal-macros:0.2.9 using Apache-2.0 OR MIT
-stdweb-internal-runtime:0.1.5 using Apache-2.0 OR MIT
-strsim:0.10.0 using MIT
-syn:1.0.107 using Apache-2.0 OR MIT
-syn:1.0.109 using Apache-2.0 OR MIT
-syntect:5.0.0 using MIT
-target-lexicon:0.12.5 using Apache-2.0 WITH LLVM-exception
-termcolor:1.2.0 using MIT OR Unlicense
-textwrap:0.16.0 using MIT
-thiserror:1.0.38 using Apache-2.0 OR MIT
-thiserror-impl:1.0.38 using Apache-2.0 OR MIT
-threadpool:1.8.1 using Apache-2.0 OR MIT
-time:0.2.27 using Apache-2.0 OR MIT
-time:0.3.20 using Apache-2.0 OR MIT
-time-core:0.1.0 using Apache-2.0 OR MIT
-time-macros:0.1.1 using Apache-2.0 OR MIT
-time-macros:0.2.8 using Apache-2.0 OR MIT
-time-macros-impl:0.1.2 using Apache-2.0 OR MIT
-tinyvec:1.6.0 using Apache-2.0 OR MIT OR Zlib
-tinyvec_macros:0.1.1 using Apache-2.0 OR MIT OR Zlib
-tracing:0.1.37 using MIT
-tracing-attributes:0.1.23 using MIT
-tracing-core:0.1.30 using MIT
-unicase:2.6.0 using Apache-2.0 OR MIT
-unicode-ident:1.0.6 using (Apache-2.0 OR MIT) AND Unicode-DFS-2016
-unicode-normalization:0.1.22 using Apache-2.0 OR MIT
-unicode-segmentation:1.10.1 using Apache-2.0 OR MIT
-unicode-width:0.1.10 using Apache-2.0 OR MIT
-unicode-xid:0.2.4 using Apache-2.0 OR MIT
-version_check:0.9.4 using Apache-2.0 OR MIT
-walkdir:2.3.2 using MIT OR Unlicense
-wasi:0.11.0+wasi-snapshot-preview1 using Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT
-wasm-bindgen:0.2.83 using Apache-2.0 OR MIT
-wasm-bindgen-backend:0.2.83 using Apache-2.0 OR MIT
-wasm-bindgen-downcast:0.1.1 using Apache-2.0 OR MIT
-wasm-bindgen-downcast-macros:0.1.1 using Apache-2.0 OR MIT
-wasm-bindgen-macro:0.2.83 using Apache-2.0 OR MIT
-wasm-bindgen-macro-support:0.2.83 using Apache-2.0 OR MIT
-wasm-bindgen-shared:0.2.83 using Apache-2.0 OR MIT
-wasm-encoder:0.22.1 using Apache-2.0 WITH LLVM-exception
-wasmer:3.1.1 using MIT
-wasmer-compiler:3.1.1 using Apache-2.0 WITH LLVM-exception OR MIT
-wasmer-compiler-cranelift:3.1.1 using Apache-2.0 WITH LLVM-exception OR MIT
-wasmer-derive:3.1.1 using MIT
-wasmer-types:3.1.1 using Apache-2.0 WITH LLVM-exception OR MIT
-wasmer-vbus:3.1.1 using MIT
-wasmer-vfs:3.1.1 using MIT
-wasmer-vm:3.1.1 using Apache-2.0 WITH LLVM-exception OR MIT
-wasmer-vnet:3.1.1 using MIT
-wasmer-wasi:3.1.1 using MIT
-wasmer-wasi-local-networking:3.1.1 using MIT
-wasmer-wasi-types:3.1.1 using MIT
-wasmer-wit-bindgen-gen-core:0.1.1 using Apache-2.0
-wasmer-wit-bindgen-gen-rust:0.1.1 using Apache-2.0
-wasmer-wit-bindgen-gen-rust-wasm:0.1.1 using Apache-2.0
-wasmer-wit-bindgen-rust:0.1.1 using Apache-2.0
-wasmer-wit-bindgen-rust-impl:0.1.1 using Apache-2.0
-wasmer-wit-parser:0.1.1 using Apache-2.0
-wasmparser:0.83.0 using Apache-2.0 WITH LLVM-exception
-wast:52.0.3 using Apache-2.0 WITH LLVM-exception
-wat:1.0.57 using Apache-2.0 WITH LLVM-exception
-winapi:0.3.9 using Apache-2.0 OR MIT
-winapi-i686-pc-windows-gnu:0.4.0 using Apache-2.0 OR MIT
-winapi-util:0.1.5 using MIT OR Unlicense
-winapi-x86_64-pc-windows-gnu:0.4.0 using Apache-2.0 OR MIT
-windows-sys:0.33.0 using Apache-2.0 OR MIT
-windows-sys:0.42.0 using Apache-2.0 OR MIT
-windows-sys:0.45.0 using Apache-2.0 OR MIT
-windows-targets:0.42.1 using Apache-2.0 OR MIT
-windows_aarch64_gnullvm:0.42.1 using Apache-2.0 OR MIT
-windows_aarch64_msvc:0.33.0 using Apache-2.0 OR MIT
-windows_aarch64_msvc:0.42.1 using Apache-2.0 OR MIT
-windows_i686_gnu:0.33.0 using Apache-2.0 OR MIT
-windows_i686_gnu:0.42.1 using Apache-2.0 OR MIT
-windows_i686_msvc:0.33.0 using Apache-2.0 OR MIT
-windows_i686_msvc:0.42.1 using Apache-2.0 OR MIT
-windows_x86_64_gnu:0.33.0 using Apache-2.0 OR MIT
-windows_x86_64_gnu:0.42.1 using Apache-2.0 OR MIT
-windows_x86_64_gnullvm:0.42.1 using Apache-2.0 OR MIT
-windows_x86_64_msvc:0.33.0 using Apache-2.0 OR MIT
-windows_x86_64_msvc:0.42.1 using Apache-2.0 OR MIT
-yaml-rust:0.4.5 using Apache-2.0 OR MIT
+Crate::addr2line:0.19.0 using Apache-2.0 OR MIT
+Crate::adler:1.0.2 using 0BSD OR Apache-2.0 OR MIT
+Crate::ahash:0.7.6 using Apache-2.0 OR MIT
+Crate::aho-corasick:1.0.1 using MIT OR Unlicense
+Crate::android_system_properties:0.1.5 using Apache-2.0 OR MIT
+Crate::anstream:0.3.2 using Apache-2.0 OR MIT
+Crate::anstyle:1.0.0 using Apache-2.0 OR MIT
+Crate::anstyle-parse:0.2.0 using Apache-2.0 OR MIT
+Crate::anstyle-query:1.0.0 using Apache-2.0 OR MIT
+Crate::anstyle-wincon:1.0.1 using Apache-2.0 OR MIT
+Crate::anyhow:1.0.71 using Apache-2.0 OR MIT
+Crate::async-trait:0.1.68 using Apache-2.0 OR MIT
+Crate::atty:0.2.14 using MIT
+Crate::autocfg:1.1.0 using Apache-2.0 OR MIT
+Crate::backtrace:0.3.67 using Apache-2.0 OR MIT
+Crate::base-x:0.2.11 using MIT
+Crate::base64:0.13.1 using Apache-2.0 OR MIT
+Crate::base64:0.21.0 using Apache-2.0 OR MIT
+Crate::biblatex:0.8.0 using Apache-2.0 OR MIT
+Crate::bimap:0.6.3 using Apache-2.0 OR MIT
+Crate::bincode:1.3.3 using MIT
+Crate::bit-set:0.5.3 using Apache-2.0 OR MIT
+Crate::bit-vec:0.6.3 using Apache-2.0 OR MIT
+Crate::bitflags:1.3.2 using Apache-2.0 OR MIT
+Crate::block-buffer:0.10.4 using Apache-2.0 OR MIT
+Crate::bumpalo:3.12.1 using Apache-2.0 OR MIT
+Crate::bumpalo:3.12.2 using Apache-2.0 OR MIT
+Crate::bytecheck:0.6.10 using MIT
+Crate::bytecheck_derive:0.6.10 using MIT
+Crate::byteorder:1.4.3 using MIT OR Unlicense
+Crate::bytes:1.4.0 using MIT
+Crate::cc:1.0.79 using Apache-2.0 OR MIT
+Crate::cfg-if:0.1.10 using Apache-2.0 OR MIT
+Crate::cfg-if:1.0.0 using Apache-2.0 OR MIT
+Crate::chrono:0.4.24 using Apache-2.0 OR MIT
+Crate::clap:3.2.25 using Apache-2.0 OR MIT
+Crate::clap:4.2.7 using Apache-2.0 OR MIT
+Crate::clap_builder:4.2.7 using Apache-2.0 OR MIT
+Crate::clap_derive:3.2.25 using Apache-2.0 OR MIT
+Crate::clap_derive:4.2.0 using Apache-2.0 OR MIT
+Crate::clap_lex:0.2.4 using Apache-2.0 OR MIT
+Crate::clap_lex:0.4.1 using Apache-2.0 OR MIT
+Crate::codespan-reporting:0.11.1 using Apache-2.0
+Crate::colorchoice:1.0.0 using Apache-2.0 OR MIT
+Crate::console_error_panic_hook:0.1.7 using Apache-2.0 OR MIT
+Crate::const_fn:0.4.9 using Apache-2.0 OR MIT
+Crate::core-foundation:0.9.3 using Apache-2.0 OR MIT
+Crate::core-foundation-sys:0.8.4 using Apache-2.0 OR MIT
+Crate::corosensei:0.1.3 using Apache-2.0 OR MIT
+Crate::cpufeatures:0.2.7 using Apache-2.0 OR MIT
+Crate::cranelift-bforest:0.86.1 using Apache-2.0 WITH LLVM-exception
+Crate::cranelift-codegen:0.86.1 using Apache-2.0 WITH LLVM-exception
+Crate::cranelift-codegen-meta:0.86.1 using Apache-2.0 WITH LLVM-exception
+Crate::cranelift-codegen-shared:0.86.1 using Apache-2.0 WITH LLVM-exception
+Crate::cranelift-entity:0.86.1 using Apache-2.0 WITH LLVM-exception
+Crate::cranelift-frontend:0.86.1 using Apache-2.0 WITH LLVM-exception
+Crate::cranelift-isle:0.86.1 using Apache-2.0 WITH LLVM-exception
+Crate::crc32fast:1.3.2 using Apache-2.0 OR MIT
+Crate::crossbeam-channel:0.5.8 using Apache-2.0 OR MIT
+Crate::crossbeam-deque:0.8.3 using Apache-2.0 OR MIT
+Crate::crossbeam-epoch:0.9.14 using Apache-2.0 OR MIT
+Crate::crossbeam-utils:0.8.15 using Apache-2.0 OR MIT
+Crate::crossterm:0.26.1 using MIT
+Crate::crossterm_winapi:0.9.0 using MIT
+Crate::crypto-common:0.1.6 using Apache-2.0 OR MIT
+Crate::cxx:1.0.94 using Apache-2.0 OR MIT
+Crate::cxx-build:1.0.94 using Apache-2.0 OR MIT
+Crate::cxxbridge-flags:1.0.94 using Apache-2.0 OR MIT
+Crate::cxxbridge-macro:1.0.94 using Apache-2.0 OR MIT
+Crate::darling:0.20.1 using MIT
+Crate::darling_core:0.20.1 using MIT
+Crate::darling_macro:0.20.1 using MIT
+Crate::datatest-stable:0.1.3 using Apache-2.0 OR MIT
+Crate::derivative:2.2.0 using Apache-2.0 OR MIT
+Crate::diffy:0.3.0 using Apache-2.0 OR MIT
+Crate::digest:0.10.6 using Apache-2.0 OR MIT
+Crate::directories:5.0.1 using Apache-2.0 OR MIT
+Crate::dirs-sys:0.4.1 using Apache-2.0 OR MIT
+Crate::discard:1.0.4 using MIT
+Crate::displaydoc:0.2.3 using Apache-2.0 OR MIT
+Crate::either:1.8.1 using Apache-2.0 OR MIT
+Crate::encoding_rs:0.8.32 using (Apache-2.0 OR MIT) AND BSD-3-Clause
+Crate::enum-iterator:0.7.0 using 0BSD
+Crate::enum-iterator-derive:0.7.0 using 0BSD
+Crate::enumset:1.1.2 using Apache-2.0 OR MIT
+Crate::enumset_derive:0.8.1 using Apache-2.0 OR MIT
+Crate::errno:0.3.1 using Apache-2.0 OR MIT
+Crate::errno-dragonfly:0.1.2 using MIT
+Crate::evalexpr:9.0.0 using MIT
+Crate::fallible-iterator:0.2.0 using Apache-2.0 OR MIT
+Crate::fancy-regex:0.7.1 using MIT
+Crate::fastrand:1.9.0 using Apache-2.0 OR MIT
+Crate::filetime:0.2.21 using Apache-2.0 OR MIT
+Crate::flate2:1.0.25 using Apache-2.0 OR MIT
+Crate::fnv:1.0.7 using Apache-2.0 OR MIT
+Crate::foreign-types:0.3.2 using Apache-2.0 OR MIT
+Crate::foreign-types-shared:0.1.1 using Apache-2.0 OR MIT
+Crate::form_urlencoded:1.1.0 using Apache-2.0 OR MIT
+Crate::futures:0.3.28 using Apache-2.0 OR MIT
+Crate::futures-channel:0.3.28 using Apache-2.0 OR MIT
+Crate::futures-core:0.3.28 using Apache-2.0 OR MIT
+Crate::futures-executor:0.3.28 using Apache-2.0 OR MIT
+Crate::futures-io:0.3.28 using Apache-2.0 OR MIT
+Crate::futures-macro:0.3.28 using Apache-2.0 OR MIT
+Crate::futures-sink:0.3.28 using Apache-2.0 OR MIT
+Crate::futures-task:0.3.28 using Apache-2.0 OR MIT
+Crate::futures-util:0.3.28 using Apache-2.0 OR MIT
+Crate::fxhash:0.2.1 using Apache-2.0 OR MIT
+Crate::generational-arena:0.2.8 using MPL-2.0
+Crate::generic-array:0.14.7 using MIT
+Crate::getrandom:0.2.9 using Apache-2.0 OR MIT
+Crate::gimli:0.26.2 using Apache-2.0 OR MIT
+Crate::gimli:0.27.2 using Apache-2.0 OR MIT
+Crate::granular-id:0.4.2 using MIT
+Crate::h2:0.3.18 using MIT
+Crate::hashbrown:0.12.3 using Apache-2.0 OR MIT
+Crate::hayagriva:0.3.0 using Apache-2.0 OR MIT
+Crate::headers:0.3.8 using MIT
+Crate::headers-core:0.2.0 using MIT
+Crate::heck:0.3.3 using Apache-2.0 OR MIT
+Crate::heck:0.4.1 using Apache-2.0 OR MIT
+Crate::hermit-abi:0.1.19 using Apache-2.0 OR MIT
+Crate::hermit-abi:0.2.6 using Apache-2.0 OR MIT
+Crate::hermit-abi:0.3.1 using Apache-2.0 OR MIT
+Crate::http:0.2.9 using Apache-2.0 OR MIT
+Crate::http-body:0.4.5 using MIT
+Crate::httparse:1.8.0 using Apache-2.0 OR MIT
+Crate::httpdate:1.0.2 using Apache-2.0 OR MIT
+Crate::hyper:0.14.26 using MIT
+Crate::hyper-tls:0.5.0 using Apache-2.0 OR MIT
+Crate::iana-time-zone:0.1.56 using Apache-2.0 OR MIT
+Crate::iana-time-zone-haiku:0.1.1 using Apache-2.0 OR MIT
+Crate::id-arena:2.2.1 using Apache-2.0 OR MIT
+Crate::ident_case:1.0.1 using Apache-2.0 OR MIT
+Crate::idna:0.3.0 using Apache-2.0 OR MIT
+Crate::indexmap:1.9.3 using Apache-2.0 OR MIT
+Crate::inotify:0.9.6 using ISC
+Crate::inotify-sys:0.1.5 using ISC
+Crate::instant:0.1.12 using BSD-3-Clause
+Crate::io-lifetimes:1.0.10 using Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT
+Crate::ipnet:2.7.2 using Apache-2.0 OR MIT
+Crate::is-terminal:0.4.7 using MIT
+Crate::isolang:2.2.0 using Apache-2.0
+Crate::itoa:1.0.6 using Apache-2.0 OR MIT
+Crate::js-sys:0.3.61 using Apache-2.0 OR MIT
+Crate::js-sys:0.3.62 using Apache-2.0 OR MIT
+Crate::json:0.12.4 using Apache-2.0 OR MIT
+Crate::kqueue:1.0.7 using MIT
+Crate::kqueue-sys:1.0.3 using MIT
+Crate::latex2mathml:0.2.3 using MIT
+Crate::lazy_static:1.4.0 using Apache-2.0 OR MIT
+Crate::leb128:0.2.5 using Apache-2.0 OR MIT
+Crate::libc:0.2.144 using Apache-2.0 OR MIT
+Crate::libtest-mimic:0.5.2 using Apache-2.0 OR MIT
+Crate::line-wrap:0.1.1 using Apache-2.0
+Crate::link-cplusplus:1.0.8 using Apache-2.0 OR MIT
+Crate::linked-hash-map:0.5.6 using Apache-2.0 OR MIT
+Crate::linux-raw-sys:0.3.7 using Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT
+Crate::lock_api:0.4.9 using Apache-2.0 OR MIT
+Crate::log:0.4.17 using Apache-2.0 OR MIT
+Crate::mach:0.3.2 using BSD-2-Clause
+Crate::memchr:2.5.0 using MIT OR Unlicense
+Crate::memmap2:0.5.10 using Apache-2.0 OR MIT
+Crate::memoffset:0.6.5 using MIT
+Crate::memoffset:0.8.0 using MIT
+Crate::mime:0.3.17 using Apache-2.0 OR MIT
+Crate::mime_guess:2.0.4 using MIT
+Crate::minimal-lexical:0.2.1 using Apache-2.0 OR MIT
+Crate::miniz_oxide:0.6.2 using Apache-2.0 OR MIT OR Zlib
+Crate::mio:0.8.6 using MIT
+Crate::more-asserts:0.2.2 using CC0-1.0
+Crate::multer:2.1.0 using MIT
+Crate::native-tls:0.2.11 using Apache-2.0 OR MIT
+Crate::nom:7.1.3 using MIT
+Crate::notify:5.1.0 using Artistic-2.0 OR CC0-1.0
+Crate::nu-ansi-term:0.46.0 using MIT
+Crate::num-integer:0.1.45 using Apache-2.0 OR MIT
+Crate::num-traits:0.2.15 using Apache-2.0 OR MIT
+Crate::num_cpus:1.15.0 using Apache-2.0 OR MIT
+Crate::numerals:0.1.4 using MIT
+Crate::object:0.30.3 using Apache-2.0 OR MIT
+Crate::once_cell:1.17.1 using Apache-2.0 OR MIT
+Crate::openssl:0.10.52 using Apache-2.0
+Crate::openssl-macros:0.1.1 using Apache-2.0 OR MIT
+Crate::openssl-probe:0.1.5 using Apache-2.0 OR MIT
+Crate::openssl-sys:0.9.87 using MIT
+Crate::option-ext:0.2.0 using MPL-2.0
+Crate::os_str_bytes:6.5.0 using Apache-2.0 OR MIT
+Crate::overload:0.1.1 using MIT
+Crate::parking_lot:0.12.1 using Apache-2.0 OR MIT
+Crate::parking_lot_core:0.9.7 using Apache-2.0 OR MIT
+Crate::paste:1.0.12 using Apache-2.0 OR MIT
+Crate::percent-encoding:2.2.0 using Apache-2.0 OR MIT
+Crate::phf:0.10.1 using MIT
+Crate::phf_shared:0.10.0 using MIT
+Crate::pin-project:1.0.12 using Apache-2.0 OR MIT
+Crate::pin-project-internal:1.0.12 using Apache-2.0 OR MIT
+Crate::pin-project-lite:0.2.9 using Apache-2.0 OR MIT
+Crate::pin-utils:0.1.0 using Apache-2.0 OR MIT
+Crate::pkg-config:0.3.27 using Apache-2.0 OR MIT
+Crate::plist:1.4.3 using MIT
+Crate::plotters:0.3.4 using MIT
+Crate::plotters-backend:0.3.4 using MIT
+Crate::plotters-svg:0.3.3 using MIT
+Crate::portpicker:0.1.1 using Unlicense
+Crate::ppv-lite86:0.2.17 using Apache-2.0 OR MIT
+Crate::proc-macro-error:1.0.4 using Apache-2.0 OR MIT
+Crate::proc-macro-error-attr:1.0.4 using Apache-2.0 OR MIT
+Crate::proc-macro-hack:0.5.20+deprecated using Apache-2.0 OR MIT
+Crate::proc-macro2:1.0.56 using Apache-2.0 OR MIT
+Crate::ptr_meta:0.1.4 using MIT
+Crate::ptr_meta_derive:0.1.4 using MIT
+Crate::pulldown-cmark:0.8.0 using MIT
+Crate::quick-xml:0.28.2 using MIT
+Crate::quote:1.0.26 using Apache-2.0 OR MIT
+Crate::quote:1.0.27 using Apache-2.0 OR MIT
+Crate::rand:0.8.5 using Apache-2.0 OR MIT
+Crate::rand_chacha:0.3.1 using Apache-2.0 OR MIT
+Crate::rand_core:0.6.4 using Apache-2.0 OR MIT
+Crate::rayon:1.7.0 using Apache-2.0 OR MIT
+Crate::rayon-core:1.11.0 using Apache-2.0 OR MIT
+Crate::redox_syscall:0.2.16 using MIT
+Crate::redox_syscall:0.3.5 using MIT
+Crate::redox_users:0.4.3 using MIT
+Crate::regalloc2:0.3.2 using Apache-2.0 WITH LLVM-exception
+Crate::regex:1.8.1 using Apache-2.0 OR MIT
+Crate::regex-syntax:0.6.29 using Apache-2.0 OR MIT
+Crate::regex-syntax:0.7.1 using Apache-2.0 OR MIT
+Crate::region:3.0.0 using MIT
+Crate::rend:0.4.0 using MIT
+Crate::reqwest:0.11.17 using Apache-2.0 OR MIT
+Crate::rkyv:0.7.41 using MIT
+Crate::rkyv_derive:0.7.41 using MIT
+Crate::roman:0.1.6 using Unlicense
+Crate::rustc-demangle:0.1.23 using Apache-2.0 OR MIT
+Crate::rustc_version:0.2.3 using Apache-2.0 OR MIT
+Crate::rustix:0.37.19 using Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT
+Crate::rustls-pemfile:1.0.2 using Apache-2.0 OR ISC OR MIT
+Crate::rustversion:1.0.12 using Apache-2.0 OR MIT
+Crate::ryu:1.0.13 using Apache-2.0 OR BSL-1.0
+Crate::safemem:0.3.3 using Apache-2.0 OR MIT
+Crate::same-file:1.0.6 using MIT OR Unlicense
+Crate::schannel:0.1.21 using MIT
+Crate::scoped-tls:1.0.1 using Apache-2.0 OR MIT
+Crate::scopeguard:1.1.0 using Apache-2.0 OR MIT
+Crate::scratch:1.0.5 using Apache-2.0 OR MIT
+Crate::seahash:4.1.0 using MIT
+Crate::security-framework:2.8.2 using Apache-2.0 OR MIT
+Crate::security-framework-sys:2.8.0 using Apache-2.0 OR MIT
+Crate::semver:0.9.0 using Apache-2.0 OR MIT
+Crate::semver-parser:0.7.0 using Apache-2.0 OR MIT
+Crate::serde:1.0.160 using Apache-2.0 OR MIT
+Crate::serde:1.0.162 using Apache-2.0 OR MIT
+Crate::serde:1.0.163 using Apache-2.0 OR MIT
+Crate::serde-wasm-bindgen:0.4.5 using MIT
+Crate::serde-wasm-bindgen:0.5.0 using MIT
+Crate::serde_derive:1.0.160 using Apache-2.0 OR MIT
+Crate::serde_derive:1.0.162 using Apache-2.0 OR MIT
+Crate::serde_derive:1.0.163 using Apache-2.0 OR MIT
+Crate::serde_json:1.0.96 using Apache-2.0 OR MIT
+Crate::serde_urlencoded:0.7.1 using Apache-2.0 OR MIT
+Crate::sha1:0.6.1 using BSD-3-Clause
+Crate::sha1:0.10.5 using Apache-2.0 OR MIT
+Crate::sha1_smol:1.0.0 using BSD-3-Clause
+Crate::signal-hook:0.3.15 using Apache-2.0 OR MIT
+Crate::signal-hook-mio:0.2.3 using Apache-2.0 OR MIT
+Crate::signal-hook-registry:1.4.1 using Apache-2.0 OR MIT
+Crate::simdutf8:0.1.4 using Apache-2.0 OR MIT
+Crate::siphasher:0.3.10 using Apache-2.0 OR MIT
+Crate::slab:0.4.8 using MIT
+Crate::slice-group-by:0.3.1 using MIT
+Crate::smallvec:1.10.0 using Apache-2.0 OR MIT
+Crate::socket2:0.4.9 using Apache-2.0 OR MIT
+Crate::spin:0.9.8 using MIT
+Crate::stable_deref_trait:1.2.0 using Apache-2.0 OR MIT
+Crate::standback:0.2.17 using Apache-2.0 OR MIT
+Crate::stdweb:0.4.20 using Apache-2.0 OR MIT
+Crate::stdweb-derive:0.5.3 using Apache-2.0 OR MIT
+Crate::stdweb-internal-macros:0.2.9 using Apache-2.0 OR MIT
+Crate::stdweb-internal-runtime:0.1.5 using Apache-2.0 OR MIT
+Crate::strsim:0.10.0 using MIT
+Crate::strum:0.24.1 using MIT
+Crate::strum_macros:0.24.3 using MIT
+Crate::syn:1.0.109 using Apache-2.0 OR MIT
+Crate::syn:2.0.15 using Apache-2.0 OR MIT
+Crate::syntect:5.0.0 using MIT
+Crate::target-lexicon:0.12.7 using Apache-2.0 WITH LLVM-exception
+Crate::tempfile:3.5.0 using Apache-2.0 OR MIT
+Crate::termcolor:1.2.0 using MIT OR Unlicense
+Crate::textwrap:0.16.0 using MIT
+Crate::thiserror:1.0.40 using Apache-2.0 OR MIT
+Crate::thiserror-impl:1.0.40 using Apache-2.0 OR MIT
+Crate::threadpool:1.8.1 using Apache-2.0 OR MIT
+Crate::time:0.2.27 using Apache-2.0 OR MIT
+Crate::time:0.3.20 using Apache-2.0 OR MIT
+Crate::time-core:0.1.0 using Apache-2.0 OR MIT
+Crate::time-macros:0.1.1 using Apache-2.0 OR MIT
+Crate::time-macros:0.2.8 using Apache-2.0 OR MIT
+Crate::time-macros-impl:0.1.2 using Apache-2.0 OR MIT
+Crate::tinystr:0.7.1 using Unicode-DFS-2016
+Crate::tinyvec:1.6.0 using Apache-2.0 OR MIT OR Zlib
+Crate::tinyvec_macros:0.1.1 using Apache-2.0 OR MIT OR Zlib
+Crate::tokio:1.28.1 using MIT
+Crate::tokio-macros:2.1.0 using MIT
+Crate::tokio-native-tls:0.3.1 using MIT
+Crate::tokio-stream:0.1.14 using MIT
+Crate::tokio-tungstenite:0.18.0 using MIT
+Crate::tokio-util:0.7.8 using MIT
+Crate::topological-sort:0.2.2 using Apache-2.0 OR MIT
+Crate::tower-service:0.3.2 using MIT
+Crate::tracing:0.1.37 using MIT
+Crate::tracing-attributes:0.1.24 using MIT
+Crate::tracing-core:0.1.30 using MIT
+Crate::try-lock:0.2.4 using MIT
+Crate::tungstenite:0.18.0 using Apache-2.0 OR MIT
+Crate::typenum:1.16.0 using Apache-2.0 OR MIT
+Crate::unic-langid:0.9.1 using Apache-2.0 OR MIT
+Crate::unic-langid-impl:0.9.1 using Apache-2.0 OR MIT
+Crate::unicase:2.6.0 using Apache-2.0 OR MIT
+Crate::unicode-bidi:0.3.13 using Apache-2.0 OR MIT
+Crate::unicode-ident:1.0.8 using (Apache-2.0 OR MIT) AND Unicode-DFS-2016
+Crate::unicode-normalization:0.1.22 using Apache-2.0 OR MIT
+Crate::unicode-segmentation:1.10.1 using Apache-2.0 OR MIT
+Crate::unicode-width:0.1.10 using Apache-2.0 OR MIT
+Crate::unicode-xid:0.2.4 using Apache-2.0 OR MIT
+Crate::unscanny:0.1.0 using Apache-2.0 OR MIT
+Crate::url:2.3.1 using Apache-2.0 OR MIT
+Crate::utf-8:0.7.6 using Apache-2.0 OR MIT
+Crate::utf8parse:0.2.1 using Apache-2.0 OR MIT
+Crate::vcpkg:0.2.15 using Apache-2.0 OR MIT
+Crate::version_check:0.9.4 using Apache-2.0 OR MIT
+Crate::walkdir:2.3.3 using MIT OR Unlicense
+Crate::want:0.3.0 using MIT
+Crate::warp:0.3.5 using MIT
+Crate::wasi:0.11.0+wasi-snapshot-preview1 using Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT
+Crate::wasm-bindgen:0.2.84 using Apache-2.0 OR MIT
+Crate::wasm-bindgen:0.2.85 using Apache-2.0 OR MIT
+Crate::wasm-bindgen-backend:0.2.84 using Apache-2.0 OR MIT
+Crate::wasm-bindgen-backend:0.2.85 using Apache-2.0 OR MIT
+Crate::wasm-bindgen-downcast:0.1.1 using Apache-2.0 OR MIT
+Crate::wasm-bindgen-downcast-macros:0.1.1 using Apache-2.0 OR MIT
+Crate::wasm-bindgen-futures:0.4.34 using Apache-2.0 OR MIT
+Crate::wasm-bindgen-futures:0.4.35 using Apache-2.0 OR MIT
+Crate::wasm-bindgen-macro:0.2.84 using Apache-2.0 OR MIT
+Crate::wasm-bindgen-macro:0.2.85 using Apache-2.0 OR MIT
+Crate::wasm-bindgen-macro-support:0.2.84 using Apache-2.0 OR MIT
+Crate::wasm-bindgen-macro-support:0.2.85 using Apache-2.0 OR MIT
+Crate::wasm-bindgen-shared:0.2.84 using Apache-2.0 OR MIT
+Crate::wasm-bindgen-shared:0.2.85 using Apache-2.0 OR MIT
+Crate::wasm-encoder:0.26.0 using Apache-2.0 WITH LLVM-exception
+Crate::wasmer:3.1.1 using MIT
+Crate::wasmer-compiler:3.1.1 using Apache-2.0 WITH LLVM-exception OR MIT
+Crate::wasmer-compiler-cranelift:3.1.1 using Apache-2.0 WITH LLVM-exception OR MIT
+Crate::wasmer-derive:3.1.1 using MIT
+Crate::wasmer-types:3.1.1 using Apache-2.0 WITH LLVM-exception OR MIT
+Crate::wasmer-vbus:3.1.1 using MIT
+Crate::wasmer-vfs:3.1.1 using MIT
+Crate::wasmer-vm:3.1.1 using Apache-2.0 WITH LLVM-exception OR MIT
+Crate::wasmer-vnet:3.1.1 using MIT
+Crate::wasmer-wasi:3.1.1 using MIT
+Crate::wasmer-wasi-local-networking:3.1.1 using MIT
+Crate::wasmer-wasi-types:3.1.1 using MIT
+Crate::wasmer-wit-bindgen-gen-core:0.1.1 using Apache-2.0
+Crate::wasmer-wit-bindgen-gen-rust:0.1.1 using Apache-2.0
+Crate::wasmer-wit-bindgen-gen-rust-wasm:0.1.1 using Apache-2.0
+Crate::wasmer-wit-bindgen-rust:0.1.1 using Apache-2.0
+Crate::wasmer-wit-bindgen-rust-impl:0.1.1 using Apache-2.0
+Crate::wasmer-wit-parser:0.1.1 using Apache-2.0
+Crate::wasmparser:0.83.0 using Apache-2.0 WITH LLVM-exception
+Crate::wast:57.0.0 using Apache-2.0 WITH LLVM-exception
+Crate::wat:1.0.63 using Apache-2.0 WITH LLVM-exception
+Crate::web-sys:0.3.61 using Apache-2.0 OR MIT
+Crate::web-sys:0.3.62 using Apache-2.0 OR MIT
+Crate::which:4.4.0 using MIT
+Crate::winapi:0.3.9 using Apache-2.0 OR MIT
+Crate::winapi-i686-pc-windows-gnu:0.4.0 using Apache-2.0 OR MIT
+Crate::winapi-util:0.1.5 using MIT OR Unlicense
+Crate::winapi-x86_64-pc-windows-gnu:0.4.0 using Apache-2.0 OR MIT
+Crate::windows:0.48.0 using Apache-2.0 OR MIT
+Crate::windows-sys:0.33.0 using Apache-2.0 OR MIT
+Crate::windows-sys:0.42.0 using Apache-2.0 OR MIT
+Crate::windows-sys:0.45.0 using Apache-2.0 OR MIT
+Crate::windows-sys:0.48.0 using Apache-2.0 OR MIT
+Crate::windows-targets:0.42.2 using Apache-2.0 OR MIT
+Crate::windows-targets:0.48.0 using Apache-2.0 OR MIT
+Crate::windows_aarch64_gnullvm:0.42.2 using Apache-2.0 OR MIT
+Crate::windows_aarch64_gnullvm:0.48.0 using Apache-2.0 OR MIT
+Crate::windows_aarch64_msvc:0.33.0 using Apache-2.0 OR MIT
+Crate::windows_aarch64_msvc:0.42.2 using Apache-2.0 OR MIT
+Crate::windows_aarch64_msvc:0.48.0 using Apache-2.0 OR MIT
+Crate::windows_i686_gnu:0.33.0 using Apache-2.0 OR MIT
+Crate::windows_i686_gnu:0.42.2 using Apache-2.0 OR MIT
+Crate::windows_i686_gnu:0.48.0 using Apache-2.0 OR MIT
+Crate::windows_i686_msvc:0.33.0 using Apache-2.0 OR MIT
+Crate::windows_i686_msvc:0.42.2 using Apache-2.0 OR MIT
+Crate::windows_i686_msvc:0.48.0 using Apache-2.0 OR MIT
+Crate::windows_x86_64_gnu:0.33.0 using Apache-2.0 OR MIT
+Crate::windows_x86_64_gnu:0.42.2 using Apache-2.0 OR MIT
+Crate::windows_x86_64_gnu:0.48.0 using Apache-2.0 OR MIT
+Crate::windows_x86_64_gnullvm:0.42.2 using Apache-2.0 OR MIT
+Crate::windows_x86_64_gnullvm:0.48.0 using Apache-2.0 OR MIT
+Crate::windows_x86_64_msvc:0.33.0 using Apache-2.0 OR MIT
+Crate::windows_x86_64_msvc:0.42.2 using Apache-2.0 OR MIT
+Crate::windows_x86_64_msvc:0.48.0 using Apache-2.0 OR MIT
+Crate::winreg:0.10.1 using MIT
+Crate::yaml-rust:0.4.5 using Apache-2.0 OR MIT
+NPM::acorn:8.8.2 using MIT
+NPM::acorn-jsx:5.3.2 using MIT
+NPM::ajv:6.12.6 using MIT
+NPM::ansi-regex:5.0.1 using MIT
+NPM::ansi-styles:3.2.1 using MIT
+NPM::ansi-styles:4.3.0 using MIT
+NPM::argparse:2.0.1 using Python-2.0
+NPM::array-union:2.1.0 using MIT
+NPM::babel-plugin-styled-components:2.1.1 using MIT
+NPM::babel-plugin-syntax-jsx:6.18.0 using MIT
+NPM::balanced-match:1.0.2 using MIT
+NPM::brace-expansion:1.1.11 using MIT
+NPM::braces:3.0.2 using MIT
+NPM::browserslist:4.21.5 using MIT
+NPM::callsites:3.1.0 using MIT
+NPM::camelize:1.0.1 using MIT
+NPM::caniuse-lite:1.0.30001481 using CC-BY-4.0
+NPM::chalk:2.4.2 using MIT
+NPM::chalk:4.1.2 using MIT
+NPM::color-convert:1.9.3 using MIT
+NPM::color-convert:2.0.1 using MIT
+NPM::color-name:1.1.3 using MIT
+NPM::color-name:1.1.4 using MIT
+NPM::comlink:4.4.1 using Apache-2.0
+NPM::concat-map:0.0.1 using MIT
+NPM::convert-source-map:1.9.0 using MIT
+NPM::cross-spawn:7.0.3 using MIT
+NPM::css-color-keywords:1.0.0 using ISC
+NPM::css-to-react-native:3.2.0 using MIT
+NPM::csstype:3.1.2 using MIT
+NPM::debug:4.3.4 using MIT
+NPM::deep-is:0.1.4 using MIT
+NPM::dir-glob:3.0.1 using MIT
+NPM::doctrine:3.0.0 using Apache-2.0
+NPM::electron-to-chromium:1.4.369 using ISC
+NPM::esbuild:0.17.18 using MIT
+NPM::escalade:3.1.1 using MIT
+NPM::escape-string-regexp:1.0.5 using MIT
+NPM::escape-string-regexp:4.0.0 using MIT
+NPM::eslint:8.39.0 using MIT
+NPM::eslint-plugin-react-hooks:4.6.0 using MIT
+NPM::eslint-plugin-react-refresh:0.3.4 using MIT
+NPM::eslint-scope:5.1.1 using BSD-2-Clause
+NPM::eslint-scope:7.2.0 using BSD-2-Clause
+NPM::eslint-visitor-keys:3.4.0 using Apache-2.0
+NPM::espree:9.5.1 using BSD-2-Clause
+NPM::esquery:1.5.0 using BSD-3-Clause
+NPM::esrecurse:4.3.0 using BSD-2-Clause
+NPM::estraverse:4.3.0 using BSD-2-Clause
+NPM::estraverse:5.3.0 using BSD-2-Clause
+NPM::esutils:2.0.3 using BSD-2-Clause
+NPM::fast-deep-equal:3.1.3 using MIT
+NPM::fast-glob:3.2.12 using MIT
+NPM::fast-json-stable-stringify:2.1.0 using MIT
+NPM::fast-levenshtein:2.0.6 using MIT
+NPM::fastq:1.15.0 using ISC
+NPM::file-entry-cache:6.0.1 using MIT
+NPM::fill-range:7.0.1 using MIT
+NPM::find-up:5.0.0 using MIT
+NPM::flat-cache:3.0.4 using MIT
+NPM::flatted:3.2.7 using ISC
+NPM::fs.realpath:1.0.0 using ISC
+NPM::fsevents:2.3.2 using MIT
+NPM::gensync:1.0.0-beta.2 using MIT
+NPM::glob:7.2.3 using ISC
+NPM::glob-parent:5.1.2 using ISC
+NPM::glob-parent:6.0.2 using ISC
+NPM::globals:11.12.0 using MIT
+NPM::globals:13.20.0 using MIT
+NPM::globby:11.1.0 using MIT
+NPM::grapheme-splitter:1.0.4 using MIT
+NPM::has-flag:3.0.0 using MIT
+NPM::has-flag:4.0.0 using MIT
+NPM::hoist-non-react-statics:3.3.2 using BSD-3-Clause
+NPM::ignore:5.2.4 using MIT
+NPM::import-fresh:3.3.0 using MIT
+NPM::imurmurhash:0.1.4 using MIT
+NPM::inflight:1.0.6 using ISC
+NPM::inherits:2.0.4 using ISC
+NPM::is-extglob:2.1.1 using MIT
+NPM::is-glob:4.0.3 using MIT
+NPM::is-number:7.0.0 using MIT
+NPM::is-path-inside:3.0.3 using MIT
+NPM::isexe:2.0.0 using ISC
+NPM::js-sdsl:4.4.0 using MIT
+NPM::js-tokens:4.0.0 using MIT
+NPM::js-yaml:4.1.0 using MIT
+NPM::jsesc:2.5.2 using MIT
+NPM::json-schema-traverse:0.4.1 using MIT
+NPM::json-stable-stringify-without-jsonify:1.0.1 using MIT
+NPM::json5:2.2.3 using MIT
+NPM::levn:0.4.1 using MIT
+NPM::locate-path:6.0.0 using MIT
+NPM::lodash:4.17.21 using MIT
+NPM::lodash.merge:4.6.2 using MIT
+NPM::loose-envify:1.4.0 using MIT
+NPM::lru-cache:5.1.1 using ISC
+NPM::lru-cache:6.0.0 using ISC
+NPM::merge2:1.4.1 using MIT
+NPM::micromatch:4.0.5 using MIT
+NPM::minimatch:3.1.2 using ISC
+NPM::monaco-editor:0.38.0 using MIT
+NPM::ms:2.1.2 using MIT
+NPM::nanoid:3.3.6 using MIT
+NPM::natural-compare:1.4.0 using MIT
+NPM::natural-compare-lite:1.4.0 using MIT
+NPM::node-fetch:2.6.9 using MIT
+NPM::node-releases:2.0.10 using MIT
+NPM::normalize.css:8.0.1 using MIT
+NPM::object-assign:4.1.1 using MIT
+NPM::once:1.4.0 using ISC
+NPM::optionator:0.9.1 using MIT
+NPM::p-limit:3.1.0 using MIT
+NPM::p-locate:5.0.0 using MIT
+NPM::parent-module:1.0.1 using MIT
+NPM::path-exists:4.0.0 using MIT
+NPM::path-is-absolute:1.0.1 using MIT
+NPM::path-key:3.1.1 using MIT
+NPM::path-type:4.0.0 using MIT
+NPM::picocolors:1.0.0 using ISC
+NPM::picomatch:2.3.1 using MIT
+NPM::postcss:8.4.23 using MIT
+NPM::postcss-value-parser:4.2.0 using MIT
+NPM::prelude-ls:1.2.1 using MIT
+NPM::prop-types:15.8.1 using MIT
+NPM::punycode:2.3.0 using MIT
+NPM::queue-microtask:1.2.3 using MIT
+NPM::react:18.2.0 using MIT
+NPM::react-dom:18.2.0 using MIT
+NPM::react-drag-drop-files:2.3.10 using MIT
+NPM::react-icons:4.8.0 using MIT
+NPM::react-is:16.13.1 using MIT
+NPM::react-is:18.2.0 using MIT
+NPM::react-refresh:0.14.0 using MIT
+NPM::react-router:6.10.0 using MIT
+NPM::react-router-dom:6.10.0 using MIT
+NPM::resolve-from:4.0.0 using MIT
+NPM::reusify:1.0.4 using MIT
+NPM::rimraf:3.0.2 using ISC
+NPM::rollup:3.21.0 using MIT
+NPM::run-parallel:1.2.0 using MIT
+NPM::scheduler:0.23.0 using MIT
+NPM::semver:6.3.0 using ISC
+NPM::semver:7.5.0 using ISC
+NPM::shallowequal:1.1.0 using MIT
+NPM::shebang-command:2.0.0 using MIT
+NPM::shebang-regex:3.0.0 using MIT
+NPM::slash:3.0.0 using MIT
+NPM::source-map-js:1.0.2 using BSD-3-Clause
+NPM::state-local:1.0.7 using MIT
+NPM::strip-ansi:6.0.1 using MIT
+NPM::strip-json-comments:3.1.1 using MIT
+NPM::styled-components:5.3.10 using MIT
+NPM::supports-color:5.5.0 using MIT
+NPM::supports-color:7.2.0 using MIT
+NPM::text-table:0.2.0 using MIT
+NPM::to-fast-properties:2.0.0 using MIT
+NPM::to-regex-range:5.0.1 using MIT
+NPM::tr46:0.0.3 using MIT
+NPM::tslib:1.14.1 using 0BSD
+NPM::tsutils:3.21.0 using MIT
+NPM::type-check:0.4.0 using MIT
+NPM::type-fest:0.20.2 using CC0-1.0 OR MIT
+NPM::typescript:5.0.4 using Apache-2.0
+NPM::update-browserslist-db:1.0.11 using MIT
+NPM::uri-js:4.4.1 using BSD-2-Clause
+NPM::vite:4.3.1 using MIT
+NPM::webidl-conversions:3.0.1 using BSD-2-Clause
+NPM::whatwg-url:5.0.0 using MIT
+NPM::which:2.0.2 using ISC
+NPM::word-wrap:1.2.3 using MIT
+NPM::wrappy:1.0.2 using ISC
+NPM::yallist:3.1.1 using ISC
+NPM::yallist:4.0.0 using ISC
+NPM::yocto-queue:0.1.0 using MIT
+NPM:@ampproject:remapping:2.2.1 using Apache-2.0
+NPM:@babel:code-frame:7.21.4 using MIT
+NPM:@babel:compat-data:7.21.4 using MIT
+NPM:@babel:core:7.21.4 using MIT
+NPM:@babel:generator:7.21.4 using MIT
+NPM:@babel:helper-annotate-as-pure:7.18.6 using MIT
+NPM:@babel:helper-compilation-targets:7.21.4 using MIT
+NPM:@babel:helper-environment-visitor:7.18.9 using MIT
+NPM:@babel:helper-function-name:7.21.0 using MIT
+NPM:@babel:helper-hoist-variables:7.18.6 using MIT
+NPM:@babel:helper-module-imports:7.21.4 using MIT
+NPM:@babel:helper-module-transforms:7.21.2 using MIT
+NPM:@babel:helper-plugin-utils:7.20.2 using MIT
+NPM:@babel:helper-simple-access:7.20.2 using MIT
+NPM:@babel:helper-split-export-declaration:7.18.6 using MIT
+NPM:@babel:helper-string-parser:7.19.4 using MIT
+NPM:@babel:helper-validator-identifier:7.19.1 using MIT
+NPM:@babel:helper-validator-option:7.21.0 using MIT
+NPM:@babel:helpers:7.21.0 using MIT
+NPM:@babel:highlight:7.18.6 using MIT
+NPM:@babel:parser:7.21.4 using MIT
+NPM:@babel:plugin-transform-react-jsx-self:7.21.0 using MIT
+NPM:@babel:plugin-transform-react-jsx-source:7.19.6 using MIT
+NPM:@babel:template:7.20.7 using MIT
+NPM:@babel:traverse:7.21.4 using MIT
+NPM:@babel:types:7.21.4 using MIT
+NPM:@emotion:is-prop-valid:1.2.0 using MIT
+NPM:@emotion:memoize:0.8.0 using MIT
+NPM:@emotion:stylis:0.8.5 using MIT
+NPM:@emotion:unitless:0.7.5 using MIT
+NPM:@esbuild:darwin-arm64:0.17.18 using MIT
+NPM:@eslint:eslintrc:2.0.2 using MIT
+NPM:@eslint:js:8.39.0 using MIT
+NPM:@eslint-community:eslint-utils:4.4.0 using MIT
+NPM:@eslint-community:regexpp:4.5.0 using MIT
+NPM:@humanwhocodes:config-array:0.11.8 using Apache-2.0
+NPM:@humanwhocodes:module-importer:1.0.1 using Apache-2.0
+NPM:@humanwhocodes:object-schema:1.2.1 using BSD-3-Clause
+NPM:@jridgewell:gen-mapping:0.3.3 using MIT
+NPM:@jridgewell:resolve-uri:3.1.0 using MIT
+NPM:@jridgewell:set-array:1.1.2 using MIT
+NPM:@jridgewell:sourcemap-codec:1.4.14 using MIT
+NPM:@jridgewell:sourcemap-codec:1.4.15 using MIT
+NPM:@jridgewell:trace-mapping:0.3.18 using MIT
+NPM:@monaco-editor:loader:1.3.3 using MIT
+NPM:@monaco-editor:react:4.5.0 using MIT
+NPM:@nodelib:fs.scandir:2.1.5 using MIT
+NPM:@nodelib:fs.stat:2.0.5 using MIT
+NPM:@nodelib:fs.walk:1.2.8 using MIT
+NPM:@remix-run:router:1.5.0 using MIT
+NPM:@types:hoist-non-react-statics:3.3.1 using MIT
+NPM:@types:json-schema:7.0.11 using MIT
+NPM:@types:node:18.16.0 using MIT
+NPM:@types:prop-types:15.7.5 using MIT
+NPM:@types:react:18.0.38 using MIT
+NPM:@types:react-dom:18.0.11 using MIT
+NPM:@types:scheduler:0.16.3 using MIT
+NPM:@types:semver:7.3.13 using MIT
+NPM:@types:styled-components:5.1.26 using MIT
+NPM:@typescript-eslint:eslint-plugin:5.59.0 using MIT
+NPM:@typescript-eslint:parser:5.59.0 using BSD-2-Clause
+NPM:@typescript-eslint:scope-manager:5.59.0 using MIT
+NPM:@typescript-eslint:type-utils:5.59.0 using MIT
+NPM:@typescript-eslint:types:5.59.0 using MIT
+NPM:@typescript-eslint:typescript-estree:5.59.0 using BSD-2-Clause
+NPM:@typescript-eslint:utils:5.59.0 using MIT
+NPM:@typescript-eslint:visitor-keys:5.59.0 using MIT
+NPM:@vitejs:plugin-react:4.0.0 using MIT
 
 
 Here are the license texts for the above-mentioned licenses:
@@ -476,6 +859,165 @@ Permission is hereby granted, free of charge, to any person or organization obta
 The copyright notices in the Software and this entire statement, including the above license grant, this restriction and the following disclaimer, must be included in all copies of the Software, in whole or in part, and all derivative works of the Software, unless such copies or derivative works are solely in the form of machine-executable object code generated by a source language processor.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR ANYONE DISTRIBUTING THE SOFTWARE BE LIABLE FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+License associated with "CC-BY-4.0" identifier:
+Creative Commons Attribution 4.0 International
+
+ Creative Commons Corporation (“Creative Commons”) is not a law firm and does not provide legal services or legal advice. Distribution of Creative Commons public licenses does not create a lawyer-client or other relationship. Creative Commons makes its licenses and related information available on an “as-is” basis. Creative Commons gives no warranties regarding its licenses, any material licensed under their terms and conditions, or any related information. Creative Commons disclaims all liability for damages resulting from their use to the fullest extent possible.
+
+Using Creative Commons Public Licenses
+
+Creative Commons public licenses provide a standard set of terms and conditions that creators and other rights holders may use to share original works of authorship and other material subject to copyright and certain other rights specified in the public license below. The following considerations are for informational purposes only, are not exhaustive, and do not form part of our licenses.
+
+Considerations for licensors: Our public licenses are intended for use by those authorized to give the public permission to use material in ways otherwise restricted by copyright and certain other rights. Our licenses are irrevocable. Licensors should read and understand the terms and conditions of the license they choose before applying it. Licensors should also secure all rights necessary before applying our licenses so that the public can reuse the material as expected. Licensors should clearly mark any material not subject to the license. This includes other CC-licensed material, or material used under an exception or limitation to copyright. More considerations for licensors.
+
+Considerations for the public: By using one of our public licenses, a licensor grants the public permission to use the licensed material under specified terms and conditions. If the licensor’s permission is not necessary for any reason–for example, because of any applicable exception or limitation to copyright–then that use is not regulated by the license. Our licenses grant only permissions under copyright and certain other rights that a licensor has authority to grant. Use of the licensed material may still be restricted for other reasons, including because others have copyright or other rights in the material. A licensor may make special requests, such as asking that all changes be marked or described. Although not required by our licenses, you are encouraged to respect those requests where reasonable. More considerations for the public.
+
+Creative Commons Attribution 4.0 International Public License
+
+By exercising the Licensed Rights (defined below), You accept and agree to be bound by the terms and conditions of this Creative Commons Attribution 4.0 International Public License ("Public License"). To the extent this Public License may be interpreted as a contract, You are granted the Licensed Rights in consideration of Your acceptance of these terms and conditions, and the Licensor grants You such rights in consideration of benefits the Licensor receives from making the Licensed Material available under these terms and conditions.
+
+Section 1 – Definitions.
+
+     a.	Adapted Material means material subject to Copyright and Similar Rights that is derived from or based upon the Licensed Material and in which the Licensed Material is translated, altered, arranged, transformed, or otherwise modified in a manner requiring permission under the Copyright and Similar Rights held by the Licensor. For purposes of this Public License, where the Licensed Material is a musical work, performance, or sound recording, Adapted Material is always produced where the Licensed Material is synched in timed relation with a moving image.
+
+     b.	Adapter's License means the license You apply to Your Copyright and Similar Rights in Your contributions to Adapted Material in accordance with the terms and conditions of this Public License.
+
+     c.	Copyright and Similar Rights means copyright and/or similar rights closely related to copyright including, without limitation, performance, broadcast, sound recording, and Sui Generis Database Rights, without regard to how the rights are labeled or categorized. For purposes of this Public License, the rights specified in Section 2(b)(1)-(2) are not Copyright and Similar Rights.
+
+     d.	Effective Technological Measures means those measures that, in the absence of proper authority, may not be circumvented under laws fulfilling obligations under Article 11 of the WIPO Copyright Treaty adopted on December 20, 1996, and/or similar international agreements.
+
+     e.	Exceptions and Limitations means fair use, fair dealing, and/or any other exception or limitation to Copyright and Similar Rights that applies to Your use of the Licensed Material.
+
+     f.	Licensed Material means the artistic or literary work, database, or other material to which the Licensor applied this Public License.
+
+     g.	Licensed Rights means the rights granted to You subject to the terms and conditions of this Public License, which are limited to all Copyright and Similar Rights that apply to Your use of the Licensed Material and that the Licensor has authority to license.
+
+     h.	Licensor means the individual(s) or entity(ies) granting rights under this Public License.
+
+     i.	Share means to provide material to the public by any means or process that requires permission under the Licensed Rights, such as reproduction, public display, public performance, distribution, dissemination, communication, or importation, and to make material available to the public including in ways that members of the public may access the material from a place and at a time individually chosen by them.
+
+     j.	Sui Generis Database Rights means rights other than copyright resulting from Directive 96/9/EC of the European Parliament and of the Council of 11 March 1996 on the legal protection of databases, as amended and/or succeeded, as well as other essentially equivalent rights anywhere in the world.
+
+     k.	You means the individual or entity exercising the Licensed Rights under this Public License. Your has a corresponding meaning.
+
+Section 2 – Scope.
+
+     a.	License grant.
+
+          1. Subject to the terms and conditions of this Public License, the Licensor hereby grants You a worldwide, royalty-free, non-sublicensable, non-exclusive, irrevocable license to exercise the Licensed Rights in the Licensed Material to:
+
+               A. reproduce and Share the Licensed Material, in whole or in part; and
+
+               B. produce, reproduce, and Share Adapted Material.
+
+          2. Exceptions and Limitations. For the avoidance of doubt, where Exceptions and Limitations apply to Your use, this Public License does not apply, and You do not need to comply with its terms and conditions.
+
+          3. Term. The term of this Public License is specified in Section 6(a).
+
+          4. Media and formats; technical modifications allowed. The Licensor authorizes You to exercise the Licensed Rights in all media and formats whether now known or hereafter created, and to make technical modifications necessary to do so. The Licensor waives and/or agrees not to assert any right or authority to forbid You from making technical modifications necessary to exercise the Licensed Rights, including technical modifications necessary to circumvent Effective Technological Measures. For purposes of this Public License, simply making modifications authorized by this Section 2(a)(4) never produces Adapted Material.
+
+          5. Downstream recipients.
+
+               A. Offer from the Licensor – Licensed Material. Every recipient of the Licensed Material automatically receives an offer from the Licensor to exercise the Licensed Rights under the terms and conditions of this Public License.
+
+               B. No downstream restrictions. You may not offer or impose any additional or different terms or conditions on, or apply any Effective Technological Measures to, the Licensed Material if doing so restricts exercise of the Licensed Rights by any recipient of the Licensed Material.
+
+          6.  No endorsement. Nothing in this Public License constitutes or may be construed as permission to assert or imply that You are, or that Your use of the Licensed Material is, connected with, or sponsored, endorsed, or granted official status by, the Licensor or others designated to receive attribution as provided in Section 3(a)(1)(A)(i).
+
+b. Other rights.
+
+          1. Moral rights, such as the right of integrity, are not licensed under this Public License, nor are publicity, privacy, and/or other similar personality rights; however, to the extent possible, the Licensor waives and/or agrees not to assert any such rights held by the Licensor to the limited extent necessary to allow You to exercise the Licensed Rights, but not otherwise.
+
+          2. Patent and trademark rights are not licensed under this Public License.
+
+          3. To the extent possible, the Licensor waives any right to collect royalties from You for the exercise of the Licensed Rights, whether directly or through a collecting society under any voluntary or waivable statutory or compulsory licensing scheme. In all other cases the Licensor expressly reserves any right to collect such royalties.
+
+Section 3 – License Conditions.
+
+Your exercise of the Licensed Rights is expressly made subject to the following conditions.
+
+     a.	Attribution.
+
+          1. If You Share the Licensed Material (including in modified form), You must:
+
+               A. retain the following if it is supplied by the Licensor with the Licensed Material:
+
+                    i. identification of the creator(s) of the Licensed Material and any others designated to receive attribution, in any reasonable manner requested by the Licensor (including by pseudonym if designated);
+
+                    ii. a copyright notice;
+
+                    iii. a notice that refers to this Public License;
+
+                    iv.	a notice that refers to the disclaimer of warranties;
+
+                    v. a URI or hyperlink to the Licensed Material to the extent reasonably practicable;
+
+               B. indicate if You modified the Licensed Material and retain an indication of any previous modifications; and
+
+               C. indicate the Licensed Material is licensed under this Public License, and include the text of, or the URI or hyperlink to, this Public License.
+
+          2. You may satisfy the conditions in Section 3(a)(1) in any reasonable manner based on the medium, means, and context in which You Share the Licensed Material. For example, it may be reasonable to satisfy the conditions by providing a URI or hyperlink to a resource that includes the required information.
+
+          3. If requested by the Licensor, You must remove any of the information required by Section 3(a)(1)(A) to the extent reasonably practicable.
+
+          4. If You Share Adapted Material You produce, the Adapter's License You apply must not prevent recipients of the Adapted Material from complying with this Public License.
+
+Section 4 – Sui Generis Database Rights.
+
+Where the Licensed Rights include Sui Generis Database Rights that apply to Your use of the Licensed Material:
+
+     a.	for the avoidance of doubt, Section 2(a)(1) grants You the right to extract, reuse, reproduce, and Share all or a substantial portion of the contents of the database;
+
+     b.	if You include all or a substantial portion of the database contents in a database in which You have Sui Generis Database Rights, then the database in which You have Sui Generis Database Rights (but not its individual contents) is Adapted Material; and
+
+     c.	You must comply with the conditions in Section 3(a) if You Share all or a substantial portion of the contents of the database.
+For the avoidance of doubt, this Section 4 supplements and does not replace Your obligations under this Public License where the Licensed Rights include other Copyright and Similar Rights.
+
+Section 5 – Disclaimer of Warranties and Limitation of Liability.
+
+     a.	Unless otherwise separately undertaken by the Licensor, to the extent possible, the Licensor offers the Licensed Material as-is and as-available, and makes no representations or warranties of any kind concerning the Licensed Material, whether express, implied, statutory, or other. This includes, without limitation, warranties of title, merchantability, fitness for a particular purpose, non-infringement, absence of latent or other defects, accuracy, or the presence or absence of errors, whether or not known or discoverable. Where disclaimers of warranties are not allowed in full or in part, this disclaimer may not apply to You.
+
+     b.	To the extent possible, in no event will the Licensor be liable to You on any legal theory (including, without limitation, negligence) or otherwise for any direct, special, indirect, incidental, consequential, punitive, exemplary, or other losses, costs, expenses, or damages arising out of this Public License or use of the Licensed Material, even if the Licensor has been advised of the possibility of such losses, costs, expenses, or damages. Where a limitation of liability is not allowed in full or in part, this limitation may not apply to You.
+
+     c.	The disclaimer of warranties and limitation of liability provided above shall be interpreted in a manner that, to the extent possible, most closely approximates an absolute disclaimer and waiver of all liability.
+
+Section 6 – Term and Termination.
+
+     a.	This Public License applies for the term of the Copyright and Similar Rights licensed here. However, if You fail to comply with this Public License, then Your rights under this Public License terminate automatically.
+
+     b.	Where Your right to use the Licensed Material has terminated under Section 6(a), it reinstates:
+
+          1. automatically as of the date the violation is cured, provided it is cured within 30 days of Your discovery of the violation; or
+
+          2. upon express reinstatement by the Licensor.
+
+     c.	For the avoidance of doubt, this Section 6(b) does not affect any right the Licensor may have to seek remedies for Your violations of this Public License.
+
+     d.	For the avoidance of doubt, the Licensor may also offer the Licensed Material under separate terms or conditions or stop distributing the Licensed Material at any time; however, doing so will not terminate this Public License.
+
+     e.	Sections 1, 5, 6, 7, and 8 survive termination of this Public License.
+
+Section 7 – Other Terms and Conditions.
+
+     a.	The Licensor shall not be bound by any additional or different terms or conditions communicated by You unless expressly agreed.
+
+     b.	Any arrangements, understandings, or agreements regarding the Licensed Material not stated herein are separate from and independent of the terms and conditions of this Public License.
+
+Section 8 – Interpretation.
+
+     a.	For the avoidance of doubt, this Public License does not, and shall not be interpreted to, reduce, limit, restrict, or impose conditions on any use of the Licensed Material that could lawfully be made without permission under this Public License.
+
+     b.	To the extent possible, if any provision of this Public License is deemed unenforceable, it shall be automatically reformed to the minimum extent necessary to make it enforceable. If the provision cannot be reformed, it shall be severed from this Public License without affecting the enforceability of the remaining terms and conditions.
+
+     c.	No term or condition of this Public License will be waived and no failure to comply consented to unless expressly agreed to by the Licensor.
+
+     d.	Nothing in this Public License constitutes or may be interpreted as a limitation upon, or waiver of, any privileges and immunities that apply to the Licensor or You, including from the legal processes of any jurisdiction or authority.
+
+Creative Commons is not a party to its public licenses. Notwithstanding, Creative Commons may elect to apply one of its public licenses to material it publishes and in those instances will be considered the “Licensor.” Except for the limited purpose of indicating that material is shared under a Creative Commons public license or as otherwise permitted by the Creative Commons policies published at creativecommons.org/policies, Creative Commons does not authorize the use of the trademark “Creative Commons” or any other trademark or logo of Creative Commons without its prior written consent including, without limitation, in connection with any unauthorized modifications to any of its public licenses or any other arrangements, understandings, or agreements concerning use of licensed material. For the avoidance of doubt, this paragraph does not form part of the public licenses.
+
+Creative Commons may be contacted at creativecommons.org.
 
 
 License associated with "CC0-1.0" identifier:
@@ -1017,6 +1559,81 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 
   This Source Code Form is "Incompatible With Secondary Licenses", as
   defined by the Mozilla Public License, v. 2.0.
+
+
+License associated with "Python-2.0" identifier:
+PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2
+
+     1. This LICENSE AGREEMENT is between the Python Software Foundation ("PSF"), and the Individual or Organization ("Licensee") accessing and otherwise using this software ("Python") in source or binary form and its associated documentation.
+
+     2. Subject to the terms and conditions of this License Agreement, PSF hereby grants Licensee a nonexclusive, royalty-free, world-wide license to reproduce, analyze, test, perform and/or display publicly, prepare derivative works, distribute, and otherwise use Python alone or in any derivative version, provided, however, that PSF's License Agreement and PSF's notice of copyright, i.e., "Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006 Python Software Foundation; All Rights Reserved" are retained in Python alone or in any derivative version prepared by Licensee.
+
+     3. In the event Licensee prepares a derivative work that is based on or incorporates Python or any part thereof, and wants to make the derivative work available to others as provided herein, then Licensee hereby agrees to include in any such work a brief summary of the changes made to Python.
+
+     4. PSF is making Python available to Licensee on an "AS IS" basis. PSF MAKES NO REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED. BY WAY OF EXAMPLE, BUT NOT LIMITATION, PSF MAKES NO AND DISCLAIMS ANY REPRESENTATION OR WARRANTY OF MERCHANTABILITY OR FITNESS FOR ANY PARTICULAR PURPOSE OR THAT THE USE OF PYTHON WILL NOT INFRINGE ANY THIRD PARTY RIGHTS.
+
+     5. PSF SHALL NOT BE LIABLE TO LICENSEE OR ANY OTHER USERS OF PYTHON FOR ANY INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES OR LOSS AS A RESULT OF MODIFYING, DISTRIBUTING, OR OTHERWISE USING PYTHON, OR ANY DERIVATIVE THEREOF, EVEN IF ADVISED OF THE POSSIBILITY THEREOF.
+
+     6. This License Agreement will automatically terminate upon a material breach of its terms and conditions.
+
+     7. Nothing in this License Agreement shall be deemed to create any relationship of agency, partnership, or joint venture between PSF and Licensee. This License Agreement does not grant permission to use PSF trademarks or trade name in a trademark sense to endorse or promote products or services of Licensee, or any third party.
+
+     8. By copying, installing or otherwise using Python, Licensee agrees to be bound by the terms and conditions of this License Agreement.
+
+
+BEOPEN.COM LICENSE AGREEMENT FOR PYTHON 2.0
+
+BEOPEN PYTHON OPEN SOURCE LICENSE AGREEMENT VERSION 1
+
+     1. This LICENSE AGREEMENT is between BeOpen.com ("BeOpen"), having an office at 160 Saratoga Avenue, Santa Clara, CA 95051, and the Individual or Organization ("Licensee") accessing and otherwise using this software in source or binary form and its associated documentation ("the Software").
+
+     2. Subject to the terms and conditions of this BeOpen Python License Agreement, BeOpen hereby grants Licensee a non-exclusive, royalty-free, world-wide license to reproduce, analyze, test, perform and/or display publicly, prepare derivative works, distribute, and otherwise use the Software alone or in any derivative version, provided, however, that the BeOpen Python License is retained in the Software, alone or in any derivative version prepared by Licensee.
+
+     3. BeOpen is making the Software available to Licensee on an "AS IS" basis. BEOPEN MAKES NO REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED. BY WAY OF EXAMPLE, BUT NOT LIMITATION, BEOPEN MAKES NO AND DISCLAIMS ANY REPRESENTATION OR WARRANTY OF MERCHANTABILITY OR FITNESS FOR ANY PARTICULAR PURPOSE OR THAT THE USE OF THE SOFTWARE WILL NOT INFRINGE ANY THIRD PARTY RIGHTS.
+
+     4. BEOPEN SHALL NOT BE LIABLE TO LICENSEE OR ANY OTHER USERS OF THE SOFTWARE FOR ANY INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES OR LOSS AS A RESULT OF USING, MODIFYING OR DISTRIBUTING THE SOFTWARE, OR ANY DERIVATIVE THEREOF, EVEN IF ADVISED OF THE POSSIBILITY THEREOF.
+
+     5. This License Agreement will automatically terminate upon a material breach of its terms and conditions.
+
+     6. This License Agreement shall be governed by and interpreted in all respects by the law of the State of California, excluding conflict of law provisions. Nothing in this License Agreement shall be deemed to create any relationship of agency, partnership, or joint venture between BeOpen and Licensee. This License Agreement does not grant permission to use BeOpen trademarks or trade names in a trademark sense to endorse or promote products or services of Licensee, or any third party. As an exception, the "BeOpen Python" logos available at http://www.pythonlabs.com/logos.html may be used according to the permissions granted on that web page.
+
+     7. By copying, installing or otherwise using the software, Licensee agrees to be bound by the terms and conditions of this License Agreement.
+
+
+CNRI OPEN SOURCE LICENSE AGREEMENT (for Python 1.6b1)
+
+IMPORTANT: PLEASE READ THE FOLLOWING AGREEMENT CAREFULLY.
+
+BY CLICKING ON "ACCEPT" WHERE INDICATED BELOW, OR BY COPYING, INSTALLING OR OTHERWISE USING PYTHON 1.6, beta 1 SOFTWARE, YOU ARE DEEMED TO HAVE AGREED TO THE TERMS AND CONDITIONS OF THIS LICENSE AGREEMENT.
+
+     1. This LICENSE AGREEMENT is between the Corporation for National Research Initiatives, having an office at 1895 Preston White Drive, Reston, VA 20191 ("CNRI"), and the Individual or Organization ("Licensee") accessing and otherwise using Python 1.6, beta 1 software in source or binary form and its associated documentation, as released at the www.python.org Internet site on August 4, 2000 ("Python 1.6b1").
+
+     2. Subject to the terms and conditions of this License Agreement, CNRI hereby grants Licensee a non-exclusive, royalty-free, world-wide license to reproduce, analyze, test, perform and/or display publicly, prepare derivative works, distribute, and otherwise use Python 1.6b1 alone or in any derivative version, provided, however, that CNRIs License Agreement is retained in Python 1.6b1, alone or in any derivative version prepared by Licensee.
+
+     Alternately, in lieu of CNRIs License Agreement, Licensee may substitute the following text (omitting the quotes): "Python 1.6, beta 1, is made available subject to the terms and conditions in CNRIs License Agreement. This Agreement may be located on the Internet using the following unique, persistent identifier (known as a handle): 1895.22/1011. This Agreement may also be obtained from a proxy server on the Internet using the URL:http://hdl.handle.net/1895.22/1011".
+
+     3. In the event Licensee prepares a derivative work that is based on or incorporates Python 1.6b1 or any part thereof, and wants to make the derivative work available to the public as provided herein, then Licensee hereby agrees to indicate in any such work the nature of the modifications made to Python 1.6b1.
+
+     4. CNRI is making Python 1.6b1 available to Licensee on an "AS IS" basis. CNRI MAKES NO REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED. BY WAY OF EXAMPLE, BUT NOT LIMITATION, CNRI MAKES NO AND DISCLAIMS ANY REPRESENTATION OR WARRANTY OF MERCHANTABILITY OR FITNESS FOR ANY PARTICULAR PURPOSE OR THAT THE USE OF PYTHON 1.6b1 WILL NOT INFRINGE ANY THIRD PARTY RIGHTS.
+
+     5. CNRI SHALL NOT BE LIABLE TO LICENSEE OR ANY OTHER USERS OF THE SOFTWARE FOR ANY INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES OR LOSS AS A RESULT OF USING, MODIFYING OR DISTRIBUTING PYTHON 1.6b1, OR ANY DERIVATIVE THEREOF, EVEN IF ADVISED OF THE POSSIBILITY THEREOF.
+
+     6. This License Agreement will automatically terminate upon a material breach of its terms and conditions.
+
+     7. This License Agreement shall be governed by and interpreted in all respects by the law of the State of Virginia, excluding conflict of law provisions. Nothing in this License Agreement shall be deemed to create any relationship of agency, partnership, or joint venture between CNRI and Licensee. This License Agreement does not grant permission to use CNRI trademarks or trade name in a trademark sense to endorse or promote products or services of Licensee, or any third party.
+
+     8. By clicking on the "ACCEPT" button where indicated, or by copying, installing or otherwise using Python 1.6b1, Licensee agrees to be bound by the terms and conditions of this License Agreement.
+
+ACCEPT
+
+
+CWI LICENSE AGREEMENT FOR PYTHON 0.9.0 THROUGH 1.2
+
+Copyright (c) 1991 - 1995, Stichting Mathematisch Centrum Amsterdam, The Netherlands. All rights reserved.
+
+     Permission to use, copy, modify, and distribute this software and its documentation for any purpose and without fee is hereby granted, provided that the above copyright notice appear in all copies and that both that copyright notice and this permission notice appear in supporting documentation, and that the name of Stichting Mathematisch Centrum or CWI not be used in advertising or publicity pertaining to distribution of the software without specific, written prior permission.
+
+     STICHTING MATHEMATISCH CENTRUM DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH CENTRUM BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
 License associated with "Unicode-DFS-2016" identifier:
