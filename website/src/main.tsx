@@ -1,14 +1,14 @@
 import ReactDOM from 'react-dom/client'
-import {createHashRouter, Outlet, RouterProvider,} from "react-router-dom";
+import { createHashRouter, Outlet, RouterProvider, } from "react-router-dom";
 import Playground from "./Playground";
 import Homepage from './Homepage.tsx'
 import "normalize.css";
 import "./main.css"
 import styled from "styled-components";
-import {useState} from 'react';
-import {Button} from './Buttons.tsx';
+import { useState } from 'react';
+import { Button } from './Buttons.tsx';
 import PackageDocsPage from './PackageDocsPage.tsx';
-import Guide from './Guide.tsx';
+import GuidePage from './GuidePage.tsx';
 
 const DebugMessage = styled.div<{ bg?: string, color?: string }>`
 height: 3rem;
@@ -48,23 +48,23 @@ function PrPrompt() {
 const router = createHashRouter([
     {
         path: "/",
-        element: <><PrPrompt/><Outlet/></>,
+        element: <><PrPrompt /><Outlet /></>,
         children: [
             {
                 path: "/",
-                element: <Homepage/>,
+                element: <Homepage />,
             },
             {
                 path: "/playground",
-                element: <Playground/>,
+                element: <Playground />,
             },
             {
                 path: "/package-docs",
-                element: <PackageDocsPage/>,
+                element: <PackageDocsPage />,
             },
             {
                 path: "/guide",
-                element: <Guide/>,
+                element: <GuidePage />,
             },
         ],
     },
@@ -73,5 +73,5 @@ const router = createHashRouter([
 ]);
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-    <RouterProvider router={router}/>
+    <RouterProvider router={router} />
 )
