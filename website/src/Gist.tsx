@@ -22,7 +22,7 @@ type GistFile = {
 // * If a "main.mdm" file is found, it is returned, otherwise the error message
 //   "Gist contains multiple files but none named main.mdm" will be returned. Note that all files will still be sent
 //   to otherFileHandler
-async function getGistById(id: string, otherFileHandler: (path: string, bytes: Uint8Array) => Promise<void>): Promise<string> {
+async function getGistById(id: string, otherFileHandler: (path: string, bytes: Uint8Array) => void): Promise<string> {
     let res = await fetch("https://api.github.com/gists/" + id);
     if (res.status !== 200) {
         throw `Error fetching Gist with id ${id}: status code ${res.status}`;
@@ -50,7 +50,7 @@ async function getGistById(id: string, otherFileHandler: (path: string, bytes: U
             mainFile = file.content;
         } else {
             let array = textEncoder.encode(file.content);
-            await otherFileHandler(filename, array);
+            otherFileHandler(filename, array);
         }
     }
 
