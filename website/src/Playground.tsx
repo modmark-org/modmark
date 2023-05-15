@@ -5,8 +5,8 @@ import {Button, Input, Select} from "./Buttons";
 import Editor from '@monaco-editor/react';
 import {editor} from 'monaco-editor';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
-import {Link} from "react-router-dom";
-import welcomeMessage from "./welcomeMessage";
+import {Link, useSearchParams} from "react-router-dom";
+import getGistById from "./Gist.tsx";
 import {Mode, Preview} from "./Preview";
 import {FiBook, FiClock, FiFolder, FiPackage} from "react-icons/fi";
 import {MdOutlineAutoAwesome, MdOutlineDownloading, MdOutlineKeyboardAlt} from "react-icons/md";
@@ -139,6 +139,7 @@ function Playground() {
     const [errors, setErrors] = useState<string[]>([]);
     const [warnings, setWarnings] = useState<string[]>([]);
     const [validPreview, setValidPreview] = useState(true);
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const [compilationCounter, setCompilationCounter] = useState(0);
 
@@ -242,9 +243,31 @@ function Playground() {
 
     // save a reference to the monaco editor
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-    const handleEditorDidMount = (editor: editor.IStandaloneCodeEditor, _monaco: Monaco) => {
+    const handleEditorDidMount = async (editor: editor.IStandaloneCodeEditor, _monaco: Monaco) => {
         editorRef.current = editor;
-        editor.setValue(localStorage.getItem("input") ?? welcomeMessage);
+        // Priorities are as follows:
+        // If we query a gist => load it
+        // If not => check local storage
+        // If local storage is empty => load the welcome document (welcomeGist)
+
+        let welcomeGist = "dd61a53d832c8e6674190252d49606e7";
+        let gist = searchParams.get("gist");
+
+        if (gist == null) {
+            let local = localStorage.getItem("input");
+            if (local != null) {
+                editor.setValue(local);
+                return;
+            }
+        }
+
+        let gistToLoad = gist ?? welcomeGist;
+        let gistContent = await getGistById(gistToLoad);
+        if (gistContent !== null) {
+            editor.setValue(gistContent);
+        } else {
+            editor.setValue("Could not load gist with ID " + gist);
+        }
     }
 
     const handleEditorChange = (value: string | undefined) => {
@@ -353,7 +376,7 @@ function Playground() {
                     <Editor
                         height="100%"
                         options={{minimap: {enabled: false}, quickSuggestions: false, wordWrap: "on"}}
-                        defaultValue="// some comment"
+                        defaultValue="Loading content..."
                         onMount={handleEditorDidMount}
                         onChange={handleEditorChange}
                     />
