@@ -203,7 +203,6 @@ function Playground() {
                 }
 
                 let {content, warnings, errors} = result as CompilationResult;
-                console.log(content);
                 setContent(content);
                 setWarnings(warnings);
                 setErrors(errors);
