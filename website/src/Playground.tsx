@@ -146,6 +146,37 @@ function Playground() {
     // Init the compiler
     const compiler: Compiler = useMemo(() => Comlink.wrap(new Worker(new URL('./worker.js', import.meta.url))), []);
 
+    // It is uncertain if the compiler or the editor is loaded first. Gist loading (and possibly file loading) is
+    // initialized as soon as the editor is loaded. If this happens before the compiler, we can't just add files to
+    // the compiler. Therefor, when we want to load a file, we add it to a temporary file store.
+    // Then, as soon as new items are added, we check if the compiler is loaded, and if it is, we add the files to the
+    // compiler. For some reason, we can't use `if (compilerLoaded)` in loadFile, it always returns false, but I am
+    // not good enough at React to figure out why. We have an useEffect listening on temporaryFileStore and
+    // compilerLoaded, which makes sure to add new files to the compiler if needed.
+    const temporaryFileStoreRef = useRef<[string, Uint8Array][]>([]);
+    const loadFile = (filename: string, content: Uint8Array) => {
+        temporaryFileStoreRef.current.push([filename, content]);
+    }
+
+    const loadAccumulatedFiles = async () => {
+        while (true) {
+            let toAdd = temporaryFileStoreRef.current.pop();
+            if (toAdd === undefined) {
+                return;
+            }
+            let [filename, file] = toAdd;
+            await compiler.add_file(filename, file);
+        }
+    }
+
+    useEffect(() => {
+        if (compilerLoaded && temporaryFileStoreRef.current.length > 0) {
+            loadAccumulatedFiles()
+                .then(() => compile(editorRef.current?.getValue() ?? "", selectedMode, true))
+                .catch(console.error);
+        }
+    }, [compilerLoaded, temporaryFileStoreRef.current.length])
+
     useEffect(() => {
         compiler.init()
             .then(() => setCompilerLoaded(true))
@@ -265,7 +296,7 @@ function Playground() {
         }
 
         let gistToLoad = gist ?? welcomeGist;
-        let gistContent = await getGistById(gistToLoad, compiler.add_file);
+        let gistContent = await getGistById(gistToLoad, loadFile);
         editor.setValue(gistContent);
     }
 
@@ -334,10 +365,10 @@ function Playground() {
                     {
                         selectedMode === "latex" &&
                         <Button
-                        onClick={() => openInOverleaf(content)}
-                    >
-                         Open in Overleaf
-                    </Button>
+                            onClick={() => openInOverleaf(content)}
+                        >
+                            Open in Overleaf
+                        </Button>
                     }
                 </div>
                 <div>
@@ -496,7 +527,7 @@ function IssuesReport({warnings, errors}: { warnings: string[], errors: string[]
     </IssuesContainer>
 }
 
-function openInOverleaf(content: string){
+function openInOverleaf(content: string) {
     let url = "https://www.overleaf.com/docs"
     // post the code to overleaf
     let form = document.createElement("form");
