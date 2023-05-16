@@ -6,7 +6,7 @@ import Editor from '@monaco-editor/react';
 import {editor} from 'monaco-editor';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import {Link, useSearchParams} from "react-router-dom";
-import getGistById from "./Gist.tsx";
+import getGistById from "./gist.ts";
 import {Mode, Preview} from "./Preview";
 import {FiBook, FiClock, FiFolder, FiPackage} from "react-icons/fi";
 import {MdOutlineAutoAwesome, MdOutlineDownloading, MdOutlineKeyboardAlt} from "react-icons/md";
