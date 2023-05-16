@@ -23,12 +23,18 @@ type GistFile = {
 //   "Gist contains multiple files but none named main.mdm" will be returned. Note that all files will still be sent
 //   to otherFileHandler
 async function getGistById(id: string, otherFileHandler: (path: string, bytes: Uint8Array) => void): Promise<string> {
-    let res = await fetch("https://api.github.com/gists/" + id);
-    if (res.status !== 200) {
-        throw `Error fetching Gist with id ${id}: status code ${res.status}`;
+    let api_result: GistResp;
+    try {
+        let res = await fetch("https://api.github.com/gists/" + id);
+        if (res.status !== 200) {
+            // noinspection ExceptionCaughtLocallyJS
+            throw `Error fetching Gist with id ${id}: status code ${res.status}`;
+        }
+        let content = await res.text();
+        api_result = JSON.parse(content) as GistResp;
+    } catch (e) {
+        return `Error loading Gist: ${e}`;
     }
-    let content = await res.text();
-    let api_result = JSON.parse(content) as GistResp;
 
     let entries = Object.entries(api_result.files);
     if (entries.length === 0) {
