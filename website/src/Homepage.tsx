@@ -1,7 +1,15 @@
-import {Link, useNavigate} from 'react-router-dom';
-import styled from 'styled-components';
-import {Button} from "./Buttons";
-import {FiBook, FiCode, FiDownload, FiExternalLink, FiGithub, FiPackage, FiPlay} from 'react-icons/fi';
+import { Link, useNavigate } from "react-router-dom";
+import styled from "styled-components";
+import { Button } from "./Buttons";
+import {
+  FiBook,
+  FiCode,
+  FiDownload,
+  FiExternalLink,
+  FiGithub,
+  FiPackage,
+  FiPlay,
+} from "react-icons/fi";
 
 const PAGEWIDTH = 1300;
 
@@ -21,7 +29,6 @@ const Container = styled.div`
   & a:hover {
     text-decoration: underline;
   }
-
 `;
 
 const MenuContainer = styled.nav`
@@ -43,9 +50,7 @@ export const ActionButton = styled(Button)`
     width: 1.3rem;
     top: 2px;
   }
-
 `;
-
 
 const Hero = styled.div`
   position: relative;
@@ -86,7 +91,6 @@ const Features = styled.div`
     font-size: 1.1rem;
   }
 `;
-
 
 const Logo = styled.div`
   display: flex;
@@ -136,37 +140,42 @@ const Footer = styled.footer`
 `;
 
 const CodeFont = styled.span`
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
 
   & > * {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: "JetBrains Mono", monospace;
   }
 `;
 
 type FeatureProps = {
-    color: string,
-    action: React.ReactNode,
-    children: React.ReactNode,
-    gridStart?: GridLine,
-    gridEnd?: GridLine,
+  color: string;
+  action: React.ReactNode;
+  children: React.ReactNode;
+  gridStart?: GridLine;
+  gridEnd?: GridLine;
 };
 
 type GridLine = "start" | "left" | "right" | "end";
 
-const FeatureContainer = styled.div<{ color: string, gridStart?: GridLine, gridEnd?: GridLine }>`
+const FeatureContainer = styled.div<{
+  color: string;
+  gridStart?: GridLine;
+  gridEnd?: GridLine;
+}>`
   display: relative;
   padding: 1rem;
   box-sizing: border-box;
   position: relative;
   border-radius: 1rem;
-  background: ${props => props.color};
+  background: ${(props) => props.color};
   color: white;
   display: flex;
   align-items: top;
   justify-content: center;
   box-shadow: 0 1px 5px #0000001c;
-  ${props => props.gridStart ? `grid-column-start: ${props.gridStart};` : ""}
-  ${props => props.gridEnd ? `grid-column-end: ${props.gridEnd};` : ""}
+  ${(props) =>
+    props.gridStart ? `grid-column-start: ${props.gridStart};` : ""}
+  ${(props) => (props.gridEnd ? `grid-column-end: ${props.gridEnd};` : "")}
 `;
 
 const FeatureAction = styled.div`
@@ -195,128 +204,168 @@ const FeatureChildren = styled.div`
 
   & img {
     max-width: 100%;
-
   }
 `;
 
-function Feature({color, children, action, gridStart, gridEnd}: FeatureProps) {
-    return <FeatureContainer color={color} gridStart={gridStart} gridEnd={gridEnd}>
-        <FeatureChildren>{children}</FeatureChildren>
-        <FeatureAction>{action}</FeatureAction>
+function Feature({
+  color,
+  children,
+  action,
+  gridStart,
+  gridEnd,
+}: FeatureProps) {
+  return (
+    <FeatureContainer color={color} gridStart={gridStart} gridEnd={gridEnd}>
+      <FeatureChildren>{children}</FeatureChildren>
+      <FeatureAction>{action}</FeatureAction>
     </FeatureContainer>
+  );
 }
 
-
 export default function Homepage() {
-    const navigate = useNavigate();
-    const menu = <MenuContainer>
-        <Link to="playground">Playground</Link>
-        <Link to="guide">Guide</Link>
-        <Link to="package-docs">Package docs</Link>
-        <a href="https://github.com/modmark-org/modmark"> GitHub</a>
-    </MenuContainer>;
+  const navigate = useNavigate();
+  const menu = (
+    <MenuContainer>
+      <Link to="playground">Playground</Link>
+      <Link to="guide">Guide</Link>
+      <Link to="package-docs">Package docs</Link>
+      <a href="https://github.com/modmark-org/modmark"> GitHub</a>
+    </MenuContainer>
+  );
 
-    return <Container>
-        <Hero>
+  return (
+    <Container>
+      <Hero>
+        <div>
+          {menu}
+          <Logo>
+            <img src="./logo.svg" alt="ModMark logo" />
             <div>
-                {menu}
-                <Logo>
-                    <img src="./logo.svg" alt="ModMark logo"/>
-                    <div>
-                        <h1>ModMark</h1>
-                        <h2>Modular Markup Language</h2>
-                    </div>
-                </Logo>
-
-                <About>
-                    <p>
-                        ModMark is a modular markup language. It has a lightweight syntax akin to Markdown but also
-                        offers a lot more flexibility and expressive power. Import packages and use modules to add extra
-                        functionality in your document or even add support for a new output format.
-                    </p>
-                    <p>
-                        ModMark comes bundled with multiple useful packages and can by default output both HTML and
-                        LaTeX documents. It is still a early protype but you can use it both on the web and in your
-                        terminal.
-                    </p>
-                </About>
-                <ActionButton onClick={(_e) => navigate("/playground")}>Try it in your browser <FiPlay/></ActionButton>
+              <h1>ModMark</h1>
+              <h2>Modular Markup Language</h2>
             </div>
-        </Hero>
-        <Features>
-            <Feature
-                action={<Link to="/guide">Getting started guide <FiBook/></Link>}
-                color="#816796"
-            >
-                <h1>
-                    <span style={{opacity: 0.4}}>#</span> Familiar and <span
-                    style={{opacity: 0.4}}>**</span>powerful<span style={{opacity: 0.4}}>**</span>
-                </h1>
-                <p>
-                    If you have used Markdown before you will quickly feel right at home.
-                </p>
-                <p>
-                    Read the getting started guide to learn more about different ways to <CodeFont>**style**
-                    ==text==</CodeFont> and include other elements in your document like
-                    a <CodeFont>[cite](modmark)</CodeFont> or a <CodeFont>[link](https://modmark.org)</CodeFont>.
-                </p>
-            </Feature>
+          </Logo>
 
-            <Feature
-                action={<Link to="/package-docs">Explore package docs <FiPackage/> </Link>}
-                color="#7392B7"
+          <About>
+            <p>
+              ModMark is a modular markup language. It has a lightweight syntax
+              akin to Markdown but also offers a lot more flexibility and
+              expressive power. Import packages and use modules to add extra
+              functionality in your document or even add support for a new
+              output format.
+            </p>
+            <p>
+              ModMark comes bundled with multiple useful packages and can by
+              default output both HTML and LaTeX documents. It is still a early
+              protype but you can use it both on the web and in your terminal.
+            </p>
+          </About>
+          <ActionButton onClick={(_e) => navigate("/playground")}>
+            Try it in your browser <FiPlay />
+          </ActionButton>
+        </div>
+      </Hero>
+      <Features>
+        <Feature
+          action={
+            <Link to="/guide">
+              Getting started guide <FiBook />
+            </Link>
+          }
+          color="#816796"
+        >
+          <h1>
+            <span style={{ opacity: 0.4 }}>#</span> Familiar and{" "}
+            <span style={{ opacity: 0.4 }}>**</span>powerful
+            <span style={{ opacity: 0.4 }}>**</span>
+          </h1>
+          <p>
+            If you have used Markdown before you will quickly feel right at
+            home.
+          </p>
+          <p>
+            Read the getting started guide to learn more about different ways to{" "}
+            <CodeFont>**style** ==text==</CodeFont> and include other elements
+            in your document like a <CodeFont>[cite](modmark)</CodeFont> or a{" "}
+            <CodeFont>[link](https://modmark.org)</CodeFont>.
+          </p>
+        </Feature>
 
-            >
-                <h1>Packages and modules add extra capabilities to your documents.</h1>
-                <p>
-                    Want to add a citations? Plot a math function? Or render a chess board? There is a package for that.
-                </p>
-            </Feature>
+        <Feature
+          action={
+            <Link to="/package-docs">
+              Explore package docs <FiPackage />{" "}
+            </Link>
+          }
+          color="#7392B7"
+        >
+          <h1>
+            Packages and modules add extra capabilities to your documents.
+          </h1>
+          <p>
+            Want to add a citations? Plot a math function? Or render a chess
+            board? There is a package for that.
+          </p>
+        </Feature>
 
-            <Feature
-                action={<a href="https://github.com/modmark-org/modmark">GitHub <FiExternalLink/> </a>}
-                color="#C1666B"
-            >
-                <h1>Free and open source</h1>
-                <p>
-                    The ModMark compiler is free and open source software, learn more on the GitHub page. Feel free to
-                    report issues or contribute too.
-                </p>
-                <FiGithub size={80} style={{marginTop: "0.3rem", float: "right"}}/>
-            </Feature>
-            <Feature
-                action={<a href="">
-                    <del>Read developer guide</del>
-                    TODO <FiCode/></a>}
-                color="#748E54"
-                gridStart="start"
-                gridEnd="right"
-            >
-                <h1>
-                    Develop packages using your favourite language
-                </h1>
-                <p>
-                    ModMark packages are <a href="https://webassembly.org/">WebAssembly (WASM)</a> programs that use
-                    the <a href="https://wasi.dev/">WebAssembly System Interface (WASI)</a>. This means that you can
-                    develop packages using many different languages.
-                </p>
-                <img width="70%" src="./languages.svg"/>
-
-            </Feature>
-            <Feature action={<>
-                <del>Download thesis</del>
-                TODO <FiDownload/></>} color="#0F8B8D">
-                <h1>Learn more</h1>
-                <p>
-                    ModMark was created as a bachelor's thesis project at Chalmers University of Technology in
-                    Gothenburg, Sweden.
-                </p>
-            </Feature>
-        </Features>
-        <Footer>
-            <h2>ModMark</h2>
-            {menu}
-        </Footer>
-
+        <Feature
+          action={
+            <a href="https://github.com/modmark-org/modmark">
+              GitHub <FiExternalLink />{" "}
+            </a>
+          }
+          color="#C1666B"
+        >
+          <h1>Free and open source</h1>
+          <p>
+            The ModMark compiler is free and open source software, learn more on
+            the GitHub page. Feel free to report issues or contribute too.
+          </p>
+          <FiGithub size={80} style={{ marginTop: "0.3rem", float: "right" }} />
+        </Feature>
+        <Feature
+          action={
+            <a href="">
+              <del>Read developer guide</del>
+              TODO <FiCode />
+            </a>
+          }
+          color="#748E54"
+          gridStart="start"
+          gridEnd="right"
+        >
+          <h1>Develop packages using your favourite language</h1>
+          <p>
+            ModMark packages are{" "}
+            <a href="https://webassembly.org/">WebAssembly (WASM)</a> programs
+            that use the{" "}
+            <a href="https://wasi.dev/">WebAssembly System Interface (WASI)</a>.
+            This means that you can develop packages using many different
+            languages.
+          </p>
+          <img width="70%" src="./languages.svg" />
+        </Feature>
+        <Feature
+          action={
+            <>
+              <a href="https://modmark-org.github.io/modmark-thesis/">
+                Read thesis <FiExternalLink />
+              </a>
+            </>
+          }
+          color="#0F8B8D"
+        >
+          <h1>Learn more</h1>
+          <p>
+            ModMark was created as a bachelor's thesis project at Chalmers
+            University of Technology in Gothenburg, Sweden.
+          </p>
+        </Feature>
+      </Features>
+      <Footer>
+        <h2>ModMark</h2>
+        {menu}
+      </Footer>
     </Container>
+  );
 }
