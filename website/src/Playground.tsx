@@ -5,11 +5,11 @@ import { Button, Input, Select } from "./Buttons";
 import Editor from '@monaco-editor/react';
 import { editor } from 'monaco-editor';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
-import {Link, useSearchParams} from "react-router-dom";
+import { Link, useOutletContext, useSearchParams } from "react-router-dom";
 import getGistById from "./gist.ts";
-import {Mode, Preview} from "./Preview";
-import {FiBook, FiClock, FiFolder, FiPackage} from "react-icons/fi";
-import {MdOutlineAutoAwesome, MdOutlineDownloading, MdOutlineKeyboardAlt} from "react-icons/md";
+import { Mode, Preview } from "./Preview";
+import { FiBook, FiClock, FiFolder, FiPackage } from "react-icons/fi";
+import { MdOutlineAutoAwesome, MdOutlineDownloading, MdOutlineKeyboardAlt } from "react-icons/md";
 import FsTree from "./FsTree";
 import PackageDocs from "./PackageDocs";
 import { CompilationResult, Compiler, handleException, PackageInfo } from "./compilerTypes";
@@ -18,12 +18,12 @@ import Guide from "./Guide";
 
 type Monaco = typeof monaco;
 
-const Container = styled.div`
+const Container = styled.div<{ inPreview: boolean }>`
   position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: calc(100vh - 3rem);
+  height: ${props => props.inPreview ? "calc(100vh - 3rem)" : "100vh"};
   box-sizing: border-box;
 `;
 
@@ -122,6 +122,7 @@ type Status =
 const COMPILE_INTERVAL = 300;
 
 function Playground() {
+    const inPreview = useOutletContext<boolean>();
     const [content, setContent] = useState("");
     const [showFiles, setShowFiles] = useState(false);
     const [activeView, setActiveView] = useState<"preview" | "docs" | "guide">("preview");
@@ -335,7 +336,7 @@ function Playground() {
     </Status>;
 
     return (
-        <Container>
+        <Container inPreview={inPreview}>
             <Menu>
                 <div>
                     <Logo>
