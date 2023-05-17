@@ -31,16 +31,19 @@ function PrPrompt() {
 
     const location = window.location;
     const regex = /pr-preview\/pr-(\d+)/;
-    console.log(location.href);
     const match = location.href.match(regex);
-    if (match !== null) {
-        return hidden ? <></> : <DebugMessage>
-            <a href={`https://github.com/modmark-org/modmark/pull/${match[1]}`}>Preview of PR #{match[1]}</a>
-            <Button onClick={() => setHidden(true)}>Close</Button>
-        </ DebugMessage>
-    }
 
-    return <></>
+    const showPrompt = !hidden && match !== null;
+
+    return <>
+        {showPrompt &&
+            <DebugMessage>
+                <a href={`https://github.com/modmark-org/modmark/pull/${match[1]}`}>Preview of PR #{match[1]}</a>
+                <Button onClick={() => setHidden(true)}>Close</Button>
+            </ DebugMessage>
+        }
+        <Outlet context={showPrompt} />
+    </>
 }
 
 // TODO: replace this with a browser router once we have replaced ace and have a proper server
@@ -48,7 +51,7 @@ function PrPrompt() {
 const router = createHashRouter([
     {
         path: "/",
-        element: <><PrPrompt /><Outlet /></>,
+        element: <><PrPrompt /></>,
         children: [
             {
                 path: "/",
