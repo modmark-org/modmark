@@ -1,10 +1,11 @@
 import styled from "styled-components";
 import PackageDocs from "./PackageDocs";
-import {CompilationException, Compiler, handleException, PackageInfo} from "./compilerTypes";
-import {useEffect, useMemo, useState} from "react";
+import { CompilationException, Compiler, handleException, PackageInfo } from "./compilerTypes";
+import { useEffect, useMemo, useState } from "react";
 import * as Comlink from "comlink";
-import {Link} from "react-router-dom";
-import {FileUploader} from "react-drag-drop-files";
+import { Link } from "react-router-dom";
+import { FileUploader } from "react-drag-drop-files";
+import { FiUpload } from "react-icons/fi";
 
 const Container = styled.div`
 `;
@@ -27,9 +28,26 @@ const Hero = styled.div`
         opacity: 0.7;
     }
 
-    & .upload {
-        border-color: #7392b7;
+`;
+
+const Upload = styled.div`
+    position:relative;
+    box-sizing: border-box;
+    border: dashed 2px #7392b7;; 
+    display: flex;
+    align-items: center;
+    justify-content:center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    width: 100%;
+    max-width: 350px;
+    border-radius: 0.5rem;
+    cursor: pointer;
+
+    &:hover {
+        background: #00000013;
     }
+
 `;
 
 const Main = styled.main`
@@ -124,16 +142,19 @@ export default function PackageDocsPage() {
         <Hero>
             <div>
                 <Link to="../">
-                    <img src="./logo.svg" alt="Logo" width="80"/>
+                    <img src="./logo.svg" alt="Logo" width="80" />
                 </Link>
                 <h1>Package documentation</h1>
                 <p>Read documentation for the standard library, or drag and drop one of your own packages.</p>
                 <FileUploader
-                    classes="upload"
                     handleChange={loadPackage}
                     label="Load package, or drop a .WASM file here"
                     types={["WASM"]}
-                />
+                >
+                    <Upload>
+                        <FiUpload size={30} /> Click or drag and drop to upload a file
+                    </Upload>
+                </FileUploader>
                 {
                     error !== null && <Errors>
                         {
@@ -153,7 +174,7 @@ export default function PackageDocsPage() {
         </Hero>
         <Main>
             {
-                loaded ? <PackageDocs packages={packages}/> : <p>Loading compiler...</p>
+                loaded ? <PackageDocs packages={packages} /> : <p>Loading compiler...</p>
             }
         </Main>
 

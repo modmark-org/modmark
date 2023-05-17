@@ -37,6 +37,11 @@ const MenuContainer = styled.nav`
   align-items: center;
   justify-content: flex-end;
   gap: 1rem;
+
+  @media (max-width: 900px) {
+    justify-content: flex-start;
+    margin-bottom: 3rem;
+  }
 `;
 
 export const ActionButton = styled(Button)`
@@ -90,6 +95,11 @@ const Features = styled.div`
   & h2 {
     font-size: 1.1rem;
   }
+
+  @media (max-width: 900px) {
+    display: flex;
+    flex-direction: column;
+  }
 `;
 
 const Logo = styled.div`
@@ -113,6 +123,20 @@ const Logo = styled.div`
     line-height: normal;
     margin-top: -10px;
     opacity: 0.7;
+  }
+
+  @media (max-width: 900px) {
+    & > img {
+      width: 5.5rem;
+    }
+
+    & > div > h1 {
+      font-size: 2.8rem;
+    }
+
+    & > div > h2 {
+      font-size: 1.2rem;
+    }
   }
 `;
 
@@ -176,6 +200,10 @@ const FeatureContainer = styled.div<{
   ${(props) =>
     props.gridStart ? `grid-column-start: ${props.gridStart};` : ""}
   ${(props) => (props.gridEnd ? `grid-column-end: ${props.gridEnd};` : "")}
+
+  @media (max-width: 900px) {
+    justify-content: flex-start;
+  }
 `;
 
 const FeatureAction = styled.div`
