@@ -3,13 +3,25 @@
     "data": "@online{djot,\ntitle = {djot},\nauthor = {John MacFarlane},\nurl = {https://djot.net},\nurldate = {2023-01-23}\n}\n\n@online{AsciiDoc,\nauthor = {{Eclipse Foundation}},\ntitle = {{AsciiDoc}},\nurl = {http://asciidoc.org/},\nurldate = {2023-01-23}\n}\n\n@online{Commonmark,\nauthor = {John MacFarlane},\ntitle = {CommonMark Spec},\nyear = {2021},\nmonth = {6},\nurl = {https://spec.commonmark.org/0.30/},\nurldate = {2023-03-21}\n}\n",
     "arguments": {
         "style": "IEEE",
-        "visibility": "visible",
         "file": "",
-        "unused-entries": "visible"
+        "visibility": "visible",
+        "unused-entries": "visible",
+        "insertion-type": "reparse",
+        "output": "plain",
+        "specialization": "enable",
+        "styling": "all"
     },
     "inline": false,
     "__test_transform_to": "latex",
     "__test_expected_result": [
+        "\n",
+        "\\begin{thebibliography}{",
+        "",
+        "}\n",
+        "\\phantomsection\\addcontentsline{toc}{chapter}{Bibliography}\n",
+        "\\raggedright\n",
+        "\\item[{",
+        "}]\n",
         {
             "arguments": {
                 "name": "imports"
@@ -17,117 +29,76 @@
             "data": "\\usepackage[hidelinks]{hyperref}",
             "name": "set-add"
         },
+        "\\hypertarget{bibentry:djot}{",
         {
-            "data": "\n",
-            "name": "raw"
+            "data": "J. MacFarlane, “Djot.” Accessed: Jan. 23, 2023. \\[Online]. Available: ",
+            "name": "inline_content"
         },
         {
             "arguments": {
-                "name": "imports"
-            },
-            "data": "\\usepackage{tabularx}",
-            "name": "set-add"
-        },
-        {
-            "data": "\\renewcommand{\\arraystretch}{1.5}\n\\begin{tabularx}{\\textwidth}{>{\\raggedright\\arraybackslash} X}\n",
-            "name": "raw"
-        },
-        {
-            "data": "\\leavevmode \\hypertarget{bibentry:djot}{",
-            "name": "raw"
-        },
-        {
-            "data": "J. MacFarlane, “Djot.” ",
-            "name": "__text"
-        },
-        {
-            "arguments": {
-                "label": "https://djot.net/"
+                "label": "\\h\\t\\t\\p\\s\\:\\/\\/\\d\\j\\o\\t\\.\\n\\e\\t\\/"
             },
             "data": "https://djot.net/",
             "name": "link"
         },
         {
-            "data": " (accessed: Jan. 23, 2023).",
-            "name": "__text"
-        },
-        {
-            "data": "}",
-            "name": "raw"
-        },
-        {
             "data": "",
-            "name": "newline"
+            "name": "inline_content"
         },
+        "}\n\n",
+        "\\item[{",
+        "}]\n",
         {
-            "data": "\n",
-            "name": "raw"
+            "arguments": {
+                "name": "imports"
+            },
+            "data": "\\usepackage[hidelinks]{hyperref}",
+            "name": "set-add"
         },
+        "\\hypertarget{bibentry:AsciiDoc}{",
         {
-            "data": "\\leavevmode \\hypertarget{bibentry:AsciiDoc}{",
-            "name": "raw"
-        },
-        {
-            "data": "Eclipse Foundation, “AsciiDoc.” ",
-            "name": "__text"
+            "data": "Eclipse Foundation, “AsciiDoc.” Accessed: Jan. 23, 2023. \\[Online]. Available: ",
+            "name": "inline_content"
         },
         {
             "arguments": {
-                "label": "http://asciidoc.org/"
+                "label": "\\h\\t\\t\\p\\:\\/\\/\\a\\s\\c\\i\\i\\d\\o\\c\\.\\o\\r\\g\\/"
             },
             "data": "http://asciidoc.org/",
             "name": "link"
         },
         {
-            "data": " (accessed: Jan. 23, 2023).",
-            "name": "__text"
-        },
-        {
-            "data": "}",
-            "name": "raw"
-        },
-        {
             "data": "",
-            "name": "newline"
+            "name": "inline_content"
         },
+        "}\n\n",
+        "\\item[{",
+        "}]\n",
         {
-            "data": "\n",
-            "name": "raw"
+            "arguments": {
+                "name": "imports"
+            },
+            "data": "\\usepackage[hidelinks]{hyperref}",
+            "name": "set-add"
         },
+        "\\hypertarget{bibentry:Commonmark}{",
         {
-            "data": "\\leavevmode \\hypertarget{bibentry:Commonmark}{",
-            "name": "raw"
-        },
-        {
-            "data": "J. MacFarlane, “Commonmark spec.” ",
-            "name": "__text"
+            "data": "J. MacFarlane, “Commonmark spec,” 2021. Accessed: Mar. 21, 2023. \\[Online]. Available: ",
+            "name": "inline_content"
         },
         {
             "arguments": {
-                "label": "https://spec.commonmark.org/0.30/"
+                "label": "\\h\\t\\t\\p\\s\\:\\/\\/\\s\\p\\e\\c\\.\\c\\o\\m\\m\\o\\n\\m\\a\\r\\k\\.\\o\\r\\g\\/\\0\\.\\3\\0\\/"
             },
             "data": "https://spec.commonmark.org/0.30/",
             "name": "link"
         },
         {
-            "data": " (accessed: Mar. 21, 2023).",
-            "name": "__text"
-        },
-        {
-            "data": "}",
-            "name": "raw"
-        },
-        {
             "data": "",
-            "name": "newline"
+            "name": "inline_content"
         },
-        {
-            "data": "\n",
-            "name": "raw"
-        },
-        {
-            "data": "\\end{tabularx}\n\\renewcommand{\\arraystretch}{1}\n",
-            "name": "raw"
-        }
+        "}\n\n",
+        "\n\\centering\n",
+        "\\end{thebibliography}"
     ]
 }

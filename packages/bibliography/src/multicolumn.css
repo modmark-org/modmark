@@ -1,0 +1,15 @@
+.modmark-bibliography {
+    display: grid;
+    grid-template-columns: [start] auto [center] 1fr [end];
+    gap: 0.5rem;
+}
+
+.modmark-bibliography>.modmark-bibliography-prefix {
+    grid-column-start: start;
+    grid-column-end: center;
+}
+
+.modmark-bibliography>.modmark-bibliography-bibitem {
+    grid-column-start: center;
+    grid-column-end: end;
+}
