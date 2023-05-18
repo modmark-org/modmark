@@ -3,65 +3,45 @@
     "data": "@online{djot,\ntitle = {djot},\nauthor = {John MacFarlane},\nurl = {https://djot.net},\nurldate = {2023-01-23}\n}\n\n@online{AsciiDoc,\nauthor = {{Eclipse Foundation}},\ntitle = {{AsciiDoc}},\nurl = {http://asciidoc.org/},\nurldate = {2023-01-23}\n}\n\n@online{Commonmark,\nauthor = {John MacFarlane},\ntitle = {CommonMark Spec},\nyear = {2021},\nmonth = {6},\nurl = {https://spec.commonmark.org/0.30/},\nurldate = {2023-03-21}\n}\n",
     "arguments": {
         "style": "IEEE",
-        "visibility": "visible",
         "file": "",
-        "unused-entries": "visible"
+        "visibility": "visible",
+        "unused-entries": "visible",
+        "insertion-type": "reparse",
+        "output": "plain",
+        "specialization": "enable",
+        "styling": "all"
     },
     "inline": false,
     "__test_transform_to": "random_format",
     "__test_expected_result": [
         {
-            "data": "J. MacFarlane, “Djot.” ",
-            "name": "__text"
-        },
-        {
             "arguments": {
-                "label": "https://djot.net/"
+                "name": "bibentry:djot"
             },
-            "data": "https://djot.net/",
-            "name": "link"
-        },
-        {
-            "data": " (accessed: Jan. 23, 2023).",
-            "name": "__text"
+            "data": "J. MacFarlane, “Djot.” Accessed: Jan. 23, 2023. \\[Online]. Available: [link label=\"\\h\\t\\t\\p\\s\\:\\/\\/\\d\\j\\o\\t\\.\\n\\e\\t\\/\"][https://djot.net/]",
+            "name": "target"
         },
         {
             "data": "",
             "name": "newline"
         },
         {
-            "data": "Eclipse Foundation, “AsciiDoc.” ",
-            "name": "__text"
-        },
-        {
             "arguments": {
-                "label": "http://asciidoc.org/"
+                "name": "bibentry:AsciiDoc"
             },
-            "data": "http://asciidoc.org/",
-            "name": "link"
-        },
-        {
-            "data": " (accessed: Jan. 23, 2023).",
-            "name": "__text"
+            "data": "Eclipse Foundation, “AsciiDoc.” Accessed: Jan. 23, 2023. \\[Online]. Available: [link label=\"\\h\\t\\t\\p\\:\\/\\/\\a\\s\\c\\i\\i\\d\\o\\c\\.\\o\\r\\g\\/\"][http://asciidoc.org/]",
+            "name": "target"
         },
         {
             "data": "",
             "name": "newline"
         },
         {
-            "data": "J. MacFarlane, “Commonmark spec.” ",
-            "name": "__text"
-        },
-        {
             "arguments": {
-                "label": "https://spec.commonmark.org/0.30/"
+                "name": "bibentry:Commonmark"
             },
-            "data": "https://spec.commonmark.org/0.30/",
-            "name": "link"
-        },
-        {
-            "data": " (accessed: Mar. 21, 2023).",
-            "name": "__text"
+            "data": "J. MacFarlane, “Commonmark spec,” 2021. Accessed: Mar. 21, 2023. \\[Online]. Available: [link label=\"\\h\\t\\t\\p\\s\\:\\/\\/\\s\\p\\e\\c\\.\\c\\o\\m\\m\\o\\n\\m\\a\\r\\k\\.\\o\\r\\g\\/\\0\\.\\3\\0\\/\"][https://spec.commonmark.org/0.30/]",
+            "name": "target"
         },
         {
             "data": "",

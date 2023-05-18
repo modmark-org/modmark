@@ -3,9 +3,13 @@
     "data": "@online{djot,\ntitle = {djot},\nauthor = {John MacFarlane},\nurl = {https://djot.net},\nurldate = {2023-01-23}\n}\n\n@online{AsciiDoc,\nauthor = {{Eclipse Foundation}},\ntitle = {{AsciiDoc}},\nurl = {http://asciidoc.org/},\nurldate = {2023-01-23}\n}\n\n@online{Commonmark,\nauthor = {John MacFarlane},\ntitle = {CommonMark Spec},\nyear = {2021},\nmonth = {6},\nurl = {https://spec.commonmark.org/0.30/},\nurldate = {2023-03-21}\n}\n",
     "arguments": {
         "style": "IEEE",
-        "visibility": "visible",
         "file": "",
-        "unused-entries": "hidden"
+        "visibility": "visible",
+        "unused-entries": "hidden",
+        "insertion-type": "reparse",
+        "output": "plain",
+        "specialization": "enable",
+        "styling": "all"
     },
     "inline": false,
     "__test_transform_to": "html",
