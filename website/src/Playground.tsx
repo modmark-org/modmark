@@ -389,7 +389,7 @@ function Playground() {
             </Menu>
             <Main>
                 {
-                    showFiles && <FsTree
+                    showFiles && compilerLoaded && <FsTree
                         folderCounter={folderCount}
                         incFolderCounter={() => setFolderCount((c) => c + 1)}
                         addFolder={compiler.add_folder}
