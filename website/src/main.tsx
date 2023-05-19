@@ -1,29 +1,29 @@
 import ReactDOM from 'react-dom/client'
-import { createHashRouter, Outlet, RouterProvider, } from "react-router-dom";
+import {createHashRouter, Outlet, RouterProvider,} from "react-router-dom";
 import Playground from "./Playground";
 import Homepage from './Homepage.tsx'
 import "normalize.css";
 import "./main.css"
 import styled from "styled-components";
-import { useState } from 'react';
-import { Button } from './Buttons.tsx';
+import {useState} from 'react';
+import {Button} from './Buttons.tsx';
 import PackageDocsPage from './PackageDocsPage.tsx';
 import GuidePage from './GuidePage.tsx';
 
 const DebugMessage = styled.div<{ bg?: string, color?: string }>`
-height: 3rem;
-padding-left: 1rem;
-padding-right: 1rem;
-display: flex;
-align-items: center;
-justify-content: space-between;
-background: ${(props) => props.bg ?? "#e2e2e2"};
-z-index:1000;
-color: ${(props) => props.color ?? "inherit"};
+  height: 3rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: ${(props) => props.bg ?? "#e2e2e2"};
+  z-index: 1000;
+  color: ${(props) => props.color ?? "inherit"};
 
-& a {
-  color: inherit;
-}
+  & a {
+    color: inherit;
+  }
 `;
 
 function PrPrompt() {
@@ -42,7 +42,7 @@ function PrPrompt() {
                 <Button onClick={() => setHidden(true)}>Close</Button>
             </ DebugMessage>
         }
-        <Outlet context={showPrompt} />
+        <Outlet context={showPrompt}/>
     </>
 }
 
@@ -51,23 +51,23 @@ function PrPrompt() {
 const router = createHashRouter([
     {
         path: "/",
-        element: <><PrPrompt /></>,
+        element: <><PrPrompt/></>,
         children: [
             {
                 path: "/",
-                element: <Homepage />,
+                element: <Homepage/>,
             },
             {
                 path: "/playground",
-                element: <Playground />,
+                element: <Playground/>,
             },
             {
                 path: "/package-docs",
-                element: <PackageDocsPage />,
+                element: <PackageDocsPage/>,
             },
             {
                 path: "/guide",
-                element: <GuidePage />,
+                element: <GuidePage/>,
             },
         ],
     },
@@ -76,5 +76,5 @@ const router = createHashRouter([
 ]);
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-    <RouterProvider router={router} />
+    <RouterProvider router={router}/>
 )
