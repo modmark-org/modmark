@@ -1,80 +1,80 @@
 import styled from "styled-components";
 import PackageDocs from "./PackageDocs";
-import { CompilationException, Compiler, handleException, PackageInfo } from "./compilerTypes";
-import { useEffect, useMemo, useState } from "react";
+import {CompilationException, Compiler, handleException, PackageInfo} from "./compilerTypes";
+import {useEffect, useMemo, useState} from "react";
 import * as Comlink from "comlink";
-import { Link } from "react-router-dom";
-import { FileUploader } from "react-drag-drop-files";
-import { FiUpload } from "react-icons/fi";
+import {Link} from "react-router-dom";
+import {FileUploader} from "react-drag-drop-files";
+import {FiUpload} from "react-icons/fi";
 
 const Container = styled.div`
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 `;
 
 
 const Hero = styled.div`
-    padding: 1rem;
-    padding-top:2rem;
-    padding-bottom: 2rem;
-    background: #f1f1f1;
+  padding: 1rem;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+  background: #f1f1f1;
 
-    & > div {
-        max-width: 800px;
-        margin-left: auto;
-        margin-right: auto;
-    }
+  & > div {
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 
-    & > div > p {
-        max-width: 40ch;
-        opacity: 0.7;
-    }
+  & > div > p {
+    max-width: 40ch;
+    opacity: 0.7;
+  }
 
 `;
 
 const Upload = styled.div`
-    position:relative;
-    box-sizing: border-box;
-    border: dashed 2px #7392b7;; 
-    display: flex;
-    align-items: center;
-    justify-content:center;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    width: 100%;
-    max-width: 350px;
-    border-radius: 0.5rem;
-    cursor: pointer;
+  position: relative;
+  box-sizing: border-box;
+  border: dashed 2px #7392b7;;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  width: 100%;
+  max-width: 350px;
+  border-radius: 0.5rem;
+  cursor: pointer;
 
-    &:hover {
-        background: #00000013;
-    }
+  &:hover {
+    background: #00000013;
+  }
 
 `;
 
 const MainWrapper = styled.div`
-    width: 100%;
-    background-color: white;
+  width: 100%;
+  background-color: white;
 `;
 
 const Main = styled.main`
-    max-width: 800px;
-    margin-left: auto;
-    margin-right: auto;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
 `;
 
 const Errors = styled.div`
-    background:#c1666b;
-    border-radius: 0.5rem;
-    color: white;
-    padding: 1rem;
-    margin-top: 1rem;
+  background: #c1666b;
+  border-radius: 0.5rem;
+  color: white;
+  padding: 1rem;
+  margin-top: 1rem;
 
-    &  pre {
-        opacity: 0.5;
-    }
-    
+  & pre {
+    opacity: 0.5;
+  }
+
 `;
 
 export default function PackageDocsPage() {
@@ -150,7 +150,7 @@ export default function PackageDocsPage() {
         <Hero>
             <div>
                 <Link to="../">
-                    <img src="./logo.svg" alt="Logo" width="80" />
+                    <img src="./logo.svg" alt="Logo" width="80"/>
                 </Link>
                 <h1>Package documentation</h1>
                 <p>Read documentation for the standard library, or drag and drop one of your own packages.</p>
@@ -160,7 +160,7 @@ export default function PackageDocsPage() {
                     types={["WASM"]}
                 >
                     <Upload>
-                        <FiUpload size={30} /> Click or drag and drop to upload a file
+                        <FiUpload size={30}/> Click or drag and drop to upload a file
                     </Upload>
                 </FileUploader>
                 {
@@ -183,7 +183,7 @@ export default function PackageDocsPage() {
         <MainWrapper>
             <Main>
                 {
-                    loaded ? <PackageDocs packages={packages} /> : <p>Loading compiler...</p>
+                    loaded ? <PackageDocs packages={packages}/> : <p>Loading compiler...</p>
                 }
             </Main>
         </MainWrapper>

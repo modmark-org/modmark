@@ -51,16 +51,16 @@ export default function Guide() {
             an example of some paragraphs:
         </p>
         <Example>
-            This is the first sentence of the first paragraph. <br />
-            This line starts on another row. These rows belong to the <br />
-            same paragraph and in many output formats they will appear <br />
-            on the same row. <br />
-            <br />
-            This is the first sentence of the second paragraph. \ <br />
-            Each empty row marks the end of a paragraph. The backslashes \ <br />
-            at the end of all these rows ensure that they are all parsed \ <br />
-            as being part of the same row. \ <br />
-            <br />
+            This is the first sentence of the first paragraph. <br/>
+            This line starts on another row. These rows belong to the <br/>
+            same paragraph and in many output formats they will appear <br/>
+            on the same row. <br/>
+            <br/>
+            This is the first sentence of the second paragraph. \ <br/>
+            Each empty row marks the end of a paragraph. The backslashes \ <br/>
+            at the end of all these rows ensure that they are all parsed \ <br/>
+            as being part of the same row. \ <br/>
+            <br/>
             Multiple empty rows are treated as one, which means this is the third paragraph.
         </Example>
         <p>
@@ -73,7 +73,7 @@ export default function Guide() {
         <SyntaxTable>
             <div>Name</div>
             <div>Example</div>
-            <Border />
+            <Border/>
             <div>Bold</div>
             <div><strong>**bold**</strong></div>
             <div>Italic</div>
@@ -91,9 +91,12 @@ export default function Guide() {
             <div>Underline</div>
             <div><u>==underline==</u></div>
             <div>Strikethrough</div>
-            <div><del>~~strikethrough~~</del></div>
+            <div>
+                <del>~~strikethrough~~</del>
+            </div>
             <div>Math</div>
-            <div><code><a href="https://www.overleaf.com/learn/latex/Mathematical_expressions">$$latex math syntax$$</a></code></div>
+            <div><code><a href="https://www.overleaf.com/learn/latex/Mathematical_expressions">$$latex math syntax$$</a></code>
+            </div>
         </SyntaxTable>
         <h3>Smart punctuation</h3>
         <p>Smart punctuation is character sequences that gets replaced by a different
@@ -119,15 +122,16 @@ export default function Guide() {
             special [config] module. For example:
         </p>
         <Example>
-            [config] <br />
-            import myPackage.wasm <br />
-            import catalog:robber <br />
-            import https://example.com/myPackage.wasm <br />
-            import std:link hiding reference <br />
+            [config] <br/>
+            import myPackage.wasm <br/>
+            import catalog:robber <br/>
+            import https://example.com/myPackage.wasm <br/>
+            import std:link hiding reference <br/>
         </Example>
         <p>
             The first import is a local import, it imports the file myPackage.wasm.
-            The second import is an import from the <a href="https://github.com/modmark-org/package-registry">package registry</a>.
+            The second import is an import from the <a href="https://github.com/modmark-org/package-registry">package
+            registry</a>.
             The third import is an import from a remote URL that points to a wasm file.
             The fourth import is an import from the standard library, and it
             reimports the link module but hides the reference module.
@@ -145,13 +149,13 @@ export default function Guide() {
             rows. Here is one example of that:
         </p>
         <Example>
-            ... will be attached below: <br />
-            <br />
-            [code] <br />
-            def foo(): <br />
-            &emsp; print("Hello world!") <br />
-            <br />
-            This code defines ... <br />
+            ... will be attached below: <br/>
+            <br/>
+            [code] <br/>
+            def foo(): <br/>
+            &emsp; print("Hello world!") <br/>
+            <br/>
+            This code defines ... <br/>
         </Example>
         <p>
             Different modules may have widely different behaviour, but the intention
@@ -168,20 +172,20 @@ export default function Guide() {
             in an inline module, <em>delimiters</em> can be used.
         </p>
         <Example>
-            [mymodule]{'{'}&^ <br />
-            This text is included in mymodule, as expected. <br />
-            <br />
-            But also this text because it is inside the delimiters. <br />
-            ^&{'}'} <br />
-            <br />
-            Inline modules can also use delimiters to capture [mymodule]{'{'}all this text {'}'} <br />
-            <br />
-            However [mymodule]{'{'}even if delimiters are used, <br />
-            this text will not be included since inline modules stops <br />
-            at the end of the row {'}'}. Since the module isn't closed, it <br />
-            will not be parsed as a module but rather as text. <br />
-            <br />
-            Here, [mymodule](( the module body will include the inner layer of  <br />
+            [mymodule]{'{'}&^ <br/>
+            This text is included in mymodule, as expected. <br/>
+            <br/>
+            But also this text because it is inside the delimiters. <br/>
+            ^&{'}'} <br/>
+            <br/>
+            Inline modules can also use delimiters to capture [mymodule]{'{'}all this text {'}'} <br/>
+            <br/>
+            However [mymodule]{'{'}even if delimiters are used, <br/>
+            this text will not be included since inline modules stops <br/>
+            at the end of the row {'}'}. Since the module isn't closed, it <br/>
+            will not be parsed as a module but rather as text. <br/>
+            <br/>
+            Here, [mymodule](( the module body will include the inner layer of <br/>
             parentheses, since only one character is allowed as the delimiter for inline modules. ))
         </Example>
         <p>
