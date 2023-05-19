@@ -49,6 +49,7 @@ const PackageDocsContainer = styled.div`
   flex-direction: column;
   gap: 2rem;
   padding: 1rem;
+  background: white;
   width: 100%;
   box-sizing: border-box;
 

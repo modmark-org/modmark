@@ -11,3 +11,7 @@ html {
     font-family: "Inter", sans-serif;
     font-size: 11pt;
 }
+
+body {
+    background-color: #f1f1f1;
+}
