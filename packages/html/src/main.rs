@@ -165,27 +165,57 @@ fn transform_document(mut doc: Value) -> String {
 }
 
 fn transform_heading(heading: Value) -> String {
-    let mut result = String::new();
-    result.push('[');
+    let mut json = vec![];
+    let level_arg = heading["arguments"]["level"].as_str().unwrap();
+    let level = level_arg.parse::<u8>().unwrap().clamp(1, 6);
+    let id = rand::random::<u64>();
+    let heading_style = env::var("heading_style").unwrap_or(String::new());
+    let mut contents_vec = vec![];
 
-    let Value::String(s) = &heading["arguments"]["level"] else {
-        panic!();
-    };
-    let level = s.parse::<u8>().unwrap().clamp(1, 6);
+    json.push(json!(format!("<h{level} id=\"{id}\">")));
 
-    write!(result, "{},", raw!(format!("<h{level}>"))).unwrap();
+    if heading_style == "numeric" {
+        json.push(json!(
+            {
+                "name": "inline_content",
+                "data": format!("[element-number]({id}) ")
+            }
+        ));
+    }
 
     if let Value::Array(children) = &heading["children"] {
         for child in children {
-            result.push_str(&serde_json::to_string(child).unwrap());
-            result.push(',');
+            json.push(child.clone());
+            contents_vec.push(child.clone());
         }
     }
 
-    write!(result, "{}", raw!(format!("</h{level}>"))).unwrap();
-    result.push(']');
+    let contents = serde_json::to_string(&contents_vec).unwrap();
 
-    result
+    let element = if heading_style == "numeric" {
+        format!("numbered-heading")
+    } else {
+        format!("unnumbered-heading")
+    };
+
+    let structure_data = json!({
+        "element": element,
+        "level": level,
+        "key": format!("{id}"),
+        "contents": contents,
+    })
+    .to_string();
+
+    json.push(json!(format!("</h{level}>")));
+    json.push(json!(
+        {
+            "name": "list-push",
+            "arguments":{"name": "structure"},
+            "data": structure_data,
+        }
+    ));
+
+    serde_json::to_string(&json).unwrap()
 }
 
 fn transform_error(error: Value) -> String {
@@ -432,6 +462,10 @@ fn manifest() -> String {
                             "default": "1"
                         }
                     ],
+                    "variables": {
+                        "structure": {"type": "list", "access": "push"},
+                        "heading_style": {"type": "const", "access": "read"},
+                    },
                     "type": "parent"
                 }
             ]

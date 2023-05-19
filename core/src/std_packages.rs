@@ -31,6 +31,7 @@ define_standard_package_loader! {
     "flow",
     "bibliography",
     "plot",
+    "structure",
 }
 
 // Here, all native packages are declared. The macro expands to two functions,

@@ -52,13 +52,17 @@ fn manifest() {
                     "from": "label",
                     "to": ["html", "latex"],
                     "arguments": [],
+                    "variables": {
+                        "structure": {"type": "list", "access": "push"}
+                    },
                 },
                 {
                     "from": "reference",
                     "to": ["html", "latex"],
-                    "arguments": [
-                        {"name": "display", "default": "", "description": "Displayed label for reference (Only HTML)"}
-                    ],
+                    "arguments": [],
+                    "variables": {
+                        "structure": {"type": "list", "access": "read"}
+                    },
                 },
                 {
                     "from": "target",
@@ -104,7 +108,10 @@ fn transform_target(to: &str) {
         let mut res = vec![];
         res.push(import!(r"\usepackage[hidelinks]{hyperref}"));
         res.push(inline_target!(name));
-        res.push(Value::String(format!("\\hypertarget{{inlinetarget{}}}{{", name)));
+        res.push(Value::String(format!(
+            "\\hypertarget{{inlinetarget{}}}{{",
+            name
+        )));
         res.push(module!("inline_content", body));
         res.push(Value::from("}"));
         res
@@ -150,9 +157,9 @@ fn transform_link(to: &str) {
             let text = if label.is_empty() { link } else { label };
 
             let output = json!([
-                {"name": "raw", "data": link_tag},
+                link_tag,
                 {"name": "inline_content", "data": text},
-                {"name": "raw", "data": "</a>"}
+                "</a>",
             ]);
             print!("{output}");
         }
@@ -171,9 +178,9 @@ fn transform_link(to: &str) {
             };
 
             let output = json!([
-                {"name": "raw", "data": prefix},
+                prefix,
                 {"name": "inline_content", "data": text},
-                {"name": "raw", "data": "}"},
+                "}",
                 import![r"\usepackage[hidelinks]{hyperref}"]
             ]);
             print!("{output}");
@@ -195,15 +202,21 @@ fn transform_label(to: &str) {
         "html" => {
             let label = input["data"].as_str().unwrap();
             let escaped_label = label.replace('"', "%22");
-
             let label_tag = format!(r#"<span id="{escaped_label}">"#);
+            let structure_data = json!({"element": "label", "key": label}).to_string();
+            let mut json = vec![];
 
-            let output = json!([
-                {"name": "raw", "data": label_tag},
-                {"name": "raw", "data": "</span>"},
-            ]);
+            json.push(json!(label_tag));
+            json.push(json!("</span>"));
+            json.push(json!(
+                {
+                    "name": "list-push",
+                    "arguments":{"name": "structure"},
+                    "data": structure_data,
+                }
+            ));
 
-            print!("{output}");
+            print!("{}", serde_json::to_string(&json).unwrap());
         }
         "latex" => {
             let label = input["data"].as_str().unwrap();
@@ -211,9 +224,7 @@ fn transform_label(to: &str) {
 
             let label_tag = format!(r#"\label{{{}}}"#, escaped_label);
 
-            let output = json!([
-                {"name": "raw", "data": label_tag},
-            ]);
+            let output = json!(label_tag);
 
             print!("{output}");
         }
@@ -233,20 +244,13 @@ fn transform_reference(to: &str) {
     match to {
         "html" => {
             let label = input["data"].as_str().unwrap();
-            let mut escaped_label = label.replace('"', "%22");
-            escaped_label.insert(0, '#');
-
-            let display = input["arguments"]
-                .get("display")
-                .map(|val| val.as_str().unwrap())
-                .unwrap_or_else(|| "");
-
-            let label_tag = format!(r#"<a href="{escaped_label}">"#);
 
             let output = json!([
-                {"name": "raw", "data": label_tag},
-                {"name": "raw", "data": display},
-                {"name": "raw", "data":  "</a>"},
+                "<a href=\"#",
+                {"name": "inline_content", "data": format!("[label-to-id]({label})")},
+                "\">",
+                {"name": "inline_content", "data": format!("[element-number]({label})")},
+                "</a>",
             ]);
 
             print!("{output}");
@@ -257,9 +261,7 @@ fn transform_reference(to: &str) {
 
             let label_tag = format!(r#"\ref{{{}}}"#, escaped_label);
 
-            let output = json!([
-                {"name": "raw", "data": label_tag},
-            ]);
+            let output = json!(label_tag);
 
             print!("{output}");
         }

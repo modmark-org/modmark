@@ -78,7 +78,8 @@ fn manifest() {
                         },
                     ],
                     "variables": {
-                        "imports": {"type": "set", "access": "add"}
+                        "imports": {"type": "set", "access": "add"},
+                        "structure": {"type": "list", "access": "push"},
                     }
                 },
                 {
@@ -159,6 +160,12 @@ fn transform_image(input: Value, to: &str) {
                 format!("id=\"{label}\"")
             };
 
+            let structure_data = json!({
+                "element": "figure",
+                "key": label,
+            })
+            .to_string();
+
             let img_src = if embed == "false" {
                 String::from(path)
             } else {
@@ -200,7 +207,13 @@ fn transform_image(input: Value, to: &str) {
                 v.push(json!("</figcaption>\n"));
             }
             v.push(json!("</figure>\n"));
-
+            v.push(json!(
+                {
+                    "name": "list-push",
+                    "arguments": {"name": "structure"},
+                    "data": structure_data,
+                }
+            ));
             print!("{}", json!(v));
         }
         "latex" => {
