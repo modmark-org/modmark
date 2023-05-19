@@ -14,6 +14,7 @@ exclude = [
     "packages/flow",
     "packages/bibliography",
     "packages/plot",
+    "packages/structure",
     "website/web_bindings"
 ]
 

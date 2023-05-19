@@ -307,7 +307,7 @@ impl Table<'_> {
         vec.push(import!(r"\usepackage{float}"));
         vec.push(json!("\\begin{table}[H]\n"));
         vec.push(json!("\\centering\n"));
-        
+
         if let Some(caption) = self.caption {
             vec.push(json!("\\caption{"));
             vec.push(inline_content!(caption));
@@ -366,6 +366,20 @@ impl Table<'_> {
     // Turns this table to HTML and gets a JSON value (containing mostly raw stuff) to return
     fn to_html(&self) -> Value {
         let mut vec: Vec<Value> = vec![];
+
+        let structure_data = json!({
+                "element": "figure",
+                "key": self.label,
+        })
+        .to_string();
+        vec.push(json!(
+            {
+                "name": "list-push",
+                "arguments": {"name": "structure"},
+                "data": structure_data,
+            }
+        ));
+
         // Push opening tag, border style on table if outer borders
         let tag = {
             let mut str = "<table".to_string();
@@ -426,6 +440,7 @@ impl Table<'_> {
         }
 
         vec.push(json!("</table>"));
+
         json!(vec)
     }
 }
