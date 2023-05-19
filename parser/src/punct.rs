@@ -145,7 +145,13 @@ fn try_smart_sequence(str: &mut String, last_escape: Option<usize>) {
             .take_while(|ch| ch == &last_char)
             .collect::<String>();
         if let Some(i) = last_escape {
-            seq.truncate(str.len() - i - 1);
+            for x in 1.. {
+                let ci = str.len() - i - x;
+                if seq.is_char_boundary(ci) {
+                    seq.truncate(ci);
+                    break;
+                }
+            }
         }
         let range = str.len() - seq.len()..str.len();
         match seq.as_str() {
