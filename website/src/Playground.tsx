@@ -59,6 +59,11 @@ const Main = styled.main`
   }
 `;
 
+const Scrollable = styled.div`
+  overflow: auto;
+  width: 100%;
+`;
+
 const View = styled.div`
   position: relative;
   width: 50%;
@@ -414,30 +419,35 @@ function Playground() {
                 </EditorContainer>
                 <View>
                     {activeView === "docs" &&
-                        <div style={{
-                            maxWidth: 800,
-                            paddingBottom: "3rem",
-                            height: "100%",
-                            overflow: "auto",
-                            width: "100%",
-                            marginLeft: "auto",
-                            marginRight: "auto"
+                        <Scrollable style={{
+                            backgroundColor: "white"
                         }}>
-                            <PackageDocs packages={packages} />
-                        </div>
+                            <div style={{
+                                maxWidth: 800,
+                                paddingBottom: "3rem",
+                                height: "100%",
+                                width: "100%",
+                                marginLeft: "auto",
+                                marginRight: "auto"
+                            }}>
+                                <PackageDocs packages={packages} />
+                            </div>
+                        </Scrollable>
                     }
                     {activeView === "guide" &&
-                        <div style={{
-                            maxWidth: 800,
-                            paddingBottom: "3rem",
-                            height: "100%",
-                            overflow: "auto",
-                            width: "100%",
-                            marginLeft: "auto",
-                            marginRight: "auto"
-                        }}>
-                            <Guide />
-                        </div>
+                        <Scrollable>
+                            <div style={{
+                                maxWidth: 800,
+                                paddingBottom: "3rem",
+                                height: "100%",
+                                overflow: "auto",
+                                width: "100%",
+                                marginLeft: "auto",
+                                marginRight: "auto"
+                            }}>
+                                <Guide />
+                            </div>
+                        </Scrollable>
                     }
                     {
                         activeView === "preview" && <>

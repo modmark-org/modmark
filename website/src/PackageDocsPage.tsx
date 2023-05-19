@@ -8,6 +8,9 @@ import { FileUploader } from "react-drag-drop-files";
 import { FiUpload } from "react-icons/fi";
 
 const Container = styled.div`
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 `;
 
 
@@ -18,7 +21,7 @@ const Hero = styled.div`
     background: #f1f1f1;
 
     & > div {
-        max-width: 1000px;
+        max-width: 800px;
         margin-left: auto;
         margin-right: auto;
     }
@@ -50,8 +53,13 @@ const Upload = styled.div`
 
 `;
 
+const MainWrapper = styled.div`
+    width: 100%;
+    background-color: white;
+`;
+
 const Main = styled.main`
-    max-width: 1000px;
+    max-width: 800px;
     margin-left: auto;
     margin-right: auto;
 `;
@@ -172,11 +180,13 @@ export default function PackageDocsPage() {
             </div>
 
         </Hero>
-        <Main>
-            {
-                loaded ? <PackageDocs packages={packages} /> : <p>Loading compiler...</p>
-            }
-        </Main>
+        <MainWrapper>
+            <Main>
+                {
+                    loaded ? <PackageDocs packages={packages} /> : <p>Loading compiler...</p>
+                }
+            </Main>
+        </MainWrapper>
 
     </Container>
 }
