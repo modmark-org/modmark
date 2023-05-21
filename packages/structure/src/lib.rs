@@ -1,6 +1,6 @@
 use serde_json::{from_str, json, Value};
 use std::env;
-use TOCEntryMode::*;
+use TOCEntryType::*;
 
 #[macro_export]
 macro_rules! inline_content {
@@ -19,7 +19,7 @@ pub struct StructureCounter {
 }
 
 #[derive(PartialEq)]
-enum TOCEntryMode {
+enum TOCEntryType {
     Numbered,
     Unnumbered,
     Empty,
@@ -29,7 +29,7 @@ struct TOCEntry {
     id: Option<String>,
     contents: Option<Value>,
     children: Vec<TOCEntry>,
-    mode: TOCEntryMode,
+    mode: TOCEntryType,
 }
 
 pub struct TOC {
@@ -49,6 +49,11 @@ impl StructureCounter {
     pub fn push_heading(&mut self, level: usize) {
         if level < 1 || level > u8::MAX as usize {
             return;
+        }
+
+        if level == 1 {
+            self.figures = 0;
+            self.tables = 0;
         }
 
         while self.headings.len() < level {
