@@ -7,18 +7,12 @@
     "inline": true,
     "__test_transform_to": "latex",
     "__test_expected_result": [
-        {
-            "data": "\\href{https://google.com}{",
-            "name": "raw"
-        },
+        "\\href{https://google.com}{",
         {
             "data": "https://google.com",
             "name": "inline_content"
         },
-        {
-            "data": "}",
-            "name": "raw"
-        },
+        "}",
         {
             "arguments": {
                 "name": "imports"

@@ -11,6 +11,15 @@ macro_rules! import {
     ($e:expr) => {json!({"name": "set-add", "arguments": {"name": "imports"}, "data": $e})}
 }
 
+macro_rules! inline_content {
+    ($expr:expr) => {
+        json!({
+            "name": "inline_content",
+            "data": $expr
+        })
+    }
+}
+
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
     let action = &args[0];
@@ -80,6 +89,7 @@ fn manifest() {
                     "variables": {
                         "imports": {"type": "set", "access": "add"},
                         "structure": {"type": "list", "access": "push"},
+                        "caption_style": {"type": "const", "access": "read"},
                     }
                 },
                 {
@@ -201,8 +211,11 @@ fn transform_image(input: Value, to: &str) {
             v.push(json!({"name": "__text", "data": alt}));
             v.push(json!("\"/>\n"));
             if !caption.is_empty() {
-                let cap_str = format!("<figcaption style=\"text-align: {cap_align}\">");
-                v.push(json!(cap_str));
+                let caption_str = format!("<figcaption style=\"text-align: {cap_align}\">");
+                v.push(json!(caption_str));
+                if env::var("caption_style").unwrap_or(String::new()) == "numbered" {
+                    v.push(inline_content!(format!("**Figure [element-number]({label}):** ")));
+                }
                 v.push(json!({"name": "inline_content", "data": caption}));
                 v.push(json!("</figcaption>\n"));
             }

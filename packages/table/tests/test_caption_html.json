@@ -13,6 +13,13 @@
     "inline": false,
     "__test_transform_to": "html",
     "__test_expected_result": [
+        {
+            "arguments": {
+                "name": "structure"
+            },
+            "data": "{\"element\":\"figure\",\"key\":\"\"}",
+            "name": "list-push"
+        },
         "<table style=\"border: 1px solid black; border-collapse: collapse;\">",
         "<caption>",
         {
