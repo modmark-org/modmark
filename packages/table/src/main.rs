@@ -366,12 +366,13 @@ impl Table<'_> {
     // Turns this table to HTML and gets a JSON value (containing mostly raw stuff) to return
     fn to_html(&self) -> Value {
         let mut vec: Vec<Value> = vec![];
-
+        let key = self.label.unwrap_or("");
         let structure_data = json!({
                 "element": "figure",
-                "key": self.label,
+                "key": key,
         })
         .to_string();
+
         vec.push(json!(
             {
                 "name": "list-push",
@@ -395,7 +396,11 @@ impl Table<'_> {
         vec.push(json!(tag));
 
         if let Some(caption) = self.caption {
+
             vec.push(json!("<caption>"));
+            if env::var("caption_style").unwrap_or(String::new()) == "numbered" {
+                vec.push(inline_content!(format!("**Table [element-number]({}):** ", key)));
+            }
             vec.push(inline_content!(caption));
             vec.push(json!("</caption>"));
         }

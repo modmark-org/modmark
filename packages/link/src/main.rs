@@ -84,23 +84,24 @@ fn manifest() {
 }
 
 fn transform(from: &str, to: &str) {
+    let input: Value = {
+        let mut buffer = String::new();
+        io::stdin().read_to_string(&mut buffer).unwrap();
+        serde_json::from_str(&buffer).unwrap()
+    };
+
     match from {
-        "link" => transform_link(to),
-        "label" => transform_label(to),
-        "reference" => transform_reference(to),
-        "target" => transform_target(to),
+        "link" => transform_link(input, to),
+        "label" => transform_label(input, to),
+        "reference" => transform_reference(input, to),
+        "target" => transform_target(input, to),
         other => {
             eprintln!("Package does not support {other}");
         }
     }
 }
 
-fn transform_target(to: &str) {
-    let input: Value = {
-        let mut buffer = String::new();
-        io::stdin().read_to_string(&mut buffer).unwrap();
-        serde_json::from_str(&buffer).unwrap()
-    };
+fn transform_target(input: Value, to: &str) {
     let name = input["arguments"]["name"].as_str().unwrap();
     let body = input["data"].as_str().unwrap();
 
@@ -128,12 +129,7 @@ fn transform_target(to: &str) {
     println!("{}", Value::Array(result));
 }
 
-fn transform_link(to: &str) {
-    let input: Value = {
-        let mut buffer = String::new();
-        io::stdin().read_to_string(&mut buffer).unwrap();
-        serde_json::from_str(&buffer).unwrap()
-    };
+fn transform_link(input: Value, to: &str) {
     let targets: Vec<String> =
         serde_json::from_str(&env::var("inline_targets").unwrap_or("[]".to_string())).unwrap();
     let data = input["data"].as_str().unwrap();
@@ -191,13 +187,7 @@ fn transform_link(to: &str) {
     }
 }
 
-fn transform_label(to: &str) {
-    let input: Value = {
-        let mut buffer = String::new();
-        io::stdin().read_to_string(&mut buffer).unwrap();
-        serde_json::from_str(&buffer).unwrap()
-    };
-
+fn transform_label(input: Value, to: &str) {
     match to {
         "html" => {
             let label = input["data"].as_str().unwrap();
@@ -234,20 +224,14 @@ fn transform_label(to: &str) {
     }
 }
 
-fn transform_reference(to: &str) {
-    let input: Value = {
-        let mut buffer = String::new();
-        io::stdin().read_to_string(&mut buffer).unwrap();
-        serde_json::from_str(&buffer).unwrap()
-    };
-
+fn transform_reference(input: Value, to: &str) {
     match to {
         "html" => {
             let label = input["data"].as_str().unwrap();
 
             let output = json!([
                 "<a href=\"#",
-                {"name": "inline_content", "data": format!("[label-to-id]({label})")},
+                {"name": "inline_content", "data": format!("[label-to-key]({label})")},
                 "\">",
                 {"name": "inline_content", "data": format!("[element-number]({label})")},
                 "</a>",

@@ -168,43 +168,31 @@ fn transform_heading(heading: Value) -> String {
     let mut json = vec![];
     let level_arg = heading["arguments"]["level"].as_str().unwrap();
     let level = level_arg.parse::<u8>().unwrap().clamp(1, 6);
-    let id = rand::random::<u64>();
+    let key = rand::random::<u64>().to_string();
     let heading_style = env::var("heading_style").unwrap_or(String::new());
-    let mut contents_vec = vec![];
+    let element;
 
-    json.push(json!(format!("<h{level} id=\"{id}\">")));
+    json.push(json!(format!("<h{level} id=\"{key}\">")));
 
-    if heading_style == "numeric" {
-        json.push(json!(
-            {
-                "name": "inline_content",
-                "data": format!("[element-number]({id}) ")
-            }
-        ));
-    }
-
-    if let Value::Array(children) = &heading["children"] {
-        for child in children {
-            json.push(child.clone());
-            contents_vec.push(child.clone());
-        }
-    }
-
-    let contents = serde_json::to_string(&contents_vec).unwrap();
-
-    let element = if heading_style == "numeric" {
-        format!("numbered-heading")
+    if heading_style == "numbered" {
+        json.push(inline_content!(format!("[element-number]({key}) ")));
+        element = "numbered-heading";
     } else {
-        format!("unnumbered-heading")
+        element = "unnumbered-heading";
     };
 
     let structure_data = json!({
         "element": element,
         "level": level,
-        "key": format!("{id}"),
-        "contents": contents,
-    })
-    .to_string();
+        "key": key,
+        "contents": heading["children"],
+    }).to_string();
+
+    if let Value::Array(children) = &heading["children"] {
+        for child in children {
+            json.push(child.clone());
+        }
+    }
 
     json.push(json!(format!("</h{level}>")));
     json.push(json!(
@@ -216,6 +204,7 @@ fn transform_heading(heading: Value) -> String {
     ));
 
     serde_json::to_string(&json).unwrap()
+
 }
 
 fn transform_error(error: Value) -> String {

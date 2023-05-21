@@ -7,17 +7,11 @@
   "inline": true,
   "__test_transform_to": "html",
   "__test_expected_result": [
-    {
-      "data": "<a href=\"https://google.com\">",
-      "name": "raw"
-    },
+    "<a href=\"https://google.com\">",
     {
       "data": "Google",
       "name": "inline_content"
     },
-    {
-      "data": "</a>",
-      "name": "raw"
-    }
+    "</a>"
   ]
 }
