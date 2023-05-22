@@ -14,6 +14,7 @@ import FsTree from "./FsTree";
 import PackageDocs from "./PackageDocs";
 import { CompilationResult, Compiler, handleException, PackageInfo } from "./compilerTypes";
 import Guide from "./Guide";
+import { IDisposable } from "monaco-editor";
 
 type Monaco = typeof monaco;
 
@@ -153,6 +154,9 @@ function Playground() {
     () => Comlink.wrap(new Worker(new URL("./worker.js", import.meta.url))),
     [],
   );
+    // Keep monaco references
+    const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+    const monacoRef = useRef<Monaco | null>(null);
 
   // It is uncertain if the compiler or the editor is loaded first. Gist loading (and possibly file loading) is
   // initialized as soon as the editor is loaded. If this happens before the compiler, we can't just add files to
@@ -284,17 +288,66 @@ function Playground() {
     });
   };
 
-  // save a reference to the monaco editor
-  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const handleEditorDidMount = async (editor: editor.IStandaloneCodeEditor, _monaco: Monaco) => {
-    editorRef.current = editor;
-    // Priorities are as follows:
-    // If we query a gist => load it
-    // If not => check local storage
-    // If local storage is empty => load the welcome document (welcomeGist)
-    // Note that getGistById returns appropriate errors as strings, and only throws
-    // on HTTP errors. Also note that getGistById may load other files as well, if
-    // the gist contains other files.
+    let [lastModel, setLastModel] = useState<IDisposable | null>(null);
+    useEffect(() => {
+        if (monacoRef.current === null) {
+            return;
+        }
+        console.log(`running, packages size: ${packages.length}`);
+        if (lastModel !== null) {
+            console.log("disposing");
+            lastModel.dispose();
+        }
+        const newModel = monacoRef.current.languages.registerCompletionItemProvider("modmark", {
+            triggerCharacters: ["["],
+            provideCompletionItems: (model, position) => {
+                const word = model.getWordUntilPosition(position);
+
+                const range = {
+                    startLineNumber: position.lineNumber,
+                    endLineNumber: position.lineNumber,
+                    startColumn: word.startColumn,
+                    endColumn: word.endColumn,
+                }
+                let alreadyAdded = new Set<string>();
+                const suggestions =
+                    packages.flatMap((pkg) => {
+                        // Remove duplicate transforms with same from
+                        let transforms = [];
+                        for (let transform of pkg.transforms) {
+                            if (!alreadyAdded.has(transform.from)) {
+                                transforms.push(transform);
+                                alreadyAdded.add(transform.from);
+                            }
+                        }
+                        return transforms.map((transform) => {
+                            return {
+                                label: transform.from,
+                                kind: monaco.languages.CompletionItemKind.Module,
+                                insertText: transform.from,
+                                range: range,
+                            }
+                        })
+                    })
+
+                return { suggestions: suggestions };
+            },
+        });
+        setLastModel(newModel);
+    }, [packages]);
+
+    const handleEditorDidMount = async (editor: editor.IStandaloneCodeEditor, _monaco: Monaco) => {
+        editorRef.current = editor;
+        monacoRef.current = _monaco;
+        // Priorities are as follows:
+        // If we query a gist => load it
+        // If not => check local storage
+        // If local storage is empty => load the welcome document (welcomeGist)
+        // Note that getGistById returns appropriate errors as strings, and only throws
+        // on HTTP errors. Also note that getGistById may load other files as well, if
+        // the gist contains other files.
+        _monaco.languages.register({ id: "modmark" });
+        _monaco.editor.setModelLanguage(editor.getModel()!, "modmark");
 
     let welcomeGist = "dd61a53d832c8e6674190252d49606e7";
     let gist = searchParams.get("gist");
