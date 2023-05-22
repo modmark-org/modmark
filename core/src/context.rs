@@ -943,6 +943,7 @@ impl<T, U> Context<T, U> {
 enum JsonEntry {
     ParentNode {
         name: String,
+        #[serde(default)]
         arguments: HashMap<String, Value>,
         children: Vec<Self>,
     },
