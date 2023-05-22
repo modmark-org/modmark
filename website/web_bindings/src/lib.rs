@@ -4,6 +4,7 @@ use modmark_core::{
 };
 use once_cell::sync::Lazy;
 use parser::ParseError;
+use rand::{Rng, rngs::ThreadRng};
 use serde::Serialize;
 use serde_json::json;
 use std::cell::RefCell;
@@ -193,11 +194,16 @@ fn escape(text: String) -> String {
 
 #[wasm_bindgen]
 pub fn json_output(source: &str) -> Result<String, PlaygroundError> {
+    // For IDs, we use random IDs in range 5000 to 500 000. This will "simulate" unique IDs that
+    // are not ordered and whose only property you can depend on is that it is unique
+    let mut rng = ThreadRng::default();
+    let mut func = move || rng.gen_range(5_000..500_000);
+
     let result = CONTEXT.with(|ctx| {
         let ctx = ctx.borrow_mut();
         let doc = Element::try_from_ast(parser::parse_with_config(source)?.0, GranularId::root())
             .map_err(|e| vec![e])?;
-        ctx.serialize_element(&doc, &OutputFormat::new("html"))
+        ctx.serialize_element(&doc, &OutputFormat::new("html"), &mut func)
             .map_err(|e| vec![e])
             .map_err(|e| Into::<PlaygroundError>::into(e))
     })?;

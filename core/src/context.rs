@@ -1,5 +1,7 @@
+use std::cell::RefCell;
 use std::collections::HashSet;
 use std::fmt::Formatter;
+use std::ops::RangeFrom;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::{
@@ -41,11 +43,23 @@ pub struct Context<T, U> {
 
 /// Contains volatile compilation state that should be cleared
 /// in between calls to evaluation functions
-#[derive(Default, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct CompilationState {
     pub variables: VariableStore,
     pub warnings: Vec<Issue>,
     pub errors: Vec<Issue>,
+    pub counter: RefCell<RangeFrom<u64>>,
+}
+
+impl Default for CompilationState {
+    fn default() -> Self {
+        Self {
+            variables: Default::default(),
+            warnings: Default::default(),
+            errors: Default::default(),
+            counter: RefCell::new(100..),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -437,7 +451,11 @@ where
         let mut err_out = Pipe::new();
 
         // Generate the input data (by serializing elements)
-        let input_data = self.serialize_element(from, output_format)?;
+        let input_data = {
+            let mut counter = self.state.counter.borrow_mut();
+            let mut func = move || counter.next().expect("Counter is infinite");
+            self.serialize_element(from, output_format, &mut func)?
+        };
         write!(&mut input, "{input_data}")?;
 
         // Function to create an issue given a body text and if it is an error or not. This closure
@@ -666,13 +684,18 @@ impl<T, U> Context<T, U> {
         std_packages::handle_native(self, package_name, node_name, element, args, output_format)
     }
 
-    /// Serialize and element into a string that can be sent to a package
-    pub fn serialize_element(
+    /// Serialize and element into a string that can be sent to a package. `counter` should be a
+    /// function, when called giving a new `u64` each time, that is unique to the compilation cycle.
+    pub fn serialize_element<F>(
         &self,
         element: &Element,
         output_format: &OutputFormat,
-    ) -> Result<String, CoreError> {
-        let entry = self.element_to_entry(element, output_format)?;
+        counter: &mut F,
+    ) -> Result<String, CoreError>
+    where
+        F: FnMut() -> u64,
+    {
+        let entry = self.element_to_entry::<F>(element, output_format, counter)?;
         serde_json::to_string_pretty(&entry).map_err(|e| e.into())
     }
 
@@ -725,6 +748,7 @@ impl<T, U> Context<T, U> {
                 name,
                 arguments,
                 children,
+                id: _,
             } => Element::Parent {
                 name,
                 args: type_erase(arguments),
@@ -740,6 +764,7 @@ impl<T, U> Context<T, U> {
                 data,
                 arguments,
                 inline,
+                id: _,
             } => Element::Module {
                 name,
                 args: ModuleArguments {
@@ -755,16 +780,20 @@ impl<T, U> Context<T, U> {
     }
 
     /// Convert an `Element` into a `JsonEntry`.
-    fn element_to_entry(
+    fn element_to_entry<F>(
         &self,
         element: &Element,
         output_format: &OutputFormat,
-    ) -> Result<JsonEntry, CoreError> {
+        counter: &mut F,
+    ) -> Result<JsonEntry, CoreError>
+    where
+        F: FnMut() -> u64,
+    {
         match element {
             Element::Compound(elems) => Ok(JsonEntry::Compound(
                 elems
                     .iter()
-                    .map(|e| self.element_to_entry(e, output_format))
+                    .map(|e| self.element_to_entry(e, output_format, counter))
                     .collect::<Result<Vec<_>, CoreError>>()?,
             )),
             Element::Parent {
@@ -775,7 +804,7 @@ impl<T, U> Context<T, U> {
             } => {
                 let converted_children: Result<Vec<JsonEntry>, CoreError> = children
                     .iter()
-                    .map(|child| self.element_to_entry(child, output_format))
+                    .map(|child| self.element_to_entry(child, output_format, counter))
                     .collect();
 
                 let mut collected_args =
@@ -787,6 +816,7 @@ impl<T, U> Context<T, U> {
                     name: name.clone(),
                     arguments: type_erased_args,
                     children: converted_children?,
+                    id: counter(),
                 })
             }
             Element::Module {
@@ -806,6 +836,7 @@ impl<T, U> Context<T, U> {
                     arguments: type_erased_args,
                     data: body.clone(),
                     inline: *one_line,
+                    id: counter(),
                 })
             }
             Element::Raw(string) => Ok(JsonEntry::Raw(string.clone())),
@@ -936,8 +967,9 @@ impl<T, U> Context<T, U> {
     }
 }
 
-/// This enum is in the same shape as the json objects that
-/// will be sent and received when communicating with packages
+/// This enum is in the same shape as the json objects that will be sent and received when
+/// communicating with packages. The ID *should* be an unique ID that has never been assigned to
+/// another entry in the same compilation cycle
 #[derive(Serialize, Deserialize)]
 #[serde(untagged)]
 enum JsonEntry {
@@ -945,6 +977,8 @@ enum JsonEntry {
         name: String,
         arguments: HashMap<String, Value>,
         children: Vec<Self>,
+        #[serde(skip_deserializing)]
+        id: u64,
     },
     Module {
         name: String,
@@ -954,6 +988,8 @@ enum JsonEntry {
         arguments: HashMap<String, Value>,
         #[serde(default = "default_inline")]
         inline: bool,
+        #[serde(skip_deserializing)]
+        id: u64,
     },
     Compound(Vec<Self>),
     Raw(String),
