@@ -24,7 +24,7 @@ fn main() {
     }
 }
 
-fn transform(from: &str, _to: &str) {
+fn transform(from: &str, to: &str) {
     let input = {
         let mut buffer = String::new();
         io::stdin().read_to_string(&mut buffer).unwrap();
@@ -47,6 +47,7 @@ fn transform(from: &str, _to: &str) {
             return;
         }
     };
+
     let svg = match res {
         Ok(svg) => svg,
         Err(e) => {
@@ -55,5 +56,9 @@ fn transform(from: &str, _to: &str) {
         }
     };
 
-    print_svg_html(svg, &ctx)
+    match to {
+        "html" => print_svg_html(svg, &ctx),
+        "latex" => print_svg_latex(svg, &ctx),
+        _ => unreachable!("unsupported output format"),
+    }
 }

@@ -4,7 +4,9 @@ use evalexpr::HashMapContext;
 use plotters::prelude::*;
 use plotters::style::ShapeStyle;
 use serde_json::{json, Value};
+use std::collections::hash_map::DefaultHasher;
 use std::fs::File;
+use std::hash::{Hash, Hasher};
 use std::io::Write;
 use std::ops::Range;
 
@@ -228,7 +230,61 @@ impl RangeManager {
     }
 }
 
-pub fn print_svg_html(svg: String, ctx: &PlotContext) {
+pub(crate) fn print_svg_latex(svg: String, ctx: &PlotContext) {
+    let SVGInfo {
+        width,
+        label,
+        caption,
+        save,
+    } = &ctx.svg_info;
+
+    let content_hash = {
+        let mut x = DefaultHasher::new();
+        svg.hash(&mut x);
+        x.finish()
+    };
+
+    // TODO: we maybe we should use the import! macro in this crate too?
+    let import_svg =
+        json!({"name": "set-add", "arguments": {"name": "imports"}, "data": "\\usepackage{svg}"});
+    let import_floats =
+        json!({"name": "set-add", "arguments": {"name": "imports"}, "data": "\\usepackage{float}"});
+
+    let mut result = vec![
+        // Import the needed packages:
+        import_svg,
+        import_floats,
+        // Embed the image:
+        // (TODO: later we might want to add a embed argument for this)
+        Value::String(format!(
+            r"\begin{{filecontents}}[noheader]{{{content_hash}.svg}}"
+        )),
+        Value::String(format!("\n{svg}")),
+        Value::String(format!(r"\end{{filecontents}}")),
+        // Start the figure
+        Value::String("\n\\begin{figure}[H]\n\\centering\n".into()),
+        Value::String(format!(
+            r"\includesvg[width={width}\textwidth, inkscapelatex=false]{{{content_hash}}}"
+        )),
+        Value::String("\n".into()),
+    ];
+
+    if !caption.is_empty() {
+        result.push(Value::String(format!("\\caption{{{caption}}}\n")));
+    }
+
+    if !label.is_empty() {
+        result.push(Value::String(format!("\\label{{{label}}}\n")));
+    }
+
+    result.push(Value::String("\\end{figure}".into()));
+
+    handle_save(&svg, save);
+
+    println!("{}", &serde_json::to_string(&result).unwrap())
+}
+
+pub(crate) fn print_svg_html(svg: String, ctx: &PlotContext) {
     let encoded: String = general_purpose::STANDARD_NO_PAD.encode(&svg);
     let src = format!("data:image/svg+xml;base64,{encoded}");
     let percentage = (ctx.svg_info.width * 100.0).round() as i32;
@@ -252,10 +308,14 @@ pub fn print_svg_html(svg: String, ctx: &PlotContext) {
     }
     v.push(String::from("</figure>\n"));
 
-    print!("{}", json!(v));
+    handle_save(&svg, &ctx.svg_info.save);
 
-    if !ctx.svg_info.save.is_empty() {
-        if let Ok(mut file) = File::create(&ctx.svg_info.save) {
+    print!("{}", json!(v));
+}
+
+fn handle_save(svg: &str, path: &str) {
+    if !path.is_empty() {
+        if let Ok(mut file) = File::create(path) {
             write!(file, "{svg}").unwrap();
         } else {
             eprintln!("Could not open the specified file.");
@@ -274,8 +334,11 @@ pub fn print_manifest() {
             "transforms": [
                 {
                     "from": "plot",
-                    "to": ["html"],
+                    "to": ["html", "latex"],
                     "description": "Plot mathematical functions. Functions should be separated by newlines.",
+                    "variables": {
+                        "imports": {"type": "set", "access": "add"},
+                    },
                     "arguments": [
                         {
                             "name": "x_from",
@@ -343,8 +406,11 @@ pub fn print_manifest() {
                 },
                 {
                     "from": "plot-list",
-                    "to": ["html"],
+                    "to": ["html", "latex"],
                     "description": "Plot a set of (x,y) values. The values should be placed on separate lines, and the x-y pair should space-separated.",
+                    "variables": {
+                        "imports": {"type": "set", "access": "add"},
+                    },
                     "arguments": [
                         {
                             "name": "x_from",
