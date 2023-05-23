@@ -292,21 +292,21 @@ pub(crate) fn print_svg_html(svg: String, ctx: &PlotContext) {
     let img_str = format!("<img src=\"{src}\" {style} ");
 
     let mut v = Vec::new();
-    v.push(String::from("<figure>\n"));
-    v.push(img_str);
+    v.push(Value::String("<figure>\n".into()));
+    v.push(Value::String(img_str));
 
     if !ctx.svg_info.label.is_empty() {
-        v.push(String::from("id=\""));
-        v.push(json!({"name": "__text", "data": ctx.svg_info.label}).to_string());
-        v.push(String::from("\""));
+        v.push(Value::String("id=\"".into()));
+        v.push(json!({"name": "__text", "data": ctx.svg_info.label}));
+        v.push(Value::String("\"".into()));
     }
-    v.push(String::from("/>\n"));
+    v.push(Value::String("/>\n".into()));
     if !ctx.svg_info.caption.is_empty() {
-        v.push(String::from("<figcaption>"));
-        v.push(json!({"name": "__text", "data": ctx.svg_info.caption}).to_string());
-        v.push(String::from("</figcaption>\n"));
+        v.push(Value::String("<figcaption>".into()));
+        v.push(json!({"name": "__text", "data": ctx.svg_info.caption}));
+        v.push(Value::String("</figcaption>\n".into()));
     }
-    v.push(String::from("</figure>\n"));
+    v.push(Value::String("</figure>\n".into()));
 
     handle_save(&svg, &ctx.svg_info.save);
 
