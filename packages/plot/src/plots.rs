@@ -67,13 +67,15 @@ fn get_function_plots(ctx: &mut PlotContext) -> Result<Vec<Plot>, String> {
             // approximate where the plot crosses the y-boundary. We then add this point and start
             // a new series of points (so that it doesn't draw a line to where it goes inside the
             // graph again).
-            if let Some(&(px, py)) = points.get(i - 1) {
-                if ctx.rm.y_margin(py) == 0.0 {
-                    let point = get_point_at_boundary((x, y), (px, py), margin);
-                    plot[plot_idx].push(point);
+            if i > 0 {
+                if let Some(&(px, py)) = points.get(i - 1) {
+                    if ctx.rm.y_margin(py) == 0.0 {
+                        let point = get_point_at_boundary((x, y), (px, py), margin);
+                        plot[plot_idx].push(point);
 
-                    plot.push(Points::new());
-                    plot_idx += 1;
+                        plot.push(Points::new());
+                        plot_idx += 1;
+                    }
                 }
             }
 
