@@ -1,0 +1,10 @@
+{
+  "bracketSpacing": true,
+  "jsxBracketSameLine": true,
+  "singleQuote": false,
+  "trailingComma": "all",
+  "semi": true,
+  "tabWidth": 2,
+  "printWidth": 100,
+  "jsonRecursiveSort": true
+}
