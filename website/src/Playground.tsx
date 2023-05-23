@@ -9,10 +9,19 @@ import { Link, useOutletContext, useSearchParams } from "react-router-dom";
 import getGistById from "./gist.ts";
 import { Mode, Preview } from "./Preview";
 import { FiBook, FiClock, FiFolder, FiPackage } from "react-icons/fi";
-import { MdOutlineAutoAwesome, MdOutlineDownloading, MdOutlineKeyboardAlt } from "react-icons/md";
+import {
+  MdOutlineAutoAwesome,
+  MdOutlineDownloading,
+  MdOutlineKeyboardAlt,
+} from "react-icons/md";
 import FsTree from "./FsTree";
 import PackageDocs from "./PackageDocs";
-import { CompilationResult, Compiler, handleException, PackageInfo } from "./compilerTypes";
+import {
+  CompilationResult,
+  Compiler,
+  handleException,
+  PackageInfo,
+} from "./compilerTypes";
 import Guide from "./Guide";
 import { IDisposable } from "monaco-editor";
 
@@ -130,7 +139,9 @@ function Playground() {
   const inPreview = useOutletContext<boolean>();
   const [content, setContent] = useState("");
   const [showFiles, setShowFiles] = useState(false);
-  const [activeView, setActiveView] = useState<"preview" | "docs" | "guide">("preview");
+  const [activeView, setActiveView] = useState<"preview" | "docs" | "guide">(
+    "preview"
+  );
   const [packages, setPackages] = useState<PackageInfo[]>([]);
   const [loadingPackage, setLoadingPackage] = useState(false);
   const [selectedMode, setSelectedMode] = useState<Mode>("render-html-iframe");
@@ -155,8 +166,8 @@ function Playground() {
     [],
   );
     // Keep monaco references
-    const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-    const monacoRef = useRef<Monaco | null>(null);
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const monacoRef = useRef<Monaco | null>(null);
 
   // It is uncertain if the compiler or the editor is loaded first. Gist loading (and possibly file loading) is
   // initialized as soon as the editor is loaded. If this happens before the compiler, we can't just add files to
@@ -184,7 +195,9 @@ function Playground() {
   useEffect(() => {
     if (compilerLoaded && temporaryFileStoreRef.current.length > 0) {
       loadAccumulatedFiles()
-        .then(() => compile(editorRef.current?.getValue() ?? "", selectedMode, true))
+        .then(() =>
+          compile(editorRef.current?.getValue() ?? "", selectedMode, true)
+        )
         .catch(console.error);
     }
   }, [compilerLoaded, temporaryFileStoreRef.current.length]);
@@ -235,10 +248,23 @@ function Playground() {
           }
 
           // Update the list of packages too
-          compiler.package_info().then((packages) => setPackages(packages ?? []));
+          compiler.package_info().then((newPackages) => {
+            const packagesUnchanged =
+              !!newPackages &&
+              packages.every((p, i) => p.name === newPackages[i].name) &&
+              packages.length === newPackages.length;
+
+            if (!packagesUnchanged) {
+              setPackages(newPackages ?? []);
+            }
+          });
 
           // ast and json output can't produce transpilation errors so we just use the input as is
-          if (mode === "ast" || mode === "ast-debug" || mode === "json-output") {
+          if (
+            mode === "ast" ||
+            mode === "ast-debug" ||
+            mode === "json-output"
+          ) {
             setContent((result as string | null) ?? "");
             setActiveMode(mode);
             setErrors([]);
@@ -262,10 +288,14 @@ function Playground() {
 
             if (error.type === "compilationError") {
               setLoadingPackage(false);
-              loggedErrors = error.data.map((e) => `<p>${e.message}</p><pre>${e.raw}</pre>`);
+              loggedErrors = error.data.map(
+                (e) => `<p>${e.message}</p><pre>${e.raw}</pre>`
+              );
             } else if (error.type === "parsingError") {
               setLoadingPackage(false);
-              loggedErrors.push(`<p>${error.data.message}</p><pre>${error.data.raw}</pre>`);
+              loggedErrors.push(
+                `<p>${error.data.message}</p><pre>${error.data.raw}</pre>`
+              );
             } else if (error.type === "noResult") {
               // If we are trying to load/download a package, update the status
               setErrors([]);
@@ -278,76 +308,82 @@ function Playground() {
             setWarnings([]);
             setActiveMode(mode);
             setValidPreview(false); // invalidate the current preview
-          },
+          }
         );
     };
     setStatus({ type: "typing" });
     setCompileTimoutId((oldId) => {
       oldId && clearTimeout(oldId);
-      return setTimeout(compile_helper, instant ? 0 : COMPILE_INTERVAL) as unknown as number;
+      return setTimeout(
+        compile_helper,
+        instant ? 0 : COMPILE_INTERVAL
+      ) as unknown as number;
     });
   };
 
-    let [lastModel, setLastModel] = useState<IDisposable | null>(null);
-    useEffect(() => {
-        if (monacoRef.current === null) {
-            return;
-        }
-        console.log(`running, packages size: ${packages.length}`);
-        if (lastModel !== null) {
-            console.log("disposing");
-            lastModel.dispose();
-        }
-        const newModel = monacoRef.current.languages.registerCompletionItemProvider("modmark", {
-            triggerCharacters: ["["],
-            provideCompletionItems: (model, position) => {
-                const word = model.getWordUntilPosition(position);
+  let [lastModel, setLastModel] = useState<IDisposable | null>(null);
+  useEffect(() => {
+    if (monacoRef.current === null) {
+      return;
+    }
+    if (lastModel !== null) {
+      lastModel.dispose();
+    }
+    const newModel = monacoRef.current.languages.registerCompletionItemProvider(
+      "modmark",
+      {
+        triggerCharacters: ["["],
+        provideCompletionItems: (model, position) => {
+          const word = model.getWordUntilPosition(position);
 
-                const range = {
-                    startLineNumber: position.lineNumber,
-                    endLineNumber: position.lineNumber,
-                    startColumn: word.startColumn,
-                    endColumn: word.endColumn,
-                }
-                let alreadyAdded = new Set<string>();
-                const suggestions =
-                    packages.flatMap((pkg) => {
-                        // Remove duplicate transforms with same from
-                        let transforms = [];
-                        for (let transform of pkg.transforms) {
-                            if (!alreadyAdded.has(transform.from)) {
-                                transforms.push(transform);
-                                alreadyAdded.add(transform.from);
-                            }
-                        }
-                        return transforms.map((transform) => {
-                            return {
-                                label: transform.from,
-                                kind: monaco.languages.CompletionItemKind.Module,
-                                insertText: transform.from,
-                                range: range,
-                            }
-                        })
-                    })
+          const range = {
+            startLineNumber: position.lineNumber,
+            endLineNumber: position.lineNumber,
+            startColumn: word.startColumn,
+            endColumn: word.endColumn,
+          };
+          let alreadyAdded = new Set<string>();
+          const suggestions = packages.flatMap((pkg) => {
+            // Remove duplicate transforms with same from
+            let transforms = [];
+            for (let transform of pkg.transforms) {
+              if (!alreadyAdded.has(transform.from)) {
+                transforms.push(transform);
+                alreadyAdded.add(transform.from);
+              }
+            }
+            return transforms.map((transform) => {
+              return {
+                label: transform.from,
+                kind: monaco.languages.CompletionItemKind.Module,
+                insertText: transform.from + "]",
+                range: range,
+              };
+            });
+          });
 
-                return { suggestions: suggestions };
-            },
-        });
-        setLastModel(newModel);
-    }, [packages]);
+          return { suggestions: suggestions };
+        },
+      }
+    );
+    setLastModel(newModel);
+  }, [packages]);
 
-    const handleEditorDidMount = async (editor: editor.IStandaloneCodeEditor, _monaco: Monaco) => {
-        editorRef.current = editor;
-        monacoRef.current = _monaco;
-        // Priorities are as follows:
-        // If we query a gist => load it
-        // If not => check local storage
-        // If local storage is empty => load the welcome document (welcomeGist)
-        // Note that getGistById returns appropriate errors as strings, and only throws
-        // on HTTP errors. Also note that getGistById may load other files as well, if
-        // the gist contains other files.
-        _monaco.languages.register({ id: "modmark" });
-        _monaco.editor.setModelLanguage(editor.getModel()!, "modmark");
+  const handleEditorDidMount = async (
+    editor: editor.IStandaloneCodeEditor,
+    _monaco: Monaco
+  ) => {
+    editorRef.current = editor;
+    monacoRef.current = _monaco;
+    // Priorities are as follows:
+    // If we query a gist => load it
+    // If not => check local storage
+    // If local storage is empty => load the welcome document (welcomeGist)
+    // Note that getGistById returns appropriate errors as strings, and only throws
+    // on HTTP errors. Also note that getGistById may load other files as well, if
+    // the gist contains other files.
+    _monaco.languages.register({ id: "modmark" });
+    _monaco.editor.setModelLanguage(editor.getModel()!, "modmark");
 
     let welcomeGist = "dd61a53d832c8e6674190252d49606e7";
     let gist = searchParams.get("gist");
@@ -432,10 +468,16 @@ function Playground() {
               Playground
             </span>
           </Logo>
-          <Button active={showFiles} onClick={() => setShowFiles((showFiles) => !showFiles)}>
+          <Button
+            active={showFiles}
+            onClick={() => setShowFiles((showFiles) => !showFiles)}
+          >
             <FiFolder /> Files
           </Button>
-          <Select value={selectedMode} onChange={(e) => handleModeChange(e.target.value as Mode)}>
+          <Select
+            value={selectedMode}
+            onChange={(e) => handleModeChange(e.target.value as Mode)}
+          >
             <option value="ast">Abstract syntax tree</option>
             <option value="ast-debug">Debug AST</option>
             <option value="json-output">JSON tree</option>
@@ -454,13 +496,18 @@ function Playground() {
             />
           )}
           {selectedMode === "latex" && (
-            <Button onClick={() => openInOverleaf(content)}>Open in Overleaf</Button>
+            <Button onClick={() => openInOverleaf(content)}>
+              Open in Overleaf
+            </Button>
           )}
         </div>
         <div>
           <Button
             active={activeView === "guide"}
-            onClick={() => setActiveView(activeView === "guide" ? "preview" : "guide")}>
+            onClick={() =>
+              setActiveView(activeView === "guide" ? "preview" : "guide")
+            }
+          >
             <FiBook /> Guide
           </Button>
 
@@ -605,7 +652,13 @@ const Warning = styled.div`
 `;
 
 // display warnings and errors
-function IssuesReport({ warnings, errors }: { warnings: string[]; errors: string[] }) {
+function IssuesReport({
+  warnings,
+  errors,
+}: {
+  warnings: string[];
+  errors: string[];
+}) {
   const errorsElem = errors.map((error, i) => (
     <Error key={i} dangerouslySetInnerHTML={{ __html: error }} />
   ));
