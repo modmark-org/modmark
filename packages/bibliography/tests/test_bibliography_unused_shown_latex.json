@@ -29,23 +29,14 @@
             "data": "\\usepackage[hidelinks]{hyperref}",
             "name": "set-add"
         },
-        "\\hypertarget{bibentry:djot}{",
-        {
-            "data": "J. MacFarlane, “Djot.” Accessed: Jan. 23, 2023. \\[Online]. Available: ",
-            "name": "inline_content"
-        },
         {
             "arguments": {
-                "label": "\\h\\t\\t\\p\\s\\:\\/\\/\\d\\j\\o\\t\\.\\n\\e\\t\\/"
+                "name": "bibentry:djot"
             },
-            "data": "https://djot.net/",
-            "name": "link"
+            "data": "J. MacFarlane, “Djot.” Accessed: Jan. 23, 2023. \\[Online]. Available: [link label=\"\\h\\t\\t\\p\\s\\:\\/\\/\\d\\j\\o\\t\\.\\n\\e\\t\\/\"][https://djot.net/]",
+            "name": "target"
         },
-        {
-            "data": "",
-            "name": "inline_content"
-        },
-        "}\n\n",
+        "\n",
         "\\item[{",
         "}]\n",
         {
@@ -55,23 +46,14 @@
             "data": "\\usepackage[hidelinks]{hyperref}",
             "name": "set-add"
         },
-        "\\hypertarget{bibentry:AsciiDoc}{",
-        {
-            "data": "Eclipse Foundation, “AsciiDoc.” Accessed: Jan. 23, 2023. \\[Online]. Available: ",
-            "name": "inline_content"
-        },
         {
             "arguments": {
-                "label": "\\h\\t\\t\\p\\:\\/\\/\\a\\s\\c\\i\\i\\d\\o\\c\\.\\o\\r\\g\\/"
+                "name": "bibentry:AsciiDoc"
             },
-            "data": "http://asciidoc.org/",
-            "name": "link"
+            "data": "Eclipse Foundation, “AsciiDoc.” Accessed: Jan. 23, 2023. \\[Online]. Available: [link label=\"\\h\\t\\t\\p\\:\\/\\/\\a\\s\\c\\i\\i\\d\\o\\c\\.\\o\\r\\g\\/\"][http://asciidoc.org/]",
+            "name": "target"
         },
-        {
-            "data": "",
-            "name": "inline_content"
-        },
-        "}\n\n",
+        "\n",
         "\\item[{",
         "}]\n",
         {
@@ -81,23 +63,14 @@
             "data": "\\usepackage[hidelinks]{hyperref}",
             "name": "set-add"
         },
-        "\\hypertarget{bibentry:Commonmark}{",
-        {
-            "data": "J. MacFarlane, “Commonmark spec,” 2021. Accessed: Mar. 21, 2023. \\[Online]. Available: ",
-            "name": "inline_content"
-        },
         {
             "arguments": {
-                "label": "\\h\\t\\t\\p\\s\\:\\/\\/\\s\\p\\e\\c\\.\\c\\o\\m\\m\\o\\n\\m\\a\\r\\k\\.\\o\\r\\g\\/\\0\\.\\3\\0\\/"
+                "name": "bibentry:Commonmark"
             },
-            "data": "https://spec.commonmark.org/0.30/",
-            "name": "link"
+            "data": "J. MacFarlane, “Commonmark spec,” 2021. Accessed: Mar. 21, 2023. \\[Online]. Available: [link label=\"\\h\\t\\t\\p\\s\\:\\/\\/\\s\\p\\e\\c\\.\\c\\o\\m\\m\\o\\n\\m\\a\\r\\k\\.\\o\\r\\g\\/\\0\\.\\3\\0\\/\"][https://spec.commonmark.org/0.30/]",
+            "name": "target"
         },
-        {
-            "data": "",
-            "name": "inline_content"
-        },
-        "}\n\n",
+        "\n",
         "\n\\centering\n",
         "\\end{thebibliography}"
     ]

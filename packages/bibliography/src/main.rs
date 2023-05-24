@@ -42,6 +42,10 @@ macro_rules! push_citation {
     ($e:expr) => {module!("list-push", $e, {"name": "inline_citations"})}
 }
 
+macro_rules! inline_target {
+    ($e:expr) => {json!({"name": "set-add", "arguments": {"name": "inline_targets"}, "data": $e})}
+}
+
 macro_rules! add_citation_label {
     ($a:expr, $b:expr) => {module!("set-add", format!("{}{}", $a, $b), {"name": "inline_citation_labels"})}
 }
@@ -123,7 +127,8 @@ fn manifest() {
                     "variables": {
                         "inline_citations": {"type": "list", "access": "read"},
                         "inline_citation_labels": {"type": "set", "access": "add"},
-                        "imports": {"type": "set", "access": "add"}
+                        "imports": {"type": "set", "access": "add"},
+                        "inline_targets": {"type": "set", "access": "add"}
                     }
                 }
             ]
@@ -541,15 +546,15 @@ fn generate_specialized_latex(
 
             if styling.target {
                 item.push(import!("\\usepackage[hidelinks]{hyperref}"));
-                item.push(raw!(format!(
-                    "\\hypertarget{{bibentry:{}}}{{",
-                    entry.entry.key()
-                )));
+                item.push(module!(
+                    "target",
+                    display_inline_content(&entry.display, styling, false),
+                    { "name": format!("bibentry:{}", entry.entry.key()) }
+                ));
+            } else {
+                item.append(&mut display_to_ast(&entry.display, styling, false));
             }
-            item.append(&mut display_to_ast(&entry.display, styling, false));
-            if styling.target {
-                item.push(raw!("}\n\n"));
-            }
+            item.push(raw!("\n"));
 
             item
         })
