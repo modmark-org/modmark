@@ -9,19 +9,10 @@ import { Link, useOutletContext, useSearchParams } from "react-router-dom";
 import getGistById from "./gist.ts";
 import { Mode, Preview } from "./Preview";
 import { FiBook, FiClock, FiFolder, FiPackage } from "react-icons/fi";
-import {
-  MdOutlineAutoAwesome,
-  MdOutlineDownloading,
-  MdOutlineKeyboardAlt,
-} from "react-icons/md";
+import { MdOutlineAutoAwesome, MdOutlineDownloading, MdOutlineKeyboardAlt } from "react-icons/md";
 import FsTree from "./FsTree";
 import PackageDocs from "./PackageDocs";
-import {
-  CompilationResult,
-  Compiler,
-  handleException,
-  PackageInfo,
-} from "./compilerTypes";
+import { CompilationResult, Compiler, handleException, PackageInfo } from "./compilerTypes";
 import Guide from "./Guide";
 import { IDisposable } from "monaco-editor";
 
@@ -139,9 +130,7 @@ function Playground() {
   const inPreview = useOutletContext<boolean>();
   const [content, setContent] = useState("");
   const [showFiles, setShowFiles] = useState(false);
-  const [activeView, setActiveView] = useState<"preview" | "docs" | "guide">(
-    "preview"
-  );
+  const [activeView, setActiveView] = useState<"preview" | "docs" | "guide">("preview");
   const [packages, setPackages] = useState<PackageInfo[]>([]);
   const [loadingPackage, setLoadingPackage] = useState(false);
   const [selectedMode, setSelectedMode] = useState<Mode>("render-html-iframe");
@@ -165,7 +154,7 @@ function Playground() {
     () => Comlink.wrap(new Worker(new URL("./worker.js", import.meta.url))),
     [],
   );
-    // Keep monaco references
+  // Keep monaco references
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
 
@@ -195,9 +184,7 @@ function Playground() {
   useEffect(() => {
     if (compilerLoaded && temporaryFileStoreRef.current.length > 0) {
       loadAccumulatedFiles()
-        .then(() =>
-          compile(editorRef.current?.getValue() ?? "", selectedMode, true)
-        )
+        .then(() => compile(editorRef.current?.getValue() ?? "", selectedMode, true))
         .catch(console.error);
     }
   }, [compilerLoaded, temporaryFileStoreRef.current.length]);
@@ -260,11 +247,7 @@ function Playground() {
           });
 
           // ast and json output can't produce transpilation errors so we just use the input as is
-          if (
-            mode === "ast" ||
-            mode === "ast-debug" ||
-            mode === "json-output"
-          ) {
+          if (mode === "ast" || mode === "ast-debug" || mode === "json-output") {
             setContent((result as string | null) ?? "");
             setActiveMode(mode);
             setErrors([]);
@@ -288,14 +271,10 @@ function Playground() {
 
             if (error.type === "compilationError") {
               setLoadingPackage(false);
-              loggedErrors = error.data.map(
-                (e) => `<p>${e.message}</p><pre>${e.raw}</pre>`
-              );
+              loggedErrors = error.data.map((e) => `<p>${e.message}</p><pre>${e.raw}</pre>`);
             } else if (error.type === "parsingError") {
               setLoadingPackage(false);
-              loggedErrors.push(
-                `<p>${error.data.message}</p><pre>${error.data.raw}</pre>`
-              );
+              loggedErrors.push(`<p>${error.data.message}</p><pre>${error.data.raw}</pre>`);
             } else if (error.type === "noResult") {
               // If we are trying to load/download a package, update the status
               setErrors([]);
@@ -308,16 +287,13 @@ function Playground() {
             setWarnings([]);
             setActiveMode(mode);
             setValidPreview(false); // invalidate the current preview
-          }
+          },
         );
     };
     setStatus({ type: "typing" });
     setCompileTimoutId((oldId) => {
       oldId && clearTimeout(oldId);
-      return setTimeout(
-        compile_helper,
-        instant ? 0 : COMPILE_INTERVAL
-      ) as unknown as number;
+      return setTimeout(compile_helper, instant ? 0 : COMPILE_INTERVAL) as unknown as number;
     });
   };
 
@@ -329,50 +305,44 @@ function Playground() {
     if (lastModel !== null) {
       lastModel.dispose();
     }
-    const newModel = monacoRef.current.languages.registerCompletionItemProvider(
-      "modmark",
-      {
-        triggerCharacters: ["["],
-        provideCompletionItems: (model, position) => {
-          const word = model.getWordUntilPosition(position);
+    const newModel = monacoRef.current.languages.registerCompletionItemProvider("modmark", {
+      triggerCharacters: ["["],
+      provideCompletionItems: (model, position) => {
+        const word = model.getWordUntilPosition(position);
 
-          const range = {
-            startLineNumber: position.lineNumber,
-            endLineNumber: position.lineNumber,
-            startColumn: word.startColumn,
-            endColumn: word.endColumn,
-          };
-          let alreadyAdded = new Set<string>();
-          const suggestions = packages.flatMap((pkg) => {
-            // Remove duplicate transforms with same from
-            let transforms = [];
-            for (let transform of pkg.transforms) {
-              if (!alreadyAdded.has(transform.from)) {
-                transforms.push(transform);
-                alreadyAdded.add(transform.from);
-              }
+        const range = {
+          startLineNumber: position.lineNumber,
+          endLineNumber: position.lineNumber,
+          startColumn: word.startColumn,
+          endColumn: word.endColumn,
+        };
+        let alreadyAdded = new Set<string>();
+        const suggestions = packages.flatMap((pkg) => {
+          // Remove duplicate transforms with same from
+          let transforms = [];
+          for (let transform of pkg.transforms) {
+            if (!alreadyAdded.has(transform.from)) {
+              transforms.push(transform);
+              alreadyAdded.add(transform.from);
             }
-            return transforms.map((transform) => {
-              return {
-                label: transform.from,
-                kind: monaco.languages.CompletionItemKind.Module,
-                insertText: transform.from + "]",
-                range: range,
-              };
-            });
+          }
+          return transforms.map((transform) => {
+            return {
+              label: transform.from,
+              kind: monaco.languages.CompletionItemKind.Module,
+              insertText: transform.from + "]",
+              range: range,
+            };
           });
+        });
 
-          return { suggestions: suggestions };
-        },
-      }
-    );
+        return { suggestions: suggestions };
+      },
+    });
     setLastModel(newModel);
   }, [packages]);
 
-  const handleEditorDidMount = async (
-    editor: editor.IStandaloneCodeEditor,
-    _monaco: Monaco
-  ) => {
+  const handleEditorDidMount = async (editor: editor.IStandaloneCodeEditor, _monaco: Monaco) => {
     editorRef.current = editor;
     monacoRef.current = _monaco;
     // Priorities are as follows:
@@ -468,16 +438,10 @@ function Playground() {
               Playground
             </span>
           </Logo>
-          <Button
-            active={showFiles}
-            onClick={() => setShowFiles((showFiles) => !showFiles)}
-          >
+          <Button active={showFiles} onClick={() => setShowFiles((showFiles) => !showFiles)}>
             <FiFolder /> Files
           </Button>
-          <Select
-            value={selectedMode}
-            onChange={(e) => handleModeChange(e.target.value as Mode)}
-          >
+          <Select value={selectedMode} onChange={(e) => handleModeChange(e.target.value as Mode)}>
             <option value="ast">Abstract syntax tree</option>
             <option value="ast-debug">Debug AST</option>
             <option value="json-output">JSON tree</option>
@@ -496,24 +460,21 @@ function Playground() {
             />
           )}
           {selectedMode === "latex" && (
-            <Button onClick={() => openInOverleaf(content)}>
-              Open in Overleaf
-            </Button>
+            <Button onClick={() => openInOverleaf(content)}>Open in Overleaf</Button>
           )}
         </div>
         <div>
           <Button
             active={activeView === "guide"}
-            onClick={() =>
-              setActiveView(activeView === "guide" ? "preview" : "guide")
-            }
+            onClick={() => setActiveView(activeView === "guide" ? "preview" : "guide")}
           >
             <FiBook /> Guide
           </Button>
 
           <Button
             active={activeView === "docs"}
-            onClick={() => setActiveView(activeView === "docs" ? "preview" : "docs")}>
+            onClick={() => setActiveView(activeView === "docs" ? "preview" : "docs")}
+          >
             <FiPackage /> Package docs
           </Button>
         </div>
@@ -547,7 +508,8 @@ function Playground() {
             <Scrollable
               style={{
                 backgroundColor: "white",
-              }}>
+              }}
+            >
               <div
                 style={{
                   maxWidth: 800,
@@ -556,7 +518,8 @@ function Playground() {
                   width: "100%",
                   marginLeft: "auto",
                   marginRight: "auto",
-                }}>
+                }}
+              >
                 <PackageDocs packages={packages} />
               </div>
             </Scrollable>
@@ -572,7 +535,8 @@ function Playground() {
                   width: "100%",
                   marginLeft: "auto",
                   marginRight: "auto",
-                }}>
+                }}
+              >
                 <Guide />
               </div>
             </Scrollable>
@@ -652,13 +616,7 @@ const Warning = styled.div`
 `;
 
 // display warnings and errors
-function IssuesReport({
-  warnings,
-  errors,
-}: {
-  warnings: string[];
-  errors: string[];
-}) {
+function IssuesReport({ warnings, errors }: { warnings: string[]; errors: string[] }) {
   const errorsElem = errors.map((error, i) => (
     <Error key={i} dangerouslySetInnerHTML={{ __html: error }} />
   ));
