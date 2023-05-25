@@ -1,21 +1,24 @@
 {
-    "name": "__math",
+    "name": "__superscript",
     "arguments": {},
     "children": [
         {
             "name": "__text",
-            "data": "x^2",
+            "data": "Hello, world",
             "arguments": {},
             "inline": true
         }
     ],
+    "id": 123,
     "__test_transform_to": "html",
     "__test_expected_result": [
+        "<sup>",
         {
-            "name": "math",
-            "data": "x^2",
+            "name": "__text",
+            "data": "Hello, world",
             "arguments": {},
             "inline": true
-        }
+        },
+        "</sup>"
     ]
 }

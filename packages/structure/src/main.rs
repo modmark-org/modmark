@@ -63,13 +63,13 @@ fn transform_heading(input: Value, to: &str, element: &str) {
             let mut json = vec![];
             let contents = input["data"].as_str().unwrap();
             let level_arg = input["arguments"]["level"].as_str().unwrap();
-            let key = rand::random::<u64>();
+            let id = input["id"].as_u64().unwrap();
             let level = level_arg.parse::<usize>().unwrap().clamp(1, 6);
 
             let structure_data = json!({
                 "element": element,
                 "level": level,
-                "key": format!("{key}"),
+                "key": format!("heading:{id}"),
                 "contents": inline_content!(contents),
             })
             .to_string();
@@ -77,7 +77,7 @@ fn transform_heading(input: Value, to: &str, element: &str) {
             json.push(json!(format!("<h{level}>")));
 
             if element == "numbered-heading" {
-                let invocation = format!("[element-number]({key}) ");
+                let invocation = format!("[element-number](heading:{id}) ");
                 json.push(inline_content!(invocation));
             }
 
@@ -117,7 +117,7 @@ fn transform_standalone_heading(input: Value, to: &str) {
 
 fn transform_toc(input: Value, to: &str) {
     let max_level = input["arguments"]["max-level"].as_u64().unwrap() as usize;
-    let toc = TOC::build_from_list(max_level);
+    let toc = Toc::build_from_list(max_level);
 
     match to {
         "html" => print!("{}", toc.to_html()),
@@ -155,7 +155,7 @@ fn manifest() {
             "transforms": [
                 {
                     "from": "table-of-contents",
-                    "to": ["any"],
+                    "to": ["html"],
                     "description": "Creates a table of contents using headings the document.",
                     "arguments": [
                         {"name": "max-level", "type": "uint", "default": 4, "description": "Specifies the highest level of headings that will be included in the TOC. Examples: 2 -> 1.1, 4 -> 1.1.1.1."},

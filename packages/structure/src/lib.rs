@@ -1,6 +1,6 @@
 use serde_json::{from_str, json, Value};
 use std::env;
-use TOCEntryType::*;
+use TocEntryType::*;
 
 #[macro_export]
 macro_rules! inline_content {
@@ -19,21 +19,21 @@ pub struct StructureCounter {
 }
 
 #[derive(PartialEq)]
-enum TOCEntryType {
+enum TocEntryType {
     Numbered,
     Unnumbered,
     Empty,
 }
 
-struct TOCEntry {
+struct TocEntry {
     id: Option<String>,
     contents: Option<Value>,
-    children: Vec<TOCEntry>,
-    mode: TOCEntryType,
+    children: Vec<TocEntry>,
+    mode: TocEntryType,
 }
 
-pub struct TOC {
-    table: TOCEntry,
+pub struct Toc {
+    table: TocEntry,
     max_level: usize,
 }
 
@@ -94,9 +94,9 @@ impl StructureCounter {
     }
 }
 
-impl TOCEntry {
+impl TocEntry {
     fn numbered(id: String, contents: Value) -> Self {
-        TOCEntry {
+        TocEntry {
             id: Some(id),
             contents: Some(contents),
             children: vec![],
@@ -105,7 +105,7 @@ impl TOCEntry {
     }
 
     fn unnumbered(id: String, contents: Value) -> Self {
-        TOCEntry {
+        TocEntry {
             id: Some(id),
             contents: Some(contents),
             children: vec![],
@@ -114,7 +114,7 @@ impl TOCEntry {
     }
 
     fn empty() -> Self {
-        TOCEntry {
+        TocEntry {
             id: None,
             contents: None,
             children: vec![],
@@ -123,13 +123,13 @@ impl TOCEntry {
     }
 }
 
-impl TOC {
+impl Toc {
     // Build and return a TOC from the elements in "structure". Currently, only "numbered-heading"
     // and "unnumbered-heading" are added.
     pub fn build_from_list(max_level: usize) -> Self {
         let structure = get_structure_list();
         let mut toc = Self {
-            table: TOCEntry::empty(),
+            table: TocEntry::empty(),
             max_level,
         };
 
@@ -140,8 +140,8 @@ impl TOC {
             let contents = entry["contents"].clone();
 
             match element {
-                "numbered-heading" => toc.push(level, TOCEntry::numbered(id, contents)),
-                "unnumbered-heading" => toc.push(level, TOCEntry::unnumbered(id, contents)),
+                "numbered-heading" => toc.push(level, TocEntry::numbered(id, contents)),
+                "unnumbered-heading" => toc.push(level, TocEntry::unnumbered(id, contents)),
                 _ => {}
             }
         }
@@ -152,14 +152,14 @@ impl TOC {
     // Push an element to the TOC. It works a bit like tree traversal. If there is a jump in level
     // (e.g. "# heading" followed by "### heading"), empty entries will be created to accommodate.
     // If entries are numbered, the example would result in "1 heading" followed by "1.0.1 heading".
-    fn push(&mut self, level: usize, entry: TOCEntry) {
+    fn push(&mut self, level: usize, entry: TocEntry) {
         if level < 1 || level > self.max_level {
             return;
         }
 
         let mut pointer = &mut self.table;
         for _ in 1..level {
-            let last = pointer.children.pop().unwrap_or(TOCEntry::empty());
+            let last = pointer.children.pop().unwrap_or(TocEntry::empty());
             pointer.children.push(last);
             pointer = pointer.children.last_mut().unwrap();
         }
@@ -177,7 +177,7 @@ impl TOC {
 
 //
 fn to_html_helper(
-    pointer: &TOCEntry,
+    pointer: &TocEntry,
     counter: &mut StructureCounter,
     json: &mut Vec<Value>,
     level: usize,
