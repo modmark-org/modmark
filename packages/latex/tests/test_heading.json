@@ -25,10 +25,7 @@
     ],
     "__test_transform_to": "latex",
     "__test_expected_result": [
-        {
-            "data": "\n\\subsection{",
-            "name": "raw"
-          },
+          "\n\\subsection{",
           {
             "arguments": {},
             "data": "Raw stuff",
@@ -47,10 +44,6 @@
             ],
             "name": "__bold"
           },
-          {
-            "data": "}\n",
-            "name": "raw"
-          }
-        
+          "}\n"
     ]
 }

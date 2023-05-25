@@ -93,6 +93,30 @@ fn transform_heading(input: Value, to: &str, element: &str) {
 
             print!("{}", serde_json::to_string(&json).unwrap());
         }
+        "latex" => {
+            let mut json = vec![];
+            let contents = input["data"].as_str().unwrap();
+            let level_arg = input["arguments"]["level"].as_str().unwrap();
+            let level = level_arg.parse::<usize>().unwrap().clamp(1, 3);
+            let subs = "sub".repeat(level-1);
+
+            if element == "unnumbered-heading" {
+                json.push(json!(format!("\\{subs}section*{{")));
+            } else {
+                json.push(json!(format!("\\{subs}section{{")));
+            }
+
+            json.push(inline_content!(contents));
+            json.push(json!("}\n"));
+
+            if element == "unnumbered-heading" {
+                json.push(json!(format!("\\addcontentsline{{toc}}{{{subs}section}}{{")));
+                json.push(inline_content!(contents));
+                json.push(json!("}\n"));
+            }
+
+            print!("{}", serde_json::to_string(&json).unwrap());
+        }
         other => eprintln!("Cannot convert {element} to {other}!"),
     }
 }
@@ -108,6 +132,19 @@ fn transform_standalone_heading(input: Value, to: &str) {
             json.push(json!(format!("<h{level}>")));
             json.push(inline_content!(contents));
             json.push(json!(format!("</h{level}>")));
+
+            print!("{}", serde_json::to_string(&json).unwrap());
+        }
+        "latex" => {
+            let mut json = vec![];
+            let contents = input["data"].as_str().unwrap();
+            let level_arg = input["arguments"]["level"].as_str().unwrap();
+            let level = level_arg.parse::<usize>().unwrap().clamp(1, 3);
+            let subs = "sub".repeat(level-1);
+
+            json.push(json!(format!("\\{subs}section*{{")));
+            json.push(inline_content!(contents));
+            json.push(json!("}\n"));
 
             print!("{}", serde_json::to_string(&json).unwrap());
         }
@@ -166,7 +203,7 @@ fn manifest() {
                 },
                 {
                     "from": "unnumbered-heading",
-                    "to": ["html"],
+                    "to": ["html", "latex"],
                     "description": "A heading that does not include a number and is not numbered in a table of contents.",
                     "type": "inline-module",
                     "arguments": [
@@ -182,7 +219,7 @@ fn manifest() {
                 },
                 {
                     "from": "numbered-heading",
-                    "to": ["html"],
+                    "to": ["html", "latex"],
                     "type": "inline-module",
                     "description": "A heading that includes number and is numbered in a table of contents.",
                     "arguments": [
@@ -198,7 +235,7 @@ fn manifest() {
                 },
                 {
                     "from": "standalone-heading",
-                    "to": ["html"],
+                    "to": ["html", "latex"],
                     "type": "inline-module",
                     "description": "A heading is not included in the document's structure or table of contents.",
                     "arguments": [

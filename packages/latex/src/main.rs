@@ -210,9 +210,8 @@ fn transform_verbatim(node: JsonEntry) -> String {
 }
 
 fn transform_heading(heading: Value) -> String {
-    let mut result = String::new();
-    result.push('[');
-
+    let mut vec = vec![];
+    
     let Value::String(s) = &heading["arguments"]["level"] else {
         panic!();
     };
@@ -226,21 +225,33 @@ fn transform_heading(heading: Value) -> String {
         subs.push_str(&"sub".repeat((clamped_level - 1) as usize));
     }
 
-    write!(
-        result,
-        r#"{{"name": "raw", "data": "\n\\{subs}section{{"}},"#,
-    )
-    .unwrap();
+    let heading_style = env::var("heading_style").unwrap_or(String::new());
+
+    if heading_style == "unnumbered" {
+        vec.push(json!(format!("\n\\{subs}section*{{")));
+    } else {
+        vec.push(json!(format!("\n\\{subs}section{{")));
+    }
+
     if let Value::Array(children) = &heading["children"] {
         for child in children {
-            result.push_str(&serde_json::to_string(child).unwrap());
-            result.push(',');
+            vec.push(child.clone());
         }
     }
-    write!(result, r#"{{"name": "raw", "data": "}}\n"}}"#,).unwrap();
-    result.push(']');
 
-    result
+    vec.push(json!("}\n"));
+
+    if heading_style == "unnumbered" {
+        vec.push(json!(format!("\\addcontentsline{{toc}}{{{subs}section}}{{")));
+        if let Value::Array(children) = &heading["children"] {
+            for child in children {
+                vec.push(child.clone());
+            }
+        }
+        vec.push(json!("}\n"));
+    }
+
+    serde_json::to_string(&vec).unwrap()
 }
 
 fn transform_math(node: Value) -> String {
@@ -414,7 +425,10 @@ fn manifest() -> String {
                             "default": "1"
                         }
                     ],
-                    "type": "parent"
+                    "type": "parent",
+                    "variables": {
+                        "heading_style": {"type": "const", "access": "read"},
+                    },
                 },
 
             ]
