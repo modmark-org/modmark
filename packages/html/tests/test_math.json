@@ -1,23 +1,22 @@
 {
-    "name": "__italic",
+    "name": "__math",
     "arguments": {},
     "children": [
         {
             "name": "__text",
-            "data": "Hello, world",
+            "data": "x^2",
             "arguments": {},
             "inline": true
         }
     ],
+    "id": 123,
     "__test_transform_to": "html",
     "__test_expected_result": [
-        "<em>",
         {
-            "name": "__text",
-            "data": "Hello, world",
+            "name": "math",
+            "data": "x^2",
             "arguments": {},
             "inline": true
-        },
-        "</em>"
+        }
     ]
 }

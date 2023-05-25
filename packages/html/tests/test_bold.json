@@ -1,5 +1,5 @@
 {
-    "name": "__superscript",
+    "name": "__bold",
     "arguments": {},
     "children": [
         {
@@ -9,15 +9,16 @@
             "inline": true
         }
     ],
+    "id": 123,
     "__test_transform_to": "html",
     "__test_expected_result": [
-        "<sup>",
+        "<strong>",
         {
             "name": "__text",
             "data": "Hello, world",
             "arguments": {},
             "inline": true
         },
-        "</sup>"
+        "</strong>"
     ]
 }

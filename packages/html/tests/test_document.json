@@ -18,9 +18,11 @@
           "arguments": {},
           "inline": true
         }
-      ]
+      ],
+      "id": 124
     }
   ],
+  "id": 123,
   "__test_transform_to": "html",
   "__test_expected_result": [
     {
@@ -55,7 +57,8 @@
           "name": "__text"
         }
       ],
-      "name": "__bold"
+      "name": "__bold",
+      "id": 124
     },
     {
       "data": "</article></body></html>",

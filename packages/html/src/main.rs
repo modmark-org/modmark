@@ -15,6 +15,7 @@ enum JsonEntry {
         name: String,
         arguments: HashMap<String, Value>,
         children: Vec<Self>,
+        id: u64,
     },
     Module {
         name: String,
@@ -168,7 +169,8 @@ fn transform_heading(heading: Value) -> String {
     let mut json = vec![];
     let level_arg = heading["arguments"]["level"].as_str().unwrap();
     let level = level_arg.parse::<u8>().unwrap().clamp(1, 6);
-    let key = rand::random::<u64>().to_string();
+    let id = heading["id"].as_u64().unwrap();
+    let key = format!("heading:{id}");
     let heading_style = env::var("heading_style").unwrap_or(String::new());
     let element;
 

@@ -5,6 +5,7 @@ use plotters::prelude::*;
 use plotters::style::ShapeStyle;
 use serde_json::{json, Value};
 use std::collections::hash_map::DefaultHasher;
+use std::env;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::Write;
@@ -290,8 +291,20 @@ pub(crate) fn print_svg_html(svg: String, ctx: &PlotContext) {
     let percentage = (ctx.svg_info.width * 100.0).round() as i32;
     let style = format!("style=\"width:{percentage}%\"");
     let img_str = format!("<img src=\"{src}\" {style} ");
+    let structure_data = json!({
+        "element": "figure",
+        "key": ctx.svg_info.label,
+    })
+    .to_string();
 
     let mut v = Vec::new();
+    v.push(json!(
+        {
+            "name": "list-push",
+            "arguments": {"name": "structure"},
+            "data": structure_data,
+        }
+    ));
     v.push(Value::String("<figure>\n".into()));
     v.push(Value::String(img_str));
 
@@ -303,13 +316,16 @@ pub(crate) fn print_svg_html(svg: String, ctx: &PlotContext) {
     v.push(Value::String("/>\n".into()));
     if !ctx.svg_info.caption.is_empty() {
         v.push(Value::String("<figcaption>".into()));
+        if env::var("caption_style").unwrap_or(String::new()) == "numbered" {
+            let numbering = format!("**Figure [element-number]({}):** ", ctx.svg_info.label);
+            v.push(json!({"name": "inline_content", "data": numbering}));
+        }
         v.push(json!({"name": "__text", "data": ctx.svg_info.caption}));
         v.push(Value::String("</figcaption>\n".into()));
     }
     v.push(Value::String("</figure>\n".into()));
 
     handle_save(&svg, &ctx.svg_info.save);
-
     print!("{}", json!(v));
 }
 
@@ -337,6 +353,7 @@ pub fn print_manifest() {
                     "to": ["html", "latex"],
                     "description": "Plot mathematical functions. Functions should be separated by newlines.",
                     "variables": {
+                        "caption_style": {"type": "const", "access": "read"},
                         "imports": {"type": "set", "access": "add"},
                     },
                     "arguments": [
@@ -409,6 +426,7 @@ pub fn print_manifest() {
                     "to": ["html", "latex"],
                     "description": "Plot a set of (x,y) values. The values should be placed on separate lines, and the x-y pair should space-separated.",
                     "variables": {
+                        "caption_style": {"type": "const", "access": "read"},
                         "imports": {"type": "set", "access": "add"},
                     },
                     "arguments": [
