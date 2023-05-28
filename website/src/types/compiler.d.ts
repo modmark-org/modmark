@@ -64,7 +64,7 @@ export type VarInfo = {
   access: string;
 };
 
-export type ArgInfo = {
+type ArgInfo = {
   name: string;
   default: string | null;
   description: string;

@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import Guide from "./Guide";
+import Guide from "../../components/Guide";
 import { Link } from "react-router-dom";
 
 const Container = styled.div`

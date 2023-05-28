@@ -2,7 +2,7 @@ import { useState } from "react";
 import { FiPackage } from "react-icons/fi";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import styled from "styled-components";
-import { PackageInfo, Transform as TransformType } from "./compilerTypes";
+import { PackageInfo, Transform as TransformType } from "../types/compiler";
 
 const PackageContainer = styled.div`
   padding: 0.5rem;
