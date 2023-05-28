@@ -1,20 +1,21 @@
 import * as Comlink from "comlink";
 import styled from "styled-components";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Input, Select } from "./Buttons";
 import Editor from "@monaco-editor/react";
 import { editor } from "monaco-editor";
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
 import { Link, useOutletContext, useSearchParams } from "react-router-dom";
 import getGistById from "./gist.ts";
-import { Mode, Preview } from "./Preview";
 import { FiBook, FiClock, FiFolder, FiPackage } from "react-icons/fi";
 import { MdOutlineAutoAwesome, MdOutlineDownloading, MdOutlineKeyboardAlt } from "react-icons/md";
-import FsTree from "./FsTree";
-import PackageDocs from "./PackageDocs";
-import { CompilationResult, Compiler, handleException, PackageInfo } from "./compilerTypes";
-import Guide from "./Guide";
+import FsTree from "./FsTree.tsx";
+
 import { IDisposable } from "monaco-editor";
+import { Mode, Preview } from "./Preview.tsx";
+import { CompilationResult, Compiler, PackageInfo, handleException } from "../../types/compiler.d";
+import Button, { Input, Select } from "../../components/Buttons.tsx";
+import PackageDocs from "../../components/PackageDocs.tsx";
+import Guide from "../../components/Guide.tsx";
 
 type Monaco = typeof monaco;
 
@@ -151,7 +152,7 @@ function Playground() {
 
   // Init the compiler
   const compiler: Compiler = useMemo(
-    () => Comlink.wrap(new Worker(new URL("./worker.js", import.meta.url))),
+    () => Comlink.wrap(new Worker(new URL("./../../components/worker.js", import.meta.url))),
     [],
   );
   // Keep monaco references
@@ -466,15 +467,13 @@ function Playground() {
         <div>
           <Button
             active={activeView === "guide"}
-            onClick={() => setActiveView(activeView === "guide" ? "preview" : "guide")}
-          >
+            onClick={() => setActiveView(activeView === "guide" ? "preview" : "guide")}>
             <FiBook /> Guide
           </Button>
 
           <Button
             active={activeView === "docs"}
-            onClick={() => setActiveView(activeView === "docs" ? "preview" : "docs")}
-          >
+            onClick={() => setActiveView(activeView === "docs" ? "preview" : "docs")}>
             <FiPackage /> Package docs
           </Button>
         </div>
@@ -508,8 +507,7 @@ function Playground() {
             <Scrollable
               style={{
                 backgroundColor: "white",
-              }}
-            >
+              }}>
               <div
                 style={{
                   maxWidth: 800,
@@ -518,8 +516,7 @@ function Playground() {
                   width: "100%",
                   marginLeft: "auto",
                   marginRight: "auto",
-                }}
-              >
+                }}>
                 <PackageDocs packages={packages} />
               </div>
             </Scrollable>
@@ -535,8 +532,7 @@ function Playground() {
                   width: "100%",
                   marginLeft: "auto",
                   marginRight: "auto",
-                }}
-              >
+                }}>
                 <Guide />
               </div>
             </Scrollable>

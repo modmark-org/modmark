@@ -1,15 +1,8 @@
 import { Link, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { Button } from "./Buttons";
-import {
-  FiBook,
-  FiCode,
-  FiDownload,
-  FiExternalLink,
-  FiGithub,
-  FiPackage,
-  FiPlay,
-} from "react-icons/fi";
+
+import { FiBook, FiCode, FiExternalLink, FiGithub, FiPackage, FiPlay } from "react-icons/fi";
+import Button from "../../components/Buttons";
 
 const PAGEWIDTH = 1300;
 
@@ -198,8 +191,9 @@ const FeatureContainer = styled.div<{
   justify-content: center;
   box-shadow: 0 1px 5px #0000001c;
   ${(props) => (props.gridStart ? `grid-column-start: ${props.gridStart};` : "")}
-  ${(props) =>
-    props.gridEnd ? `grid-column-end: ${props.gridEnd};` : ""} @media(max-width: 900 px) {
+  ${(props) => (props.gridEnd ? `grid-column-end: ${props.gridEnd};` : "")} 
+    
+  @media(max-width: 900px) {
     justify-content: flex-start;
   }
 `;

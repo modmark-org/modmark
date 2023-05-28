@@ -2,9 +2,9 @@ import { FiDownload, FiFolder, FiFolderPlus, FiUpload } from "react-icons/fi";
 import { MdDriveFileRenameOutline, MdOutlineDelete } from "react-icons/md";
 import { IoMdArrowBack, IoMdCheckmark, IoMdClose } from "react-icons/io";
 import styled from "styled-components";
-import Button from "./Buttons";
 import { useEffect, useState } from "react";
 import { FileUploader } from "react-drag-drop-files";
+import Button from "../../components/Buttons";
 
 const Container = styled.div`
   position: relative;

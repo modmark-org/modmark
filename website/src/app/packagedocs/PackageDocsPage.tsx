@@ -1,11 +1,17 @@
 import styled from "styled-components";
-import PackageDocs from "./PackageDocs";
-import { CompilationException, Compiler, handleException, PackageInfo } from "./compilerTypes";
 import { useEffect, useMemo, useState } from "react";
 import * as Comlink from "comlink";
 import { Link } from "react-router-dom";
 import { FileUploader } from "react-drag-drop-files";
 import { FiUpload } from "react-icons/fi";
+import PackageDocs from "../../components/PackageDocs";
+import {
+  CompilationException,
+  Compiler,
+  PackageInfo,
+  handleException,
+} from "../../types/compiler.d";
+import React from "react";
 
 const Container = styled.div`
   display: flex;
@@ -81,7 +87,7 @@ export default function PackageDocsPage() {
 
   // Init the compiler
   const compiler: Compiler = useMemo(
-    () => Comlink.wrap(new Worker(new URL("./worker.js", import.meta.url))),
+    () => Comlink.wrap(new Worker(new URL("./../../components/worker.js", import.meta.url))),
     [],
   );
 

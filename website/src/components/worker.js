@@ -1,11 +1,11 @@
 // FIXME: Replace with a normal ES module import once Firefox adds support for js modules in web workers
-importScripts("./../web_bindings/web_bindings.js");
+importScripts("./../../web_bindings/web_bindings.js");
 importScripts("https://unpkg.com/comlink/dist/umd/comlink.js");
 
 const compiler = {
     loaded: false,
     async init() {
-        await wasm_bindgen("./../web_bindings/web_bindings_bg.wasm");
+        await wasm_bindgen("./../../web_bindings/web_bindings_bg.wasm");
         this.loaded = true;
     },
 
